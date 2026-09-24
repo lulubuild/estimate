@@ -289,7 +289,7 @@ footer a { color: inherit; }
       <!-- ③ 공간별 필요 공사 (앱 12x·13x — 가격 없음) -->
       <section class="section" aria-labelledby="s3" data-field="rooms">
         <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title" id="s3">공간별 필요 공사</h2></div>
-        <p class="sec-desc">공사할 공간을 고르고, 그 공간에 필요한 공사를 눌러 주세요. 잘 모르시면 공간만 골라도 됩니다.</p>
+        <p class="sec-desc">공사할 공간을 고르고, 그 공간에 필요한 공사를 눌러 주세요. 잘 모르시면 공간만 골라도 됩니다. 도배·마루는 집 전체 기준이라 '공용(전체)'에서 골라 주세요.</p>
         <div class="rooms" id="roomToggles" role="group" aria-label="공간 선택"></div>
         <div id="roomCards" class="room-cards"></div>
         <div class="err" style="margin-top:12px">공사할 공간을 하나 이상 골라 주세요.</div>
@@ -382,6 +382,8 @@ const CONFIG = {
   ROOMS: ["거실", "공용(전체)", "발코니1", "안방", "방1", "방2", "화장실1", "화장실2", "주방", "현관"],
   // 앱 '단가표 관리'의 공종 이름과 글자까지 같아야 앱이 항목을 자동으로 담습니다.
   TRADES: ["철거·청소", "목공", "전기·조명", "창호", "문·문틀", "필름", "도배", "마루", "타일", "욕실", "제작가구"],
+  // 집 전체 기준으로만 받는 공종 — '공용(전체)' 카드에서만 보인다.
+  WHOLE_HOUSE_ONLY: ["도배", "마루"],
 };
 /* ════════════════════════════════════════════════════════════════════ */
 
@@ -512,7 +514,7 @@ function renderRoomCards() {
 
     const chips = document.createElement("div");
     chips.className = "chips"; chips.setAttribute("role", "group"); chips.setAttribute("aria-label", `${room} 필요 공사`);
-    CONFIG.TRADES.forEach(trade => {
+    CONFIG.TRADES.filter(t => room === "공용(전체)" || !CONFIG.WHOLE_HOUSE_ONLY.includes(t)).forEach(trade => {
       const c = document.createElement("button");
       c.type = "button"; c.className = "chip"; c.textContent = trade;
       c.setAttribute("aria-pressed", String(data.trades.has(trade)));
@@ -686,7 +688,7 @@ function validate() {
 function buildPayload() {
   const rooms = CONFIG.ROOMS.filter(r => state.rooms.has(r)).map(r => {
     const v = state.rooms.get(r);
-    return { room: r, trades: CONFIG.TRADES.filter(t => v.trades.has(t)), pyeong: state.scope === "부분" ? v.pyeong : "" };
+    return { room: r, trades: CONFIG.TRADES.filter(t => v.trades.has(t) && (r === "공용(전체)" || !CONFIG.WHOLE_HOUSE_ONLY.includes(t))), pyeong: state.scope === "부분" ? v.pyeong : "" };
   });
   return {
     action: "webInquiry",
