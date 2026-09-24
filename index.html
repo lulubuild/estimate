@@ -1,0 +1,773 @@
+a
+  b`${x}
+	c<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>온라인 견적 요청</title>
+<meta name="description" content="평형과 공사할 공간만 알려주시면 담당자가 견적을 준비해 연락드립니다.">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* ── 색·치수 토큰: 앱의 MacStyle(유튜브 컨셉)과 같은 값 ─────────────── */
+:root {
+  --bg: #F9F9F9;          /* background */
+  --surface: #FFFFFF;     /* surface */
+  --sunken: #F2F2F2;      /* surfaceSunken */
+  --selected: #E5E5E5;    /* surfaceSelected */
+  --ink: #0F0F0F;         /* ink */
+  --muted: #606060;       /* inkMuted */
+  --accent: #065FD4;      /* written (활성) */
+  --line: #E5E5E5;
+  --brand: #FF0000;       /* 로고 전용 */
+  --danger: #CC0000;
+  --page-margin: 16px;
+  --panel-padding: 20px;
+  --r-card: 12px;
+  --r-input: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F0F0F; --surface: #1F1F1F; --sunken: #272727; --selected: #373737;
+    --ink: #F1F1F1; --muted: #AAAAAA; --accent: #3EA6FF; --line: #303030; --danger: #FF6B6B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F0F0F; --surface: #1F1F1F; --sunken: #272727; --selected: #373737;
+  --ink: #F1F1F1; --muted: #AAAAAA; --accent: #3EA6FF; --line: #303030; --danger: #FF6B6B;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-size: 16px; line-height: 1.5; letter-spacing: -0.01em;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
+}
+button, input, textarea { font: inherit; color: inherit; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 var(--page-margin); }
+
+/* 머리 */
+header.top { padding: 24px 0 8px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; }
+.brand-mark { width: 26px; height: 26px; flex: none; color: var(--brand); }
+h1 { font-size: 26px; line-height: 1.3; margin: 18px 0 6px; font-weight: 700; letter-spacing: -0.02em; }
+.lead { margin: 0; color: var(--muted); font-size: 15px; }
+.steps { display: flex; gap: 6px; flex-wrap: wrap; margin: 16px 0 4px; padding: 0; list-style: none; }
+.steps li { font-size: 13px; color: var(--muted); background: var(--sunken); border-radius: 999px; padding: 4px 12px; }
+
+/* 패널 = 앱의 macPanel: 한 장 + 구분선 */
+.panel { background: var(--surface); border-radius: var(--r-card); margin: 16px 0; overflow: hidden; }
+.section { padding: var(--panel-padding); }
+.section + .section { border-top: 1px solid var(--line); }
+.sec-head { display: flex; align-items: baseline; gap: 10px; margin: 0 0 14px; }
+.sec-num { font-size: 13px; font-weight: 700; color: var(--accent); }
+.sec-title { font-size: 18px; font-weight: 700; margin: 0; }
+.sec-desc { margin: -8px 0 14px; font-size: 14px; color: var(--muted); }
+
+/* 입력칸 */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid .full { grid-column: 1 / -1; }
+@media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+label.f { display: block; }
+.f > span.l { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+.req { color: var(--accent); margin-left: 2px; }
+.input, textarea.input {
+  width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid transparent; border-radius: var(--r-input);
+  background: var(--sunken); outline: none; font-size: 16px; transition: border-color .15s, background .15s;
+}
+.input:focus { border-color: var(--accent); background: var(--surface); }
+.input[readonly] { color: var(--muted); }
+textarea.input { min-height: 120px; resize: vertical; line-height: 1.55; }
+.with-suffix { position: relative; }
+.with-suffix .input { padding-right: 44px; }
+.with-suffix .sfx { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.row { display: flex; gap: 8px; }
+.row .input { flex: 1; min-width: 0; }
+.hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.err { font-size: 13px; color: var(--danger); margin-top: 6px; display: none; }
+.invalid .err { display: block; }
+.invalid .input { border-color: var(--danger); }
+
+/* 알약 버튼·칩 */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; padding: 0 18px; border-radius: 999px; border: 0; cursor: pointer;
+  background: var(--sunken); color: var(--ink); font-weight: 600; font-size: 15px; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent; transition: background .15s, transform .1s;
+}
+.btn:hover { background: var(--selected); }
+.btn:active { transform: scale(.98); }
+.btn.primary { background: var(--ink); color: var(--bg); }
+.btn.primary:hover { opacity: .88; }
+.btn[disabled] { opacity: .45; cursor: default; transform: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  min-height: 40px; padding: 0 16px; border-radius: 999px; border: 0; cursor: pointer;
+  background: var(--sunken); color: var(--ink); font-size: 15px; font-weight: 500;
+  -webkit-tap-highlight-color: transparent; transition: background .15s, color .15s;
+}
+.chip:hover { background: var(--selected); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }   /* 선택 = 반전 (칩 전용) */
+.seg { display: inline-flex; background: var(--sunken); border-radius: 999px; padding: 4px; gap: 4px; }
+.seg .chip { min-height: 38px; background: transparent; }
+.seg .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+/* 공간 카드 (앱의 13x 공간 카드와 같은 모양) */
+.rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.room-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 52px; padding: 0 14px; border-radius: var(--r-card); cursor: pointer; border: 0;
+  background: var(--sunken); color: var(--ink); font-size: 15px; font-weight: 600; text-align: left;
+  -webkit-tap-highlight-color: transparent; transition: background .15s;
+}
+.room-toggle:hover { background: var(--selected); }
+.room-toggle .dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--muted); flex: none; display: grid; place-items: center; transition: all .15s; }
+.room-toggle[aria-pressed="true"] { background: var(--selected); }
+.room-toggle[aria-pressed="true"] .dot { border-color: var(--accent); background: var(--accent); }
+.room-toggle[aria-pressed="true"] .dot::after { content: ""; width: 6px; height: 10px; border: solid var(--bg); border-width: 0 2px 2px 0; transform: translate(0, -1px) rotate(45deg); }
+.room-toggle .cnt { font-size: 12px; font-weight: 600; color: var(--accent); margin-left: auto; margin-right: 4px; }
+
+.room-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.room-card { background: var(--sunken); border-radius: var(--r-card); padding: 16px; animation: pop .18s ease-out; }
+@keyframes pop { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .room-card { animation: none; } }
+.room-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.room-card-head h3 { margin: 0; font-size: 16px; font-weight: 700; flex: 1; min-width: 80px; }
+.room-card .chip { background: var(--surface); min-height: 38px; font-size: 14px; padding: 0 14px; }
+.room-card .chip:hover { background: var(--selected); }
+.room-card .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.room-pyeong { display: flex; align-items: center; gap: 6px; }
+.room-pyeong .input { width: 96px; min-height: 40px; padding: 8px 34px 8px 12px; background: var(--surface); text-align: right; }
+.room-pyeong .with-suffix .sfx { right: 12px; font-size: 14px; }
+.room-pyeong span.l { font-size: 13px; color: var(--muted); }
+.icon-btn { width: 36px; height: 36px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 20px; line-height: 1; }
+.icon-btn:hover { background: var(--selected); color: var(--ink); }
+.empty { padding: 18px; border-radius: var(--r-card); border: 1px dashed var(--line); color: var(--muted); font-size: 14px; text-align: center; margin-top: 16px; }
+.bulk { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; font-size: 13px; color: var(--muted); }
+
+/* 사진 */
+.photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.ph { position: relative; aspect-ratio: 1; border-radius: var(--r-input); overflow: hidden; background: var(--sunken); }
+.ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ph button { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(15,15,15,.72); color: #fff; cursor: pointer; font-size: 16px; line-height: 1; }
+.ph-add { aspect-ratio: 1; border-radius: var(--r-input); border: 1px dashed var(--muted); background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer; font-size: 13px; text-align: center; padding: 6px; }
+.ph-add:hover { background: var(--sunken); color: var(--ink); }
+.ph-add b { display: block; font-size: 26px; font-weight: 400; line-height: 1; margin-bottom: 4px; }
+
+/* 동의 */
+.consent { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+.consent input { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
+details.policy { margin-top: 12px; background: var(--sunken); border-radius: var(--r-input); padding: 12px 14px; font-size: 14px; color: var(--muted); }
+details.policy summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+details.policy table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+details.policy th, details.policy td { text-align: left; padding: 8px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
+
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+/* 아래 요약 바 (앱의 18x 견적 요약 — 가격 없이 수량만) */
+.bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding: 12px var(--page-margin) calc(12px + env(safe-area-inset-bottom));
+}
+.bar-in { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+.bar-sum { flex: 1; min-width: 0; font-size: 14px; color: var(--muted); line-height: 1.35; }
+.bar-sum b { color: var(--ink); font-weight: 700; }
+.bar .btn.primary { min-width: 132px; }
+
+/* 완료 화면 */
+.done { text-align: center; padding: 56px var(--panel-padding); }
+.done .ok { width: 64px; height: 64px; border-radius: 50%; background: var(--accent); margin: 0 auto 20px; display: grid; place-items: center; }
+.done .ok::after { content: ""; width: 14px; height: 26px; border: solid var(--bg); border-width: 0 4px 4px 0; transform: translate(0, -3px) rotate(45deg); }
+.done h2 { margin: 0 0 8px; font-size: 22px; }
+.done p { margin: 4px 0; color: var(--muted); }
+.receipt { display: inline-block; margin: 16px 0 4px; padding: 10px 18px; border-radius: 999px; background: var(--sunken); font-weight: 700; letter-spacing: .02em; }
+.demo-note { margin-top: 16px; font-size: 13px; color: var(--danger); }
+
+/* 주소 검색 레이어 */
+.layer { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; padding: var(--page-margin); }
+.layer.on { display: flex; }
+.layer-box { background: var(--surface); border-radius: var(--r-card); width: 100%; max-width: 520px; height: min(560px, 85vh); overflow: hidden; display: flex; flex-direction: column; }
+.layer-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 8px 16px; border-bottom: 1px solid var(--line); font-weight: 700; }
+#postcodeWrap { flex: 1; }
+
+.toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(12px); background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none; transition: all .2s; z-index: 40; max-width: calc(100% - 32px); text-align: center; }
+.toast.on { opacity: 1; transform: translateX(-50%); }
+.spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+footer { text-align: center; font-size: 13px; color: var(--muted); padding: 8px 0 24px; }
+footer a { color: inherit; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6 1.8 11.2l1.3 1.5L5 11.1V21h5.5v-6h3v6H19v-9.9l1.9 1.6 1.3-1.5z"/></svg><span id="companyName">룰루타일</span></div>
+    <h1>온라인 견적 요청</h1>
+    <p class="lead">평형과 공사할 공간만 알려주세요. 담당자가 견적을 준비해 연락드립니다.</p>
+    <ol class="steps" aria-label="작성 순서">
+      <li>① 기본 정보</li><li>② 평형·일정</li><li>③ 공간별 필요 공사</li><li>④ 사진·요청사항</li>
+    </ol>
+  </header>
+
+  <form id="form" novalidate autocomplete="on">
+    <div class="panel" id="formPanel">
+
+      <!-- ① 기본 정보 (앱 111·112·113·115) -->
+      <section class="section" aria-labelledby="s1">
+        <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title" id="s1">기본 정보</h2></div>
+        <div class="grid">
+          <label class="f" data-field="name">
+            <span class="l">고객명 / 현장명<span class="req">*</span></span>
+            <input class="input" name="name" id="name" maxlength="30" autocomplete="name" placeholder="홍길동">
+            <div class="err">성함을 입력해 주세요.</div>
+          </label>
+          <label class="f" data-field="phone">
+            <span class="l">연락처<span class="req">*</span></span>
+            <input class="input" name="phone" id="phone" inputmode="tel" autocomplete="tel" maxlength="13" placeholder="010-0000-0000">
+            <div class="err">연락 가능한 번호를 입력해 주세요.</div>
+          </label>
+          <div class="f full" data-field="address">
+            <span class="l">현장 주소<span class="req">*</span></span>
+            <div class="row">
+              <input class="input" id="address" readonly placeholder="주소 검색을 눌러 주세요" aria-label="현장 주소">
+              <button type="button" class="btn" id="addrBtn">주소 검색</button>
+            </div>
+            <div class="err">현장 주소를 입력해 주세요.</div>
+          </div>
+          <label class="f">
+            <span class="l">상세 주소</span>
+            <input class="input" id="addressDetail" maxlength="80" placeholder="동·호수 (선택)">
+          </label>
+          <label class="f" data-field="zip">
+            <span class="l">현장 우편번호</span>
+            <input class="input" id="zip" inputmode="numeric" maxlength="5" placeholder="주소 검색 시 자동 입력">
+            <div class="err">우편번호는 숫자 5자리입니다.</div>
+          </label>
+        </div>
+      </section>
+
+      <!-- ② 평형·일정 (앱 114·117·118) -->
+      <section class="section" aria-labelledby="s2">
+        <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title" id="s2">평형·일정</h2></div>
+        <div class="grid">
+          <label class="f" data-field="pyeong">
+            <span class="l">전체 평형<span class="req">*</span></span>
+            <div class="with-suffix">
+              <input class="input" id="pyeong" inputmode="decimal" maxlength="5" placeholder="예: 32">
+              <span class="sfx">평</span>
+            </div>
+            <div class="hint" id="pyeongHint">공급면적 기준으로 적어 주세요.</div>
+            <div class="err">1~500 사이의 숫자로 입력해 주세요.</div>
+          </label>
+          <div class="f">
+            <span class="l">시공 범위</span>
+            <div class="seg" role="group" aria-label="시공 범위">
+              <button type="button" class="chip" data-scope="전체" aria-pressed="true">전체 시공</button>
+              <button type="button" class="chip" data-scope="부분" aria-pressed="false">부분 시공</button>
+            </div>
+            <div class="hint" id="scopeHint">집 전체를 공사합니다.</div>
+          </div>
+          <label class="f">
+            <span class="l">공사 희망일</span>
+            <input class="input" type="date" id="startDate">
+          </label>
+          <label class="f" data-field="endDate">
+            <span class="l">완공 희망일</span>
+            <input class="input" type="date" id="endDate">
+            <div class="err">완공 희망일은 공사 희망일 이후여야 합니다.</div>
+          </label>
+        </div>
+      </section>
+
+      <!-- ③ 공간별 필요 공사 (앱 12x·13x — 가격 없음) -->
+      <section class="section" aria-labelledby="s3" data-field="rooms">
+        <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title" id="s3">공간별 필요 공사</h2></div>
+        <p class="sec-desc">공사할 공간을 고르고, 그 공간에 필요한 공사를 눌러 주세요. 잘 모르시면 공간만 골라도 됩니다.</p>
+        <div class="rooms" id="roomToggles" role="group" aria-label="공간 선택"></div>
+        <div id="roomCards" class="room-cards"></div>
+        <div class="err" style="margin-top:12px">공사할 공간을 하나 이상 골라 주세요.</div>
+      </section>
+
+      <!-- ④ 사진·요청사항 (앱 116) -->
+      <section class="section" aria-labelledby="s4">
+        <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title" id="s4">사진·요청사항</h2></div>
+        <div class="f" style="margin-bottom:18px">
+          <span class="l">현장 사진 <span style="font-weight:400">(선택 · 최대 <span id="maxPhotosLabel">5</span>장)</span></span>
+          <div class="photos" id="photos">
+            <button type="button" class="ph-add" id="phAdd"><span><b>+</b>사진 추가</span></button>
+          </div>
+          <input type="file" id="photoInput" accept="image/*" multiple hidden>
+          <div class="hint">평면도나 현재 모습 사진이 있으면 더 정확한 견적을 드릴 수 있어요.</div>
+        </div>
+        <label class="f">
+          <span class="l">요청사항</span>
+          <textarea class="input" id="note" maxlength="1000" placeholder="원하는 스타일, 거주 중 공사 여부, 꼭 바꾸고 싶은 부분 등을 자유롭게 적어 주세요."></textarea>
+        </label>
+        <label class="hp" aria-hidden="true">웹사이트<input id="website" tabindex="-1" autocomplete="off"></label>
+      </section>
+
+      <!-- 개인정보 동의 -->
+      <section class="section" data-field="consent">
+        <label class="consent">
+          <input type="checkbox" id="consent">
+          <span><b>개인정보 수집·이용에 동의합니다.</b><span class="req">*</span><br>
+          <span style="font-size:14px;color:var(--muted)">견적 안내와 상담 연락에만 사용합니다.</span></span>
+        </label>
+        <details class="policy">
+          <summary>수집 항목 자세히 보기</summary>
+          <table>
+            <tr><th>수집 항목</th><td>이름, 연락처, 현장 주소·우편번호, 평형, 공사 희망일, 현장 사진, 요청사항</td></tr>
+            <tr><th>이용 목적</th><td>인테리어 견적 산출 및 상담 연락</td></tr>
+            <tr><th>보유 기간</th><td id="retentionText">문의일로부터 1년 (계약 시 관련 법령에 따른 기간)</td></tr>
+            <tr><th>동의 거부</th><td>동의하지 않으실 수 있으며, 이 경우 온라인 견적 요청을 할 수 없습니다. 전화로 문의해 주세요.</td></tr>
+          </table>
+          <p style="margin:10px 0 0" id="privacyLinkWrap" hidden><a id="privacyLink" href="#" target="_blank" rel="noopener">개인정보처리방침 전문 보기</a></p>
+        </details>
+        <div class="err">개인정보 수집·이용에 동의해 주세요.</div>
+      </section>
+    </div>
+  </form>
+
+  <div class="panel" id="donePanel" hidden>
+    <div class="done">
+      <div class="ok" aria-hidden="true"></div>
+      <h2>견적 요청이 접수되었습니다</h2>
+      <p>담당자가 확인 후 연락드리겠습니다.</p>
+      <div class="receipt" id="receipt">접수번호</div>
+      <p style="font-size:14px">급하신 경우 <a id="donePhone" href="#" style="color:var(--accent)">전화</a>로 연락 주세요.</p>
+      <p class="demo-note" id="demoNote" hidden>미리보기 모드 — 연동 주소가 비어 있어 실제로 전송되지 않았습니다.</p>
+      <div style="margin-top:24px"><button type="button" class="btn" id="againBtn">새 요청 작성</button></div>
+    </div>
+  </div>
+
+  <footer><span id="footerText"></span></footer>
+</div>
+
+<div class="bar" id="bar">
+  <div class="bar-in">
+    <div class="bar-sum" id="barSum" aria-live="polite"><b>공간 0</b> · 공사 0건</div>
+    <button type="button" class="btn primary" id="submitBtn">견적 요청 보내기</button>
+  </div>
+</div>
+
+<div class="layer" id="addrLayer" role="dialog" aria-modal="true" aria-label="주소 검색">
+  <div class="layer-box">
+    <div class="layer-head">주소 검색 <button type="button" class="icon-btn" id="addrClose" aria-label="닫기">×</button></div>
+    <div id="postcodeWrap"></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   설정 — 이 블록만 고치면 됩니다
+   ════════════════════════════════════════════════════════════════════ */
+const CONFIG = {
+  // 앱의 '구글 폼 연동 설정 → Web App 주소'와 같은 주소 (…/exec).
+  // 비워 두면 미리보기 모드로 동작합니다(전송하지 않음).
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzRtjXk_fWwx6yxK_Vonj8sMRMild_j9hOrgCNXh34qBLupLQZqUnyu0VkwpAPULXn0/exec",
+  COMPANY_NAME: "룰루타일",
+  COMPANY_PHONE: "010-9896-8980",
+  PRIVACY_URL: "",            // 개인정보처리방침 페이지 주소 (있으면 링크 표시)
+  RETENTION: "문의일로부터 1년 (계약 시 관련 법령에 따른 기간)",
+  MAX_PHOTOS: 5,
+  // 앱 '공간 분류'와 같은 이름 (EstimateDraft.defaultRoomNames 순서)
+  ROOMS: ["거실", "공용(전체)", "발코니1", "안방", "방1", "방2", "화장실1", "화장실2", "주방", "현관"],
+  // 앱 '단가표 관리'의 공종 이름과 글자까지 같아야 앱이 항목을 자동으로 담습니다.
+  TRADES: ["철거·청소", "목공", "전기·조명", "창호", "문·문틀", "필름", "도배", "마루", "타일", "욕실", "제작가구"],
+};
+/* ════════════════════════════════════════════════════════════════════ */
+
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const DRAFT_KEY = "estimate-request-draft-v1";
+const openedAt = Date.now();
+
+const state = {
+  scope: "전체",
+  rooms: new Map(),   // room -> { trades:Set, pyeong:"" }
+  photos: [],         // { name, dataUrl }
+};
+
+// ── 머리·꼬리 채우기 ─────────────────────────────────────────────
+$("#companyName").textContent = CONFIG.COMPANY_NAME;
+document.title = `온라인 견적 요청 · ${CONFIG.COMPANY_NAME}`;
+$("#footerText").textContent = `${CONFIG.COMPANY_NAME} · ${CONFIG.COMPANY_PHONE}`;
+$("#donePhone").textContent = CONFIG.COMPANY_PHONE;
+$("#donePhone").href = "tel:" + CONFIG.COMPANY_PHONE.replace(/[^\d+]/g, "");
+$("#maxPhotosLabel").textContent = CONFIG.MAX_PHOTOS;
+$("#retentionText").textContent = CONFIG.RETENTION;
+if (CONFIG.PRIVACY_URL) { $("#privacyLink").href = CONFIG.PRIVACY_URL; $("#privacyLinkWrap").hidden = false; }
+
+// ── 토스트 ───────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("on"), 2600);
+}
+
+// ── 연락처 자동 하이픈 ─────────────────────────────────────────────
+function formatPhone(v) {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.startsWith("02")) {
+    if (d.length <= 2) return d;
+    if (d.length <= 5) return `${d.slice(0,2)}-${d.slice(2)}`;
+    if (d.length <= 9) return `${d.slice(0,2)}-${d.slice(2,5)}-${d.slice(5)}`;
+    return `${d.slice(0,2)}-${d.slice(2,6)}-${d.slice(6,10)}`;
+  }
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0,3)}-${d.slice(3)}`;
+  if (d.length <= 10) return `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}`;
+  return `${d.slice(0,3)}-${d.slice(3,7)}-${d.slice(7)}`;
+}
+$("#phone").addEventListener("input", e => { e.target.value = formatPhone(e.target.value); });
+$("#zip").addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, "").slice(0, 5); });
+$("#pyeong").addEventListener("input", e => {
+  let v = e.target.value.replace(/[^\d.]/g, "");
+  const i = v.indexOf("."); if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, "").slice(0, 1);
+  e.target.value = v;
+  const n = parseFloat(v);
+  $("#pyeongHint").textContent = n > 0 ? `약 ${(n * 3.305785).toFixed(1)}㎡ · 공급면적 기준` : "공급면적 기준으로 적어 주세요.";
+  updateBar();
+});
+
+// ── 시공 범위 (전체 / 부분) ─────────────────────────────────────────
+$$("[data-scope]").forEach(b => b.addEventListener("click", () => setScope(b.dataset.scope)));
+function setScope(scope) {
+  state.scope = scope;
+  $$("[data-scope]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.scope === scope)));
+  $("#scopeHint").textContent = scope === "전체"
+    ? "집 전체를 공사합니다."
+    : "고른 공간마다 대략의 평형을 적어 주세요. 모르면 비워 두셔도 됩니다.";
+  renderRoomCards();
+  saveDraft();
+}
+
+// ── 공간 선택 · 공간 카드 ───────────────────────────────────────────
+function renderRoomToggles() {
+  const wrap = $("#roomToggles");
+  wrap.innerHTML = "";
+  CONFIG.ROOMS.forEach(room => {
+    const on = state.rooms.has(room);
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "room-toggle";
+    b.setAttribute("aria-pressed", String(on));
+    const n = on ? state.rooms.get(room).trades.size : 0;
+    b.innerHTML = `<span></span><span class="cnt"></span><span class="dot" aria-hidden="true"></span>`;
+    b.firstChild.textContent = room;
+    b.children[1].textContent = n ? `${n}` : "";
+    b.addEventListener("click", () => toggleRoom(room));
+    wrap.appendChild(b);
+  });
+}
+function toggleRoom(room) {
+  if (state.rooms.has(room)) state.rooms.delete(room);
+  else state.rooms.set(room, { trades: new Set(), pyeong: "" });
+  clearInvalid("rooms");
+  renderRoomToggles(); renderRoomCards(); saveDraft();
+}
+function renderRoomCards() {
+  const wrap = $("#roomCards");
+  wrap.innerHTML = "";
+  const ordered = CONFIG.ROOMS.filter(r => state.rooms.has(r));
+  if (!ordered.length) {
+    wrap.innerHTML = `<div class="empty">위에서 공사할 공간을 골라 주세요.</div>`;
+    updateBar(); return;
+  }
+  ordered.forEach(room => {
+    const data = state.rooms.get(room);
+    const card = document.createElement("div");
+    card.className = "room-card";
+    const head = document.createElement("div");
+    head.className = "room-card-head";
+    const h = document.createElement("h3"); h.textContent = room; head.appendChild(h);
+    if (state.scope === "부분") {
+      const p = document.createElement("div");
+      p.className = "room-pyeong";
+      p.innerHTML = `<span class="l">이 공간</span><div class="with-suffix"><input class="input" inputmode="decimal" maxlength="5" placeholder="모름"><span class="sfx">평</span></div>`;
+      const inp = $("input", p);
+      inp.value = data.pyeong;
+      inp.setAttribute("aria-label", `${room} 평형`);
+      inp.addEventListener("input", () => {
+        let v = inp.value.replace(/[^\d.]/g, "");
+        const i = v.indexOf("."); if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, "").slice(0, 1);
+        inp.value = v; data.pyeong = v; saveDraft(); updateBar();
+      });
+      head.appendChild(p);
+    }
+    const x = document.createElement("button");
+    x.type = "button"; x.className = "icon-btn"; x.textContent = "×";
+    x.setAttribute("aria-label", `${room} 빼기`);
+    x.addEventListener("click", () => toggleRoom(room));
+    head.appendChild(x);
+    card.appendChild(head);
+
+    const chips = document.createElement("div");
+    chips.className = "chips"; chips.setAttribute("role", "group"); chips.setAttribute("aria-label", `${room} 필요 공사`);
+    CONFIG.TRADES.forEach(trade => {
+      const c = document.createElement("button");
+      c.type = "button"; c.className = "chip"; c.textContent = trade;
+      c.setAttribute("aria-pressed", String(data.trades.has(trade)));
+      c.addEventListener("click", () => {
+        if (data.trades.has(trade)) data.trades.delete(trade); else data.trades.add(trade);
+        c.setAttribute("aria-pressed", String(data.trades.has(trade)));
+        renderRoomToggles(); updateBar(); saveDraft();
+      });
+      chips.appendChild(c);
+    });
+    card.appendChild(chips);
+    wrap.appendChild(card);
+  });
+  updateBar();
+}
+
+// ── 사진 (브라우저에서 줄여서 보낸다: 긴 변 1600px, JPEG) ────────────────
+$("#phAdd").addEventListener("click", () => $("#photoInput").click());
+$("#photoInput").addEventListener("change", async e => {
+  const files = [...e.target.files];
+  e.target.value = "";
+  for (const f of files) {
+    if (state.photos.length >= CONFIG.MAX_PHOTOS) { toast(`사진은 최대 ${CONFIG.MAX_PHOTOS}장까지 올릴 수 있어요.`); break; }
+    if (!f.type.startsWith("image/")) continue;
+    try {
+      const dataUrl = await shrinkImage(f, 1600, 0.82);
+      state.photos.push({ name: f.name.replace(/\.[^.]+$/, "") + ".jpg", dataUrl });
+    } catch (err) {
+      toast("이 사진은 열 수 없어요. JPG나 PNG로 올려 주세요.");
+    }
+  }
+  renderPhotos();
+});
+function shrinkImage(file, maxSide, quality) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+      const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+      const ctx = cv.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(cv.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("decode")); };
+    img.src = url;
+  });
+}
+function renderPhotos() {
+  const wrap = $("#photos");
+  $$(".ph", wrap).forEach(n => n.remove());
+  state.photos.forEach((p, i) => {
+    const d = document.createElement("div"); d.className = "ph";
+    const img = document.createElement("img"); img.src = p.dataUrl; img.alt = `현장 사진 ${i + 1}`;
+    const x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label", `사진 ${i + 1} 빼기`);
+    x.addEventListener("click", () => { state.photos.splice(i, 1); renderPhotos(); });
+    d.append(img, x);
+    wrap.insertBefore(d, $("#phAdd"));
+  });
+  $("#phAdd").hidden = state.photos.length >= CONFIG.MAX_PHOTOS;
+  updateBar();
+}
+
+// ── 주소 검색 (카카오 우편번호 서비스, 무료·키 불필요) ────────────────────
+let postcodeLoading;
+function loadPostcode() {
+  if (window.daum && window.daum.Postcode) return Promise.resolve();
+  if (!postcodeLoading) postcodeLoading = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+    s.onload = res; s.onerror = () => { postcodeLoading = null; rej(); };
+    document.head.appendChild(s);
+  });
+  return postcodeLoading;
+}
+$("#addrBtn").addEventListener("click", async () => {
+  try { await loadPostcode(); }
+  catch {
+    // 검색을 못 불러오면 직접 입력으로 전환
+    const a = $("#address"); a.readOnly = false; a.placeholder = "주소를 직접 입력해 주세요"; a.focus();
+    toast("주소 검색을 불러오지 못했어요. 직접 입력해 주세요."); return;
+  }
+  const layer = $("#addrLayer"), wrap = $("#postcodeWrap");
+  wrap.innerHTML = "";
+  new daum.Postcode({
+    width: "100%", height: "100%",
+    oncomplete(data) {
+      const base = data.roadAddress || data.jibunAddress || data.address;
+      const extra = data.buildingName && data.apartment === "Y" ? ` (${data.buildingName})` : "";
+      $("#address").value = base + extra;
+      $("#zip").value = data.zonecode || "";
+      clearInvalid("address"); clearInvalid("zip");
+      layer.classList.remove("on");
+      $("#addressDetail").focus();
+      saveDraft();
+    },
+  }).embed(wrap);
+  layer.classList.add("on");
+});
+$("#addrClose").addEventListener("click", () => $("#addrLayer").classList.remove("on"));
+$("#addrLayer").addEventListener("click", e => { if (e.target.id === "addrLayer") e.currentTarget.classList.remove("on"); });
+
+// ── 요약 바 ─────────────────────────────────────────────────────────
+function updateBar() {
+  const rooms = state.rooms.size;
+  let trades = 0; state.rooms.forEach(r => trades += r.trades.size);
+  const py = parseFloat($("#pyeong").value);
+  const parts = [`<b>공간 ${rooms}</b> · 공사 ${trades}건`];
+  if (py > 0) parts.push(`${py}평`);
+  if (state.photos.length) parts.push(`사진 ${state.photos.length}`);
+  $("#barSum").innerHTML = parts.join(" · ");
+}
+
+// ── 초안 저장 (이 브라우저에만, 사진 제외) ──────────────────────────────
+const draftFields = ["name", "phone", "address", "addressDetail", "zip", "pyeong", "startDate", "endDate", "note"];
+function saveDraft() {
+  try {
+    const d = { scope: state.scope, rooms: [...state.rooms].map(([k, v]) => [k, [...v.trades], v.pyeong]) };
+    draftFields.forEach(f => d[f] = $("#" + f).value);
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  } catch {}
+}
+function loadDraft() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch {}
+  if (!d) return;
+  draftFields.forEach(f => { if (typeof d[f] === "string") $("#" + f).value = d[f]; });
+  if (d.address) $("#address").readOnly = true;
+  (d.rooms || []).forEach(([k, t, p]) => {
+    if (CONFIG.ROOMS.includes(k)) state.rooms.set(k, { trades: new Set((t || []).filter(x => CONFIG.TRADES.includes(x))), pyeong: p || "" });
+  });
+  if (d.scope === "부분") state.scope = "부분";
+  $("#pyeong").dispatchEvent(new Event("input"));
+}
+function clearDraft() { try { localStorage.removeItem(DRAFT_KEY); } catch {} }
+$("#form").addEventListener("input", e => { if (e.target.closest("[data-field]")) clearInvalid(e.target.closest("[data-field]").dataset.field); saveDraft(); });
+
+// ── 검사 ─────────────────────────────────────────────────────────────
+function setInvalid(field) { const el = $(`[data-field="${field}"]`); if (el) el.classList.add("invalid"); return el; }
+function clearInvalid(field) { const el = $(`[data-field="${field}"]`); if (el) el.classList.remove("invalid"); }
+$("#consent").addEventListener("change", () => clearInvalid("consent"));
+
+function validate() {
+  const bad = [];
+  if (!$("#name").value.trim()) bad.push("name");
+  const phoneDigits = $("#phone").value.replace(/\D/g, "");
+  if (phoneDigits.length < 9 || phoneDigits.length > 11 || !phoneDigits.startsWith("0")) bad.push("phone");
+  if (!$("#address").value.trim()) bad.push("address");
+  const zip = $("#zip").value.trim();
+  if (zip && !/^\d{5}$/.test(zip)) bad.push("zip");
+  const py = parseFloat($("#pyeong").value);
+  if (!(py >= 1 && py <= 500)) bad.push("pyeong");
+  const s = $("#startDate").value, e = $("#endDate").value;
+  if (s && e && e < s) bad.push("endDate");
+  if (!state.rooms.size) bad.push("rooms");
+  if (!$("#consent").checked) bad.push("consent");
+  bad.forEach(setInvalid);
+  if (bad.length) {
+    const first = $(`[data-field="${bad[0]}"]`);
+    first.scrollIntoView({ behavior: "smooth", block: "center" });
+    const focusable = $("input, textarea", first);
+    if (focusable && !focusable.readOnly) setTimeout(() => focusable.focus({ preventScroll: true }), 300);
+  }
+  return bad.length === 0;
+}
+
+// ── 제출 ─────────────────────────────────────────────────────────────
+function buildPayload() {
+  const rooms = CONFIG.ROOMS.filter(r => state.rooms.has(r)).map(r => {
+    const v = state.rooms.get(r);
+    return { room: r, trades: CONFIG.TRADES.filter(t => v.trades.has(t)), pyeong: state.scope === "부분" ? v.pyeong : "" };
+  });
+  return {
+    action: "webInquiry",
+    name: $("#name").value.trim(),
+    phone: $("#phone").value.trim(),
+    address: $("#address").value.trim(),
+    addressDetail: $("#addressDetail").value.trim(),
+    zip: $("#zip").value.trim(),
+    pyeong: $("#pyeong").value.trim(),
+    scope: state.scope,
+    startDate: $("#startDate").value,
+    endDate: $("#endDate").value,
+    rooms,
+    note: $("#note").value.trim(),
+    photos: state.photos.map(p => ({ name: p.name, data: p.dataUrl.split(",")[1] })),
+    website: $("#website").value,          // 스팸 방지용 숨은 칸 — 사람은 비워 둔다
+    elapsed: Date.now() - openedAt,
+  };
+}
+
+let sending = false;
+$("#submitBtn").addEventListener("click", submit);
+$("#form").addEventListener("submit", e => { e.preventDefault(); submit(); });
+
+async function submit() {
+  if (sending) return;
+  if (!validate()) { toast("빠진 항목을 확인해 주세요."); return; }
+  const payload = buildPayload();
+  const btn = $("#submitBtn");
+  sending = true; btn.disabled = true; btn.innerHTML = `<span class="spinner" aria-hidden="true"></span>보내는 중`;
+  try {
+    let receipt;
+    if (!CONFIG.SCRIPT_URL) {
+      console.log("[미리보기] 전송할 내용", { ...payload, photos: payload.photos.map(p => `${p.name} (${Math.round(p.data.length * 0.75 / 1024)}KB)`) });
+      await new Promise(r => setTimeout(r, 600));
+      const d = new Date();
+      receipt = "W" + String(d.getFullYear()).slice(2) + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0") + "-DEMO";
+      $("#demoNote").hidden = false;
+    } else {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 60000);
+      // text/plain = 사전 요청(preflight) 없이 Apps Script로 바로 보낼 수 있는 형식
+      const res = await fetch(CONFIG.SCRIPT_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload), signal: ctrl.signal, redirect: "follow",
+      });
+      clearTimeout(timer);
+      const json = await res.json().catch(() => null);
+      if (!json || !json.ok) throw new Error((json && json.error) || "전송에 실패했어요.");
+      receipt = json.receipt || "";
+      $("#demoNote").hidden = true;
+    }
+    clearDraft();
+    $("#receipt").textContent = receipt ? `접수번호 ${receipt}` : "접수 완료";
+    $("#form").hidden = true; $("#bar").hidden = true; $("#donePanel").hidden = false;
+    document.body.style.paddingBottom = "0";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } catch (err) {
+    const msg = err.name === "AbortError" ? "응답이 늦어요. 잠시 후 다시 시도해 주세요." : (err.message || "전송에 실패했어요.");
+    toast(`${msg} 계속 안 되면 ${CONFIG.COMPANY_PHONE}로 연락 주세요.`);
+  } finally {
+    sending = false; btn.disabled = false; btn.textContent = "견적 요청 보내기";
+  }
+}
+
+$("#againBtn").addEventListener("click", () => {
+  $("#form").reset(); state.rooms.clear(); state.photos = []; setScope("전체");
+  $("#address").readOnly = true; $("#pyeong").dispatchEvent(new Event("input"));
+  renderRoomToggles(); renderRoomCards(); renderPhotos();
+  $("#form").hidden = false; $("#bar").hidden = false; $("#donePanel").hidden = true;
+  document.body.style.paddingBottom = "";
+  window.scrollTo({ top: 0 });
+});
+
+// ── 시작 ─────────────────────────────────────────────────────────────
+loadDraft();
+setScope(state.scope);
+renderRoomToggles();
+renderRoomCards();
+renderPhotos();
+</script>
+</body>
+</html>
