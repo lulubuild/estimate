@@ -488,7 +488,8 @@ function renderRoomCards() {
     const head = document.createElement("div");
     head.className = "room-card-head";
     const h = document.createElement("h3"); h.textContent = room; head.appendChild(h);
-    if (state.scope === "부분") {
+    // 공용(전체)는 앱이 전체 평형을 그대로 쓰므로 공간 평형 칸을 두지 않는다
+    if (state.scope === "부분" && room !== "공용(전체)") {
       const p = document.createElement("div");
       p.className = "room-pyeong";
       p.innerHTML = `<span class="l">이 공간</span><div class="with-suffix"><input class="input" inputmode="decimal" maxlength="5" placeholder="모름"><span class="sfx">평</span></div>`;
