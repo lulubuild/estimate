@@ -48,7 +48,9 @@ body {
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 button, input, textarea { font: inherit; color: inherit; }
-.wrap { max-width: 760px; margin: 0 auto; padding: 0 var(--page-margin); }
+/* 아이패드 세로(744~1024px)에서 좌우를 꽉 채운다 — 큰 화면에서만 1100px로 묶는다(2026-09-26) */
+.wrap { max-width: 1100px; margin: 0 auto; padding: 0 var(--page-margin); }
+@media (min-width: 700px) { :root { --page-margin: 24px; --panel-padding: 28px; } }
 
 /* 머리 */
 header.top { padding: 24px 0 8px; }
@@ -140,6 +142,15 @@ textarea.input { min-height: 120px; resize: vertical; line-height: 1.55; }
 .room-card .chip { background: var(--surface); min-height: 38px; font-size: 14px; padding: 0 14px; }
 .room-card .chip:hover { background: var(--selected); }
 .room-card .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+/* 공종별 상품 고르기 — 고른 공종 아래에 펼쳐진다 */
+.products { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.product-group { border-top: 1px solid var(--line); padding-top: 10px; }
+.product-group > .pg-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.product-group > .pg-title span { font-weight: 400; color: var(--muted); }
+.product-chip { min-height: 44px; padding: 6px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; font-size: 14px; line-height: 1.25; display: inline-flex; flex-direction: column; justify-content: center; -webkit-tap-highlight-color: transparent; }
+.product-chip small { font-size: 11px; color: var(--muted); }
+.product-chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.product-chip[aria-pressed="true"] small { color: var(--bg); opacity: .75; }
 .room-pyeong { display: flex; align-items: center; gap: 6px; }
 .room-pyeong .input { width: 96px; min-height: 40px; padding: 8px 34px 8px 12px; background: var(--surface); text-align: right; }
 .room-pyeong .with-suffix .sfx { right: 12px; font-size: 14px; }
@@ -175,7 +186,7 @@ details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
   background: var(--surface); border-top: 1px solid var(--line);
   padding: 12px var(--page-margin) calc(12px + env(safe-area-inset-bottom));
 }
-.bar-in { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+.bar-in { max-width: 1052px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
 .bar-sum { flex: 1; min-width: 0; font-size: 14px; color: var(--muted); line-height: 1.35; }
 .bar-sum b { color: var(--ink); font-weight: 700; }
 .bar .btn.primary { min-width: 132px; }
@@ -384,6 +395,21 @@ const CONFIG = {
   TRADES: ["철거·청소", "목공", "전기·조명", "창호", "문·문틀", "필름", "도배", "마루", "타일", "욕실", "제작가구"],
   // 집 전체 기준으로만 받는 공종 — '공용(전체)' 카드에서만 보인다.
   WHOLE_HOUSE_ONLY: ["도배", "마루"],
+  // 공종별 상품 — 앱 '단가표 관리'의 **항목명과 글자까지 같아야** 앱이 그 상품만 담는다.
+  // 상품을 고르지 않은 공종은 앱이 그 공종의 항목을 전부 담는다(담당자가 상담 뒤 정리).
+  // 가격은 싣지 않는다. 단가표를 바꾸면 여기도 같이 고칠 것.
+  PRODUCTS: {
+    "도배": [["실크벽지 도배 (벽+천장)", "시공 · 벽+천장"], ["실크벽지 도배 (벽만)", "시공 · 천장 제외"], ["디아망 실크벽지", "LX Z:IN · 실크"], ["베스띠 실크벽지", "LX Z:IN · 실크"], ["베이스(테라피) 실크벽지", "LX Z:IN · 실크"], ["휘앙세 장폭합지", "LX Z:IN · 합지"], ["프리모 실크벽지", "개나리벽지 · 실크"], ["로하스 실크벽지", "개나리벽지 · 실크"], ["아트북 실크벽지", "개나리벽지 · 실크"], ["파사드 실크벽지", "신한벽지 · 실크"], ["스케치 실크벽지", "신한벽지 · 실크"], ["아이리스 장폭합지", "신한벽지 · 합지"]],
+    "마루": [["강마루 시공", "7.5T 강마루"], ["강화마루 시공", "광폭 강화마루"], ["온돌마루(합판마루) 시공", "온돌마루"], ["장판 시공 1.8T", "모노륨 1.8T"], ["장판 시공 2.2T", "모노륨 2.2~2.4T"], ["장판 시공 4.5T", "모노륨 4.5T 소리잠"], ["데코타일 시공 2T", "우드·사각 2T"], ["데코타일 시공 3T", "우드·사각 3T"], ["데코타일 시공 난방용", "온돌용"], ["바닥 철거·샌딩", "기존 바닥 철거"]],
+    "타일": [["타일 시공비 - 벽 (자재 별도)", "벽 시공"], ["타일 시공비 - 바닥 (자재 별도)", "바닥 시공"], ["포세린 타일 자재 600×600", "600각 포세린"], ["줄눈(에폭시) 시공", "욕실 1곳"]],
+    "제작가구": [["주방가구 일체 (상·하부장+상판)", "주방 전체"], ["붙박이장·시스템장", "방 붙박이"]],
+    "창호": [["아파트 전체 창호 교체 (30평대)", "PVC 이중창"], ["방충망 교체", "창 1짝"]],
+    "문·문틀": [["중문 - 3연동", "3연동 슬라이딩"], ["중문 - 스윙·슬림도어", "여닫이·원슬라이딩"], ["방문 교체 - ABS 도어", "문틀 포함"]],
+    "욕실": [["욕실 전체 리모델링 패키지", "철거·타일·도기·수전"], ["양변기 교체", "자재+설치"], ["세면대 교체", "자재+설치"]],
+    "필름": [["방문+문틀 필름 시공", "문짝+문틀"], ["현관문 필름 시공", "실내측"]],
+    "전기·조명": [["LED 등기구 교체", "자재+설치"], ["콘센트·스위치 증설·교체", "1곳 기준"]],
+    "철거·청소": [["실내 전체 철거 (폐기물 포함)", "마감재 전체"], ["입주청소", "준공·입주청소"]],
+  },
 };
 /* ════════════════════════════════════════════════════════════════════ */
 
@@ -471,7 +497,7 @@ function renderRoomToggles() {
 }
 function toggleRoom(room) {
   if (state.rooms.has(room)) state.rooms.delete(room);
-  else state.rooms.set(room, { trades: new Set(), pyeong: "" });
+  else state.rooms.set(room, { trades: new Set(), pyeong: "", items: new Map() });
   clearInvalid("rooms");
   renderRoomToggles(); renderRoomCards(); saveDraft();
 }
@@ -519,16 +545,56 @@ function renderRoomCards() {
       c.type = "button"; c.className = "chip"; c.textContent = trade;
       c.setAttribute("aria-pressed", String(data.trades.has(trade)));
       c.addEventListener("click", () => {
-        if (data.trades.has(trade)) data.trades.delete(trade); else data.trades.add(trade);
+        if (data.trades.has(trade)) { data.trades.delete(trade); data.items.delete(trade); }
+        else data.trades.add(trade);
         c.setAttribute("aria-pressed", String(data.trades.has(trade)));
+        renderProducts(room, data, products);
         renderRoomToggles(); updateBar(); saveDraft();
       });
       chips.appendChild(c);
     });
     card.appendChild(chips);
+    const products = document.createElement("div");
+    products.className = "products";
+    card.appendChild(products);
+    renderProducts(room, data, products);
     wrap.appendChild(card);
   });
   updateBar();
+}
+
+// 고른 공종 아래에 그 공종의 상품을 펼친다 — 여러 개 고를 수 있고, 안 골라도 된다.
+function renderProducts(room, data, wrap) {
+  wrap.innerHTML = "";
+  CONFIG.TRADES.filter(t => data.trades.has(t) && (CONFIG.PRODUCTS[t] || []).length).forEach(trade => {
+    const picked = data.items.get(trade) || new Set();
+    const g = document.createElement("div"); g.className = "product-group";
+    const title = document.createElement("div"); title.className = "pg-title";
+    title.textContent = trade + " 상품";
+    const hint = document.createElement("span");
+    hint.textContent = picked.size ? `${picked.size}개 선택` : "고르지 않으면 상담 때 정해요";
+    title.appendChild(hint); g.appendChild(title);
+    const list = document.createElement("div"); list.className = "chips";
+    list.setAttribute("role", "group"); list.setAttribute("aria-label", `${room} ${trade} 상품`);
+    CONFIG.PRODUCTS[trade].forEach(([name, sub]) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "product-chip";
+      b.setAttribute("aria-pressed", String(picked.has(name)));
+      const n = document.createElement("span"); n.textContent = name;
+      const s = document.createElement("small"); s.textContent = sub;
+      b.append(n, s);
+      b.addEventListener("click", () => {
+        const set = data.items.get(trade) || new Set();
+        if (set.has(name)) set.delete(name); else set.add(name);
+        if (set.size) data.items.set(trade, set); else data.items.delete(trade);
+        b.setAttribute("aria-pressed", String(set.has(name)));
+        hint.textContent = set.size ? `${set.size}개 선택` : "고르지 않으면 상담 때 정해요";
+        updateBar(); saveDraft();
+      });
+      list.appendChild(b);
+    });
+    g.appendChild(list); wrap.appendChild(g);
+  });
 }
 
 // ── 사진 (브라우저에서 줄여서 보낸다: 긴 변 1600px, JPEG) ────────────────
@@ -635,7 +701,7 @@ function updateBar() {
 const draftFields = ["name", "phone", "address", "addressDetail", "zip", "pyeong", "startDate", "endDate", "note"];
 function saveDraft() {
   try {
-    const d = { scope: state.scope, rooms: [...state.rooms].map(([k, v]) => [k, [...v.trades], v.pyeong]) };
+    const d = { scope: state.scope, rooms: [...state.rooms].map(([k, v]) => [k, [...v.trades], v.pyeong, [...v.items].map(([t, s]) => [t, [...s]])]) };
     draftFields.forEach(f => d[f] = $("#" + f).value);
     localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
   } catch {}
@@ -646,8 +712,21 @@ function loadDraft() {
   if (!d) return;
   draftFields.forEach(f => { if (typeof d[f] === "string") $("#" + f).value = d[f]; });
   if (d.address) $("#address").readOnly = true;
-  (d.rooms || []).forEach(([k, t, p]) => {
-    if (CONFIG.ROOMS.includes(k)) state.rooms.set(k, { trades: new Set((t || []).filter(x => CONFIG.TRADES.includes(x))), pyeong: p || "" });
+  if (!Array.isArray(d.rooms)) d.rooms = [];
+  d.rooms.forEach(entry => {
+    if (!Array.isArray(entry)) return;
+    const [k, t, p, it] = entry;
+    if (!CONFIG.ROOMS.includes(k)) return;
+    // 예전 초안(규칙 이전)의 도배·마루가 공용(전체) 밖에 남아 있으면 버린다.
+    const trades = new Set((Array.isArray(t) ? t : []).filter(x => CONFIG.TRADES.includes(x)
+      && (k === "공용(전체)" || !CONFIG.WHOLE_HOUSE_ONLY.includes(x))));
+    const items = new Map();
+    (Array.isArray(it) ? it : []).forEach(([tr, names]) => {
+      if (!trades.has(tr) || !Array.isArray(names)) return;
+      const valid = new Set(names.filter(n => (CONFIG.PRODUCTS[tr] || []).some(([pn]) => pn === n)));
+      if (valid.size) items.set(tr, valid);
+    });
+    state.rooms.set(k, { trades, pyeong: typeof p === "string" ? p : "", items });
   });
   if (d.scope === "부분") state.scope = "부분";
   $("#pyeong").dispatchEvent(new Event("input"));
@@ -688,7 +767,11 @@ function validate() {
 function buildPayload() {
   const rooms = CONFIG.ROOMS.filter(r => state.rooms.has(r)).map(r => {
     const v = state.rooms.get(r);
-    return { room: r, trades: CONFIG.TRADES.filter(t => v.trades.has(t) && (r === "공용(전체)" || !CONFIG.WHOLE_HOUSE_ONLY.includes(t))), pyeong: state.scope === "부분" ? v.pyeong : "" };
+    const trades = CONFIG.TRADES.filter(t => v.trades.has(t) && (r === "공용(전체)" || !CONFIG.WHOLE_HOUSE_ONLY.includes(t)));
+    // 고른 상품만 — 공종별 { 공종: [상품명…] }. 안 고른 공종은 빠진다(앱이 공종 전체를 담는다).
+    const items = {};
+    trades.forEach(t => { const set = v.items.get(t); if (set && set.size) items[t] = (CONFIG.PRODUCTS[t] || []).map(([n]) => n).filter(n => set.has(n)); });
+    return { room: r, trades, items, pyeong: state.scope === "부분" ? v.pyeong : "" };
   });
   return {
     action: "webInquiry",
