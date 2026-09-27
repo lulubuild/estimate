@@ -20,6 +20,7 @@
   --line: #E5E5E5;
   --brand: #FF0000;       /* 로고 전용 */
   --danger: #CC0000;
+  --accent-soft: #E8F0FC; /* 체크표에서 담긴 칸 */
   --page-margin: 16px;
   --panel-padding: 20px;
   --r-card: 12px;
@@ -30,12 +31,14 @@
   :root:not([data-theme="light"]) {
     --bg: #0F0F0F; --surface: #1F1F1F; --sunken: #272727; --selected: #373737;
     --ink: #F1F1F1; --muted: #AAAAAA; --accent: #3EA6FF; --line: #303030; --danger: #FF6B6B;
+    --accent-soft: #15314D;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0F0F0F; --surface: #1F1F1F; --sunken: #272727; --selected: #373737;
   --ink: #F1F1F1; --muted: #AAAAAA; --accent: #3EA6FF; --line: #303030; --danger: #FF6B6B;
+  --accent-soft: #15314D;
   color-scheme: dark;
 }
 
@@ -133,32 +136,62 @@ textarea.input { min-height: 120px; resize: vertical; line-height: 1.55; }
 .room-toggle[aria-pressed="true"] .dot::after { content: ""; width: 6px; height: 10px; border: solid var(--bg); border-width: 0 2px 2px 0; transform: translate(0, -1px) rotate(45deg); }
 .room-toggle .cnt { font-size: 12px; font-weight: 600; color: var(--accent); margin-left: auto; margin-right: 4px; }
 
-.room-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
-.room-card { background: var(--sunken); border-radius: var(--r-card); padding: 16px; animation: pop .18s ease-out; }
-@keyframes pop { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .room-card { animation: none; } }
-.room-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
-.room-card-head h3 { margin: 0; font-size: 16px; font-weight: 700; flex: 1; min-width: 80px; }
-.room-card .chip { background: var(--surface); min-height: 38px; font-size: 14px; padding: 0 14px; }
-.room-card .chip:hover { background: var(--selected); }
-.room-card .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
-/* 공종별 상품 고르기 — 고른 공종 아래에 펼쳐진다 */
-.products { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
-.product-group { border-top: 1px solid var(--line); padding-top: 10px; }
-.product-group > .pg-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
-.product-group > .pg-title span { font-weight: 400; color: var(--muted); }
+/* 공간 × 공종 체크표 (앱 129와 같은 방식 — 공종 = 행, 공간 = 열, 가격 없음) — 2026-09-27 */
+.mx-scroll { margin-top: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; padding-bottom: 4px; }
+table.mx { border-collapse: separate; border-spacing: 6px; margin: -6px; }
+.mx th, .mx td { padding: 0; vertical-align: middle; font-weight: inherit; }
+.mx .corner { position: sticky; left: 0; z-index: 2; background: var(--surface); font-size: 12px; color: var(--muted); text-align: left; padding-left: 4px; min-width: 88px; }
+.mx .col-head { text-align: center; min-width: 100px; padding: 0 0 4px; }
+.mx thead th { vertical-align: top; }
+.mx thead th.corner { vertical-align: middle; }
+.mx .col-name { display: flex; align-items: center; justify-content: center; gap: 0; font-size: 14px; font-weight: 700; }
+.mx .col-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 96px; }
+.mx .col-x { width: 26px; height: 26px; font-size: 17px; flex: none; }
+.mx .col-sub { font-size: 11.5px; color: var(--muted); }
+.mx .py { margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.mx .py input { width: 58px; min-height: 30px; padding: 4px 8px; border-radius: 8px; border: 1px solid transparent; background: var(--sunken); text-align: right; font-size: 14px; outline: none; }
+.mx .py input:focus { border-color: var(--accent); background: var(--surface); }
+.mx .row-head { position: sticky; left: 0; z-index: 1; background: var(--surface); text-align: left; }
+.row-btn { display: block; width: 100%; min-height: 62px; padding: 6px 8px 6px 4px; border: 0; border-radius: 10px; background: transparent; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.row-btn:hover { background: var(--sunken); }
+.row-btn b { display: block; font-size: 14.5px; font-weight: 700; white-space: nowrap; }
+.row-btn span { display: block; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.cell {
+  width: 100%; min-width: 100px; height: 62px; padding: 4px 6px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--sunken); color: var(--muted); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  font-size: 20px; line-height: 1; -webkit-tap-highlight-color: transparent; transition: background .15s, border-color .15s;
+}
+.cell:hover { background: var(--selected); }
+.cell.on { border: 1.5px solid var(--accent); background: var(--accent-soft); color: var(--ink); }
+.cell .c-main { font-size: 12.5px; font-weight: 600; line-height: 1.25; text-align: center; word-break: keep-all; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cell .c-sub { font-size: 11px; line-height: 1.2; color: var(--accent); font-weight: 600; }
+.cell.off { background: transparent; border-style: dashed; color: var(--muted); opacity: .45; font-size: 15px; cursor: default; }
+.cell.off:hover { background: transparent; }
+.mx-hint { font-size: 13px; color: var(--muted); margin-top: 10px; }
 .product-chip { min-height: 44px; padding: 6px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; font-size: 14px; line-height: 1.25; display: inline-flex; flex-direction: column; justify-content: center; -webkit-tap-highlight-color: transparent; }
 .product-chip small { font-size: 11px; color: var(--muted); }
 .product-chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .product-chip[aria-pressed="true"] small { color: var(--bg); opacity: .75; }
-.room-pyeong { display: flex; align-items: center; gap: 6px; }
-.room-pyeong .input { width: 96px; min-height: 40px; padding: 8px 34px 8px 12px; background: var(--surface); text-align: right; }
-.room-pyeong .with-suffix .sfx { right: 12px; font-size: 14px; }
-.room-pyeong span.l { font-size: 13px; color: var(--muted); }
 .icon-btn { width: 36px; height: 36px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 20px; line-height: 1; }
 .icon-btn:hover { background: var(--selected); color: var(--ink); }
 .empty { padding: 18px; border-radius: var(--r-card); border: 1px dashed var(--line); color: var(--muted); font-size: 14px; text-align: center; margin-top: 16px; }
-.bulk { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; font-size: 13px; color: var(--muted); }
+
+/* 칸 · 공종 팝업 (휴대폰에서는 아래에서 올라오는 시트) */
+.layer.sheet .layer-box { height: auto; max-height: min(640px, 88vh); }
+.sheet-body { padding: 16px; overflow-y: auto; flex: 1; }
+.sheet-hint { margin: 0 0 12px; font-size: 13px; color: var(--muted); }
+.sheet-foot { display: flex; gap: 8px; justify-content: flex-end; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
+.sheet .chip { background: var(--sunken); }
+.sheet .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.sheet .product-chip { background: var(--sunken); border-color: transparent; }
+.sheet .product-chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+@media (max-width: 560px) {
+  .layer.sheet { align-items: flex-end; padding: 0; }
+  .layer.sheet .layer-box { max-width: none; border-radius: 16px 16px 0 0; }
+  .sheet-foot .btn { flex: 1; }
+}
 
 /* 사진 */
 .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
@@ -300,9 +333,9 @@ footer a { color: inherit; }
       <!-- ③ 공간별 필요 공사 (앱 12x·13x — 가격 없음) -->
       <section class="section" aria-labelledby="s3" data-field="rooms">
         <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title" id="s3">공간별 필요 공사</h2></div>
-        <p class="sec-desc">공사할 공간을 고르고, 그 공간에 필요한 공사를 눌러 주세요. 잘 모르시면 공간만 골라도 됩니다. 도배·마루는 집 전체 기준이라 '공용(전체)'에서 골라 주세요.</p>
+        <p class="sec-desc">공사할 공간을 고르면 아래 표에 열로 생깁니다. 칸을 눌러 그 공간에 필요한 공사를 담고, 원하시는 상품이 있으면 골라 주세요(안 골라도 됩니다). 공종 이름을 누르면 여러 공간에 한 번에 담습니다. 도배·마루는 집 전체 기준이라 '공용(전체)' 열에서 고릅니다.</p>
         <div class="rooms" id="roomToggles" role="group" aria-label="공간 선택"></div>
-        <div id="roomCards" class="room-cards"></div>
+        <div id="matrixWrap"></div>
         <div class="err" style="margin-top:12px">공사할 공간을 하나 이상 골라 주세요.</div>
       </section>
 
@@ -372,6 +405,13 @@ footer a { color: inherit; }
   <div class="layer-box">
     <div class="layer-head">주소 검색 <button type="button" class="icon-btn" id="addrClose" aria-label="닫기">×</button></div>
     <div id="postcodeWrap"></div>
+  </div>
+</div>
+<div class="layer sheet" id="sheetLayer" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="layer-box">
+    <div class="layer-head"><span id="sheetTitle"></span><button type="button" class="icon-btn" id="sheetClose" aria-label="닫기">×</button></div>
+    <div class="sheet-body" id="sheetBody"></div>
+    <div class="sheet-foot" id="sheetFoot"></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
@@ -475,16 +515,24 @@ function setScope(scope) {
   $$("[data-scope]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.scope === scope)));
   $("#scopeHint").textContent = scope === "전체"
     ? "집 전체를 공사합니다."
-    : "고른 공간마다 대략의 평형을 적어 주세요. 모르면 비워 두셔도 됩니다.";
-  renderRoomCards();
+    : "표 머리의 '평' 칸에 공간마다 대략의 평형을 적어 주세요. 모르면 비워 두셔도 됩니다.";
+  renderMatrix();
   saveDraft();
 }
 
-// ── 공간 선택 · 공간 카드 ───────────────────────────────────────────
+// ── 공간 선택 · 공간 × 공종 체크표 (앱 129와 같은 방식, 2026-09-27) ─────────────
+const WHOLE = "공용(전체)";
+const koSort = (a, b) => a.localeCompare(b, "ko");
+// 도배·마루는 '공용(전체)' 열에서만 고른다(CONFIG.WHOLE_HOUSE_ONLY).
+const allowed = (room, trade) => room === WHOLE || !CONFIG.WHOLE_HOUSE_ONLY.includes(trade);
+const productNames = trade => (CONFIG.PRODUCTS[trade] || []).map(([n]) => n);
+const pickedNames = (data, trade) => { const set = data.items.get(trade); return set ? productNames(trade).filter(n => set.has(n)) : []; };
+
 function renderRoomToggles() {
   const wrap = $("#roomToggles");
   wrap.innerHTML = "";
-  CONFIG.ROOMS.forEach(room => {
+  // 앱 체크표처럼 가나다순(2026-09-27)
+  [...CONFIG.ROOMS].sort(koSort).forEach(room => {
     const on = state.rooms.has(room);
     const b = document.createElement("button");
     b.type = "button"; b.className = "room-toggle";
@@ -501,29 +549,46 @@ function toggleRoom(room) {
   if (state.rooms.has(room)) state.rooms.delete(room);
   else state.rooms.set(room, { trades: new Set(), pyeong: "", items: new Map() });
   clearInvalid("rooms");
-  renderRoomToggles(); renderRoomCards(); saveDraft();
+  renderRoomToggles(); renderMatrix(); saveDraft();
 }
-function renderRoomCards() {
-  const wrap = $("#roomCards");
+function afterChange() {
+  clearInvalid("rooms");
+  renderRoomToggles(); renderMatrix(); saveDraft();
+}
+
+// 표 — 공종 = 행, 공간 = 열(고른 공간만, 가나다순). 칸을 누르면 담기 + 상품 고르기.
+function renderMatrix() {
+  const wrap = $("#matrixWrap");
+  const prev = $(".mx-scroll", wrap);
+  const keepLeft = prev ? prev.scrollLeft : 0;   // 다시 그려도 가로 위치를 지킨다
   wrap.innerHTML = "";
-  const ordered = CONFIG.ROOMS.filter(r => state.rooms.has(r));
-  if (!ordered.length) {
-    wrap.innerHTML = `<div class="empty">위에서 공사할 공간을 골라 주세요.</div>`;
+  const rooms = [...state.rooms.keys()].sort(koSort);
+  if (!rooms.length) {
+    wrap.innerHTML = `<div class="empty">위에서 공사할 공간을 골라 주세요. 고른 공간이 표의 열로 생깁니다.</div>`;
     updateBar(); return;
   }
-  ordered.forEach(room => {
+  const scroller = document.createElement("div"); scroller.className = "mx-scroll";
+  const table = document.createElement("table"); table.className = "mx";
+  const thead = document.createElement("thead"); const hr = document.createElement("tr");
+  const corner = document.createElement("th"); corner.className = "corner"; corner.scope = "col";
+  corner.textContent = "공종 \\ 공간"; hr.appendChild(corner);
+  rooms.forEach(room => {
     const data = state.rooms.get(room);
-    const card = document.createElement("div");
-    card.className = "room-card";
-    const head = document.createElement("div");
-    head.className = "room-card-head";
-    const h = document.createElement("h3"); h.textContent = room; head.appendChild(h);
-    // 공용(전체)는 앱이 전체 평형을 그대로 쓰므로 공간 평형 칸을 두지 않는다
-    if (state.scope === "부분" && room !== "공용(전체)") {
-      const p = document.createElement("div");
-      p.className = "room-pyeong";
-      p.innerHTML = `<span class="l">이 공간</span><div class="with-suffix"><input class="input" inputmode="decimal" maxlength="5" placeholder="모름"><span class="sfx">평</span></div>`;
-      const inp = $("input", p);
+    const th = document.createElement("th"); th.className = "col-head"; th.scope = "col";
+    const name = document.createElement("div"); name.className = "col-name";
+    const nm = document.createElement("span"); nm.textContent = room; nm.title = room;
+    const x = document.createElement("button"); x.type = "button"; x.className = "icon-btn col-x"; x.textContent = "×";
+    x.setAttribute("aria-label", `${room} 빼기`);
+    x.addEventListener("click", () => toggleRoom(room));
+    name.append(nm, x);
+    const sub = document.createElement("div"); sub.className = "col-sub";
+    sub.textContent = data.trades.size ? `공사 ${data.trades.size}건` : "공사 없음";
+    th.append(name, sub);
+    // 부분 시공 — 공간 평형(공용(전체)는 앱이 전체 평형을 쓰므로 칸이 없다)
+    if (state.scope === "부분" && room !== WHOLE) {
+      const py = document.createElement("label"); py.className = "py";
+      py.innerHTML = `<input inputmode="decimal" maxlength="5" placeholder="모름"><span>평</span>`;
+      const inp = $("input", py);
       inp.value = data.pyeong;
       inp.setAttribute("aria-label", `${room} 평형`);
       inp.addEventListener("input", () => {
@@ -531,71 +596,201 @@ function renderRoomCards() {
         const i = v.indexOf("."); if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, "").slice(0, 1);
         inp.value = v; data.pyeong = v; saveDraft(); updateBar();
       });
-      head.appendChild(p);
+      th.appendChild(py);
     }
-    const x = document.createElement("button");
-    x.type = "button"; x.className = "icon-btn"; x.textContent = "×";
-    x.setAttribute("aria-label", `${room} 빼기`);
-    x.addEventListener("click", () => toggleRoom(room));
-    head.appendChild(x);
-    card.appendChild(head);
-
-    const chips = document.createElement("div");
-    chips.className = "chips"; chips.setAttribute("role", "group"); chips.setAttribute("aria-label", `${room} 필요 공사`);
-    CONFIG.TRADES.filter(t => room === "공용(전체)" || !CONFIG.WHOLE_HOUSE_ONLY.includes(t)).forEach(trade => {
-      const c = document.createElement("button");
-      c.type = "button"; c.className = "chip"; c.textContent = trade;
-      c.setAttribute("aria-pressed", String(data.trades.has(trade)));
-      c.addEventListener("click", () => {
-        if (data.trades.has(trade)) { data.trades.delete(trade); data.items.delete(trade); }
-        else data.trades.add(trade);
-        c.setAttribute("aria-pressed", String(data.trades.has(trade)));
-        renderProducts(room, data, products);
-        renderRoomToggles(); updateBar(); saveDraft();
-      });
-      chips.appendChild(c);
-    });
-    card.appendChild(chips);
-    const products = document.createElement("div");
-    products.className = "products";
-    card.appendChild(products);
-    renderProducts(room, data, products);
-    wrap.appendChild(card);
+    hr.appendChild(th);
   });
+  thead.appendChild(hr); table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  CONFIG.TRADES.forEach(trade => {
+    const tr = document.createElement("tr");
+    const th = document.createElement("th"); th.className = "row-head"; th.scope = "row";
+    const rb = document.createElement("button"); rb.type = "button"; rb.className = "row-btn"; rb.dataset.trade = trade;
+    const used = rooms.filter(r => state.rooms.get(r).trades.has(trade)).length;
+    const n = productNames(trade).length;
+    rb.innerHTML = "<b></b><span></span>";
+    rb.firstChild.textContent = trade;
+    rb.lastChild.textContent = [used ? `${used}곳` : "", n ? `상품 ${n}` : ""].filter(Boolean).join(" · ");
+    rb.setAttribute("aria-label", `${trade} — 여러 공간에 한 번에 담기`);
+    rb.addEventListener("click", () => openTradeSheet(trade));
+    th.appendChild(rb); tr.appendChild(th);
+    rooms.forEach(room => {
+      const td = document.createElement("td");
+      td.appendChild(cellButton(room, trade));
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody); scroller.appendChild(table); wrap.appendChild(scroller);
+  const hint = document.createElement("div"); hint.className = "mx-hint";
+  hint.textContent = "표가 넓으면 옆으로 밀어 보세요.";
+  wrap.appendChild(hint);
+  scroller.scrollLeft = keepLeft;
+  hint.hidden = scroller.scrollWidth <= scroller.clientWidth + 1;
   updateBar();
 }
 
-// 고른 공종 아래에 그 공종의 상품을 펼친다 — 여러 개 고를 수 있고, 안 골라도 된다.
-function renderProducts(room, data, wrap) {
-  wrap.innerHTML = "";
-  CONFIG.TRADES.filter(t => data.trades.has(t) && (CONFIG.PRODUCTS[t] || []).length).forEach(trade => {
-    const picked = data.items.get(trade) || new Set();
-    const g = document.createElement("div"); g.className = "product-group";
-    const title = document.createElement("div"); title.className = "pg-title";
-    title.textContent = trade + " 상품";
-    const hint = document.createElement("span");
-    hint.textContent = picked.size ? `${picked.size}개 선택` : "고르지 않으면 상담 때 정해요";
-    title.appendChild(hint); g.appendChild(title);
-    const list = document.createElement("div"); list.className = "chips";
-    list.setAttribute("role", "group"); list.setAttribute("aria-label", `${room} ${trade} 상품`);
-    CONFIG.PRODUCTS[trade].forEach(([name, sub]) => {
-      const b = document.createElement("button");
-      b.type = "button"; b.className = "product-chip";
-      b.setAttribute("aria-pressed", String(picked.has(name)));
-      const n = document.createElement("span"); n.textContent = name;
-      const s = document.createElement("small"); s.textContent = sub;
-      b.append(n, s);
-      b.addEventListener("click", () => {
-        const set = data.items.get(trade) || new Set();
-        if (set.has(name)) set.delete(name); else set.add(name);
-        if (set.size) data.items.set(trade, set); else data.items.delete(trade);
-        b.setAttribute("aria-pressed", String(set.has(name)));
-        hint.textContent = set.size ? `${set.size}개 선택` : "고르지 않으면 상담 때 정해요";
-        updateBar(); saveDraft();
+function cellButton(room, trade) {
+  const data = state.rooms.get(room);
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "cell";
+  b.dataset.room = room; b.dataset.trade = trade;
+  if (!allowed(room, trade)) {
+    b.classList.add("off"); b.textContent = "—";
+    b.setAttribute("aria-label", `${room} ${trade}: '공용(전체)' 열에서만 고릅니다`);
+    b.addEventListener("click", () => toast(`${trade}는 집 전체 기준이라 '공용(전체)' 열에서 골라 주세요.`));
+    return b;
+  }
+  if (!data.trades.has(trade)) {
+    b.textContent = "+";
+    b.setAttribute("aria-label", `${room}에 ${trade} 담기`);
+  } else {
+    b.classList.add("on");
+    const picked = pickedNames(data, trade);
+    const main = document.createElement("span"); main.className = "c-main";
+    const sub = document.createElement("span"); sub.className = "c-sub";
+    if (picked.length) {
+      main.textContent = picked[0];
+      sub.textContent = picked.length > 1 ? `외 ${picked.length - 1}개` : "선택";
+    } else {
+      main.textContent = "✓ 필요";
+      sub.textContent = "상품은 상담 때";
+    }
+    b.append(main, sub);
+    b.setAttribute("aria-label", `${room} ${trade}: ${picked.length ? picked.join(", ") : "필요, 상품은 상담 때"} — 누르면 상품 고르기`);
+  }
+  b.addEventListener("click", () => {
+    const hasProducts = productNames(trade).length > 0;
+    if (!data.trades.has(trade)) {
+      data.trades.add(trade); afterChange();
+      if (!hasProducts) return;
+    } else if (!hasProducts) {
+      data.trades.delete(trade); data.items.delete(trade); afterChange(); return;
+    }
+    openCellSheet(room, trade);
+  });
+  return b;
+}
+
+// ── 팝업(시트) — 칸 · 공종 ─────────────────────────────────────────
+let sheetReturn = null;
+function openSheet({ title, build, actions, returnFocus }) {
+  $("#sheetTitle").textContent = title;
+  const body = $("#sheetBody"); body.innerHTML = ""; build(body);
+  const foot = $("#sheetFoot"); foot.innerHTML = "";
+  actions.forEach(a => {
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "btn" + (a.primary ? " primary" : ""); btn.textContent = a.label;
+    btn.addEventListener("click", a.onClick);
+    foot.appendChild(btn);
+  });
+  sheetReturn = returnFocus || null;
+  $("#sheetLayer").classList.add("on");
+  setTimeout(() => { const first = $("button", body) || $("#sheetClose"); first.focus({ preventScroll: true }); }, 30);
+}
+function closeSheet() {
+  if (!$("#sheetLayer").classList.contains("on")) return;
+  $("#sheetLayer").classList.remove("on");
+  const target = sheetReturn && sheetReturn(); sheetReturn = null;
+  if (target) target.focus({ preventScroll: true });
+}
+$("#sheetClose").addEventListener("click", closeSheet);
+$("#sheetLayer").addEventListener("click", e => { if (e.target.id === "sheetLayer") closeSheet(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+
+// 칸 팝업 — 그 공간 · 공종의 상품 고르기(여러 개, 안 골라도 됨). 담기는 칸을 누른 순간 이미 됐다.
+function openCellSheet(room, trade) {
+  const data = state.rooms.get(room);
+  const cellOf = () => $(`.cell[data-room="${CSS.escape(room)}"][data-trade="${CSS.escape(trade)}"]`);
+  openSheet({
+    title: `${room} · ${trade}`,
+    returnFocus: cellOf,
+    build(body) {
+      const hint = document.createElement("p"); hint.className = "sheet-hint";
+      const setHint = () => {
+        const n = pickedNames(data, trade).length;
+        hint.textContent = n ? `${n}개 골랐어요. 여러 개 고를 수 있어요.` : "원하시는 상품을 골라 주세요. 고르지 않으면 상담 때 정해요.";
+      };
+      setHint(); body.appendChild(hint);
+      const list = document.createElement("div"); list.className = "chips";
+      list.setAttribute("role", "group"); list.setAttribute("aria-label", `${room} ${trade} 상품`);
+      (CONFIG.PRODUCTS[trade] || []).forEach(([name, sub]) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "product-chip";
+        const set0 = data.items.get(trade);
+        b.setAttribute("aria-pressed", String(!!(set0 && set0.has(name))));
+        const n = document.createElement("span"); n.textContent = name;
+        const s = document.createElement("small"); s.textContent = sub;
+        b.append(n, s);
+        b.addEventListener("click", () => {
+          const set = data.items.get(trade) || new Set();
+          if (set.has(name)) set.delete(name); else set.add(name);
+          if (set.size) data.items.set(trade, set); else data.items.delete(trade);
+          b.setAttribute("aria-pressed", String(set.has(name)));
+          setHint(); afterChange();
+        });
+        list.appendChild(b);
       });
-      list.appendChild(b);
+      body.appendChild(list);
+    },
+    actions: [
+      { label: "이 공사 빼기", onClick() { data.trades.delete(trade); data.items.delete(trade); afterChange(); closeSheet(); } },
+      { label: "완료", primary: true, onClick: closeSheet },
+    ],
+  });
+}
+
+// 공종 팝업 — 이 공사가 필요한 공간을 한 번에 고른다(앱 914). 상품은 칸에서 고른다.
+function openTradeSheet(trade) {
+  const rowOf = () => $(`.row-btn[data-trade="${CSS.escape(trade)}"]`);
+  const rooms = [...state.rooms.keys()].sort(koSort).filter(r => allowed(r, trade));
+  if (!rooms.length) {
+    const wholeOnly = CONFIG.WHOLE_HOUSE_ONLY.includes(trade);
+    openSheet({
+      title: `${trade} — 필요한 공간`,
+      returnFocus: rowOf,
+      build(body) {
+        const p = document.createElement("p"); p.className = "sheet-hint";
+        p.textContent = wholeOnly
+          ? `${trade}는 집 전체 기준이라 '공용(전체)'에서 고릅니다.`
+          : "위에서 공사할 공간을 먼저 골라 주세요.";
+        body.appendChild(p);
+      },
+      actions: wholeOnly
+        ? [{ label: "'공용(전체)'에 담기", primary: true, onClick() {
+              if (!state.rooms.has(WHOLE)) state.rooms.set(WHOLE, { trades: new Set(), pyeong: "", items: new Map() });
+              state.rooms.get(WHOLE).trades.add(trade); afterChange(); closeSheet();
+            } }]
+        : [{ label: "닫기", primary: true, onClick: closeSheet }],
     });
-    g.appendChild(list); wrap.appendChild(g);
+    return;
+  }
+  openSheet({
+    title: `${trade} — 필요한 공간`,
+    returnFocus: rowOf,
+    build(body) {
+      const p = document.createElement("p"); p.className = "sheet-hint";
+      p.textContent = "이 공사가 필요한 공간을 눌러 주세요. 상품은 표의 칸을 눌러 고릅니다.";
+      body.appendChild(p);
+      const list = document.createElement("div"); list.className = "chips";
+      list.setAttribute("role", "group"); list.setAttribute("aria-label", `${trade} 필요한 공간`);
+      rooms.forEach(room => {
+        const data = state.rooms.get(room);
+        const c = document.createElement("button");
+        c.type = "button"; c.className = "chip"; c.textContent = room;
+        c.setAttribute("aria-pressed", String(data.trades.has(trade)));
+        c.addEventListener("click", () => {
+          if (data.trades.has(trade)) { data.trades.delete(trade); data.items.delete(trade); }
+          else data.trades.add(trade);
+          c.setAttribute("aria-pressed", String(data.trades.has(trade)));
+          afterChange();
+        });
+        list.appendChild(c);
+      });
+      body.appendChild(list);
+    },
+    actions: [{ label: "완료", primary: true, onClick: closeSheet }],
   });
 }
 
@@ -842,7 +1037,7 @@ async function submit() {
 $("#againBtn").addEventListener("click", () => {
   $("#form").reset(); state.rooms.clear(); state.photos = []; setScope("전체");
   $("#address").readOnly = true; $("#pyeong").dispatchEvent(new Event("input"));
-  renderRoomToggles(); renderRoomCards(); renderPhotos();
+  renderRoomToggles(); renderMatrix(); renderPhotos();
   $("#form").hidden = false; $("#bar").hidden = false; $("#donePanel").hidden = true;
   document.body.style.paddingBottom = "";
   window.scrollTo({ top: 0 });
@@ -852,7 +1047,7 @@ $("#againBtn").addEventListener("click", () => {
 loadDraft();
 setScope(state.scope);
 renderRoomToggles();
-renderRoomCards();
+renderMatrix();
 renderPhotos();
 </script>
 </body>
