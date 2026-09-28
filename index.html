@@ -148,7 +148,9 @@ textarea.input { min-height: 120px; resize: vertical; line-height: 1.55; }
 .product-group > .pg-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .product-group > .pg-title span { font-weight: 400; color: var(--muted); }
 .product-chip { min-height: 44px; padding: 6px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; font-size: 14px; line-height: 1.25; display: inline-flex; flex-direction: column; justify-content: center; -webkit-tap-highlight-color: transparent; }
-.product-chip small { font-size: 11px; color: var(--muted); }
+.product-chip { max-width: min(100%, 340px); }
+/* 규격이 긴 자재(욕실 도기 · 조명)는 두 줄까지만 — 전체는 마우스를 올리면(title) 보인다 */
+.product-chip small { font-size: 11px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .product-chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .product-chip[aria-pressed="true"] small { color: var(--bg); opacity: .75; }
 .room-pyeong { display: flex; align-items: center; gap: 6px; }
@@ -300,7 +302,7 @@ footer a { color: inherit; }
       <!-- ③ 공간별 필요 공사 (앱 12x·13x — 가격 없음) -->
       <section class="section" aria-labelledby="s3" data-field="rooms">
         <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title" id="s3">공간별 필요 공사</h2></div>
-        <p class="sec-desc">공사할 공간을 고르고, 그 공간에 필요한 공사를 눌러 주세요. 잘 모르시면 공간만 골라도 됩니다. 도배·마루는 집 전체 기준이라 '공용(전체)'에서 골라 주세요.</p>
+        <p class="sec-desc" id="roomsDesc">공사할 공간을 고르고, 그 공간에 필요한 공사를 눌러 주세요. 잘 모르시면 공간만 골라도 됩니다. 도배·마루는 집 전체 기준이라 '공용(전체)'에서 골라 주세요.</p>
         <div class="rooms" id="roomToggles" role="group" aria-label="공간 선택"></div>
         <div id="roomCards" class="room-cards"></div>
         <div class="err" style="margin-top:12px">공사할 공간을 하나 이상 골라 주세요.</div>
@@ -389,42 +391,228 @@ const CONFIG = {
   PRIVACY_URL: "https://lulubuild.github.io/estimate/privacy.html", // 개인정보처리방침 페이지 주소 (있으면 링크 표시)
   RETENTION: "문의일로부터 1년 (계약 시 관련 법령에 따른 기간)",
   MAX_PHOTOS: 5,
-  // 앱 '공간 분류'와 같은 이름 (EstimateDraft.defaultRoomNames 순서)
-  ROOMS: ["거실", "공용(전체)", "발코니1", "안방", "방1", "방2", "화장실1", "화장실2", "주방", "현관"],
-  // 앱 '단가표 관리'의 공종 이름과 글자까지 같아야 앱이 항목을 자동으로 담습니다.
-  TRADES: ["철거·청소", "목공", "전기·조명", "창호", "문·문틀", "필름", "도배", "마루", "타일", "욕실", "제작가구"],
-  // 집 전체 기준으로만 받는 공종 — '공용(전체)' 카드에서만 보인다.
-  WHOLE_HOUSE_ONLY: ["도배", "마루"],
-  // 공종별 상품 — 앱 '단가표 관리'의 **항목명과 글자까지 같아야** 앱이 그 상품만 담는다.
-  // 상품을 고르지 않은 공종은 앱이 그 공종의 항목을 전부 담는다(담당자가 상담 뒤 정리).
-  // 가격은 싣지 않는다. 단가표를 바꾸면 여기도 같이 고칠 것.
-  // 2026-09-27: 아이패드 백업(인테리어견적_백업_20260927_1329)의 단가표에서 11개 공종의 항목을 그대로 옮겼다.
-  PRODUCTS: {
-    "철거·청소": [["실내 전체 철거 (폐기물 포함)", "마감재 전체 철거"], ["입주청소", "준공·입주청소"]],
-    "목공": [["몰딩/걸레받이 교체", "거실 기준"], ["붙박이장 제작", "침실 기준"], ["천장 돔 시공", "욕실 기준"], ["신발장 제작/교체", "현관 기준"], ["중문 설치", "현관 기준"], ["방문 교체(문틀 포함)", "공용(전체) 기준"]],
-    "전기·조명": [["LED 등기구 교체", "자재+설치"], ["콘센트·스위치 증설·교체", "1개소 기준"]],
-    "창호": [["샤시 교체(이중창)", "침실 기준"], ["발코니 샤시 교체", "발코니/베란다 기준"], ["아파트 전체 창호 교체 (30평대)", "PVC 이중창, 전체 교체"], ["방충망 교체", "창 1짝 기준"]],
-    "문·문틀": [["중문 - 3연동", "3연동 슬라이딩"], ["중문 - 스윙·슬림도어", "여닫이·원슬라이딩"], ["방문 교체 - ABS 도어", "문틀 포함"]],
-    "필름": [["방문+문틀 필름 시공", "문짝+문틀 1틀"], ["현관문 필름 시공", "실내측 1짝"]],
+  // 전체 평형을 그대로 쓰는 공간 — 공간 평형 칸을 두지 않는다(앱 EstimateDraft.wholeHouseRoomName).
+  WHOLE_HOUSE_ROOM: "공용(전체)",
+};
+
+/* 공간 · 공종 · 상품 — 앱 '평면도 관리'의 **웹 견적 페이지에 반영**(408)이 Apps Script에 올린 설정을
+   페이지가 열릴 때 읽어 쓴다. 아래 DEFAULT_WEB은 그 설정을 아직 못 읽었을 때(처음 · 연결 실패)의 기본값이다.
+   · rooms — 앱 기본 공간 카드(EstimateDraft.defaultRoomNames)
+   · trades · products — 앱 '단가표 관리'의 공종 · 항목명과 **글자까지 같아야** 앱이 그 항목만 담는다.
+     상품을 고르지 않은 공종은 앱이 그 공종의 항목을 전부 담는다. 가격은 싣지 않는다.
+   · categories — 앱 공간 분류와 그 분류에서 안 쓰는 공종(419). 공간 카드 → 분류 찾기는 앱 RoomTradeScope와 같은 규칙.
+     안 쓰는 공종은 그 공간 카드에 보이지 않고 전송에서도 빠진다(사용자 결정 2026-09-29 — 완전히 숨김).
+   2026-09-29 기본값: 단가표(시공 항목 + 자재 DB Rev1 135건) · 도배 · 마루는 공용(전체)에서만. */
+const DEFAULT_WEB = {
+  v: 1,
+  rooms: ["거실", "공용(전체)", "발코니1", "안방", "방1", "방2", "화장실1", "화장실2", "주방", "현관"],
+  trades: ["도배", "도장", "마루", "목공", "문·문틀", "욕실", "전기·조명", "제작가구", "창호", "철거·청소", "타일", "필름"],
+  products: {
     "도배": [["디아망 실크벽지", "LX Z:IN · 106cm*1560cm"], ["베스띠 실크벽지", "LX Z:IN · 106cm*1560cm"], ["베이스(테라피) 실크벽지", "LX Z:IN · 106cm*1560cm"], ["휘앙세 장폭합지", "LX Z:IN · 93cm*1775cm"], ["프리모 실크벽지", "개나리벽지 · 106cm*1560cm"], ["로하스 실크벽지", "개나리벽지 · 106cm*1560cm"], ["아트북 실크벽지", "개나리벽지 · 106cm*1560cm"], ["파사드 실크벽지", "신한벽지 · 106cm*1560cm"], ["스케치 실크벽지", "신한벽지 · 106cm*1560cm"], ["아이리스 장폭합지", "신한벽지 · 93cm*1775cm"]],
+    "도장": [["숲으로 웰빙 수성 내부용", "KCC · 18L, 수성, 무광, 백색, 실내 벽 · 천장(벽지 · 석고보드), 고급형"], ["숲으로 에이스 수성 내부용", "KCC · 18L, 수성, 무광, 백색, 실내 벽 · 천장, 표준형"], ["숲으로 에코플러스 수성 내부용", "KCC · 18L, 수성, 무광, 백색(K), 실내 벽 · 천장, 보급형"], ["순앤수 원터치 수성 내부용", "노루페인트 · 16L, 수성, 무광, 백색, 실내 벽 · 천장, 1회 도장 고급형(18L 없음)"], ["순앤수 수성 내부용 KS 2급", "노루페인트 · 18L, 수성, 무광, 백색, 실내 벽 · 천장, 표준형(KS M 6010 2종 2급)"], ["순앤수 100 수성 내부용", "노루페인트 · 18L, 수성, 무광, 백색, 실내 벽 · 천장, 보급형"], ["아이럭스 멀티플랫 수성", "삼화페인트 · 4L, 수성, 무광, 백색, 실내 벽 · 벽지, 고급형(18L 없음)"], ["아이생각 수성 내부 프로", "삼화페인트 · 18L, 수성, 무광, 백색, 실내 벽 · 천장, 보급형"], ["숲으로 홈앤 멀티멜 수용성 에나멜", "KCC · 3.78L, 수용성 에나멜, 반광, 백색, 문 · 몰딩 · 가구 · 목재 · 철재"], ["숲으로 올인원 다용도 수성", "KCC · 3.78L, 수성 다용도(젯소 없이), 반광, 백색, 문 · 창틀 · 몰딩 · 목재 · 철재"], ["순앤수 올커버 다용도 수성", "노루페인트 · 4L, 수성 다용도, 반광, 백색, 방문 · 몰딩 · 가구 · 목재 · 철재 · 시트지"], ["멀티플러스 다용도 수성", "노루페인트 · 3.8L, 수성 다용도, 반광, 백색, 가구 · 방문 · 목재 · 철재"], ["아이럭스 올코팅 수성 에나멜", "삼화페인트 · 4L, 수성 에나멜, 백색, 몰딩 · 가구 · 방문 · 목재 · 철재(광도 선택)"], ["홈스타 파스텔OK 플러스 멀티 수성", "삼화페인트 · 4L, 수성 멀티, 반광, 백색, 방문 · 가구 · 벽지"]],
     "마루": [["에디톤 스톤 5T (450×900)", "LX Z:IN · 450*900*5T, 4장/박스(1.62㎡·약 0.5평)"], ["에디톤 스톤 스퀘어 5T (600×600)", "LX Z:IN · 600*600*5T, 4장/박스(1.44㎡)"], ["에디톤 마루 5T (우드 180×1220)", "LX Z:IN · 180*1220*5T, 7장/박스(1.54㎡)"], ["나투스강 7.5T 강마루", "동화자연마루 · 95*800*7.5T, 42장/박스(3.19㎡)"], ["나투스진 그란데 7T 강마루", "동화자연마루 · 325*810*7T, 12장/박스(3.16㎡)"], ["나투스진 테라 7.5T 강마루", "동화자연마루 · 161*1215*7.5T, 16장/박스(3.13㎡)"], ["구정강 7.5T 강마루", "구정마루 · 94*800*7.5T, 1박스 3.23㎡(약 1평)"], ["그랜드텍스쳐 165 강마루", "구정마루 · 165*1200*7.5T, 16장/박스(3.17㎡)"], ["마뷸러스 젠 대리석 강마루", "구정마루 · 597*597*8.7T, 9장/박스(3.2㎡)"]],
-    "타일": [["주방 벽타일 시공", "주방 기준"], ["욕실 벽/바닥 타일 시공", "욕실 기준"], ["타일 시공비 - 벽 (자재 별도)", "압착·떠발이 공임"], ["타일 시공비 - 바닥 (자재 별도)", "압착 공임"], ["포세린 타일 자재 600×600", "600각 포세린(자재만)"], ["줄눈(에폭시) 시공", "욕실 1개소 기준"]],
-    "욕실": [["욕실 전체 리모델링 패키지", "3~5㎡ 1개소, 철거·타일·도기·수전"], ["양변기 교체", "자재+설치"], ["세면대 교체", "자재+설치"]],
+    "목공": [["몰딩/걸레받이 교체", "거실 기준"], ["붙박이장 제작", "침실 기준"], ["천장 돔 시공", "욕실 기준"], ["신발장 제작/교체", "현관 기준"], ["중문 설치", "현관 기준"], ["방문 교체(문틀 포함)", "공용(전체) 기준"]],
+    "문·문틀": [["중문 - 3연동", "3연동 슬라이딩"], ["중문 - 스윙·슬림도어", "여닫이·원슬라이딩"], ["방문 교체 - ABS 도어", "문틀 포함"], ["에넥스 피아블 안전 비대칭 3연동 중문", "에넥스 · 3연동 슬라이딩 오픈형, 폭 1000~1500 · 높이 ~2300, 알루미늄, 아쿠아 · 모루 · 브론즈 유리, 설치 포함(전국 무료시공), 철거 별도"], ["에넥스 에반 원슬라이딩 중문", "에넥스 · 원슬라이딩 디바이딩, 폭 800~1300, 알루미늄, 망입 · 아쿠아 · 브론즈 · 샤틴 유리, 설치 포함(전국 무료시공), 철거 별도"], ["에넥스 비바 우드랩핑 원슬라이딩 중문", "에넥스 · 원슬라이딩 오픈형, 폭 1000~1200, 알루미늄+우드랩핑, 설치 포함(서울 · 경기 무료시공, 그 밖은 별도 가능), 철거 별도"], ["에넥스 클라세 리얼아치 양개 스윙 중문", "에넥스 · 양개 스윙(비대칭 아치), 폭 1000~1600 · 높이 ~2300, 알루미늄, 아쿠아 · 모루 · 브론즈 유리, 설치 포함(전국 무료시공), 철거 별도"], ["한샘 라이트 3연동 중문 오픈 · 고시형", "한샘 · 3연동 슬라이딩 오픈형 · 고시형, 폭 1251~1500, 알루미늄 슬림프레임, 기본유리 5T, 설치 포함(전국 무료시공, 보양 · 폐기처리 포함) · 조사 판매처 2곳"], ["한샘 라이트 3연동 중문 디바이딩형", "한샘 · 3연동 슬라이딩 디바이딩(유리 분할), 폭 1251~1500, 알루미늄 슬림프레임, 기본유리, 설치 포함(전국 무료시공) · 조사 판매처 2곳"], ["한샘 유닛슬라이딩 기본형 중문", "한샘 · 원슬라이딩 기본형, 중형 폭 901~1300, 일반유리, 설치 포함(무료 1일 시공) · 조사 판매처 2곳"], ["영림 초슬림 3연동 중문 오픈형", "영림 · 3연동 슬라이딩 오픈형, 기본색(화이트 · 우드), 유리 5종, 설치 포함(영림 본사직영 맞춤시공), 기본 크기 확인 못 함 · 조사 판매처 2곳"], ["영림 초슬림 3연동 중문 유리고시형", "영림 · 3연동 슬라이딩 유리고시형, 기본색(화이트 · 우드), 유리 5종, 설치 포함(영림 본사직영 맞춤시공), 기본 크기 확인 못 함 · 조사 판매처 2곳"], ["영림 슬림슬라이딩 중문 오픈형", "영림 · 원슬라이딩 오픈형, 화이트 · 우드, 유리 6종, 설치 포함(영림 본사직영 맞춤시공), 기본 크기 확인 못 함 · 조사 판매처 2곳"], ["영림 슬림슬라이딩 중문 유리고시형", "영림 · 원슬라이딩 유리고시형, 화이트 · 우드, 유리 6종, 설치 포함(영림 본사직영 맞춤시공), 기본 크기 확인 못 함 · 조사 판매처 2곳"], ["예림 EZ 이지도어 민자 + 발포문틀 세트", "예림 · ABS 여닫이 문짝(EZ-001 민자)+PVC 발포문틀 110바, 기본 1000*2100 이하, 자재만, 경첩 · 손잡이 별도 · 조사 판매처 2곳"], ["예림 EZ 이지도어 민자 + 발포슬림문틀 세트", "예림 · ABS 여닫이 문짝(EZ 민자)+발포슬림문틀 110mm(슬림문선), 기본 1000*2100 이하, 자재만, 경첩 · 손잡이 별도 · 조사 판매처 2곳"], ["영림 ABS 민자 YA-07 + 발포문틀 세트", "영림 · ABS 여닫이 문짝(YA-07 민자)+영림 PVC 발포문틀 110바, 자재만, 경첩 · 손잡이 별도 · 조사 판매처 1곳"], ["영림 더도어 민자 TA-04 + 발포문틀 세트", "영림 · ABS 보급형 문짝(더도어 TA-04 민자)+영림 PVC 발포문틀 110바, 자재만, 경첩 · 손잡이 별도 · 조사 판매처 1곳"], ["우딘 내추럴 민자 + 발포문틀 세트", "우딘 · ABS 여닫이 문짝(내추럴 민자)+우딘 PVC 발포문틀 110바, 기본 1000*2100 이하, 자재만, 경첩 · 손잡이 별도 · 조사 판매처 1곳"], ["우딘 민자 + 목재슬림문틀 세트", "우딘 · ABS 여닫이 문짝(민자)+목재슬림문틀 110mm · 슬림문선 10mm, 기본 1000*2100 이하, 자재만, 경첩 · 손잡이 별도 · 조사 판매처 1곳"]],
+    "욕실": [["욕실 전체 리모델링 패키지", "3~5㎡ 1개소, 철거·타일·도기·수전"], ["양변기 교체", "자재+설치"], ["세면대 교체", "자재+설치"], ["CC-735 림리스 투피스 치마형 양변기", "대림바스 · 400*690*740mm, 투피스 치마형 림리스, 평균 5L, 바닥배수 305mm, 시트·양부속 포함"], ["CC-766 투피스 양변기", "대림바스 · 400*740*700mm, 투피스 수로노출형, 평균 6L, 바닥배수 305mm, 시트·양부속 포함"], ["CC-214 원피스 치마형 양변기", "대림바스 · 400*690*550mm, 원피스 치마형, 5L, 바닥배수 305mm, 시트·양부속 포함"], ["웨이브S 초절수 투피스 양변기 C319000A", "아메리칸스탠다드 · 380*680*700mm, 투피스 치마형 파워림, 바닥배수 305mm, 슬로우시트·양부속 포함"], ["휴스턴 투피스 양변기 C338900A", "아메리칸스탠다드 · 380*700*720mm, 투피스 치마형, 6L 이하, 바닥배수 305mm, 시트·부속 포함"], ["보스톤 원피스 양변기 C209300C", "아메리칸스탠다드 · 390*700*510mm, 원피스 치마형, 6L 이하, 바닥배수 305mm, 시트·부속 포함"], ["아르노 라운드 반다리 세면기 CL-384", "대림바스 · 505*445*380mm, 반다리 일체형, 1홀, 도기만(수전·폽업·트랩 별도)"], ["사각 반다리 세면기 CL-370", "대림바스 · 505*445*760mm, 반다리 일체형, 1홀, 도기만(수전·폽업·트랩 별도)"], ["슬림 탑볼 세면기 CL-826", "대림바스 · 480*370*135mm, 탑볼형, 도기만(수전·폽업 별도)"], ["플랫 반다리 세면기 CCASF516", "아메리칸스탠다드 · 545*455*410mm, 반다리 일체형, 1홀, 도기만(수전·폽업·트랩 별도)"], ["웨이브R 반다리 세면기 C151500L", "아메리칸스탠다드 · 540*460*410mm, 반다리 일체형, 1홀, 도기만(수전·폽업·트랩 별도)"], ["시그니처 탑볼 세면기 CCAS0628", "아메리칸스탠다드 · 551*399*100mm, 탑볼형, 도기만(수전·폽업 별도)"], ["컨셉큐브 언더카운터 세면기 CCAS0451", "아메리칸스탠다드 · 560*470*200mm, 언더카운터형, 수전 구멍 없음(상판 설치), 도기만"], ["원홀 세면수전 DL-YL6A10", "대림바스 · 원홀 대붙이, 냉온수 혼합, 크롬, 폽업 별도"], ["세면·샤워 겸용 수전 DL-YB6A15", "대림바스 · 4인치(102mm) 2홀 대붙이, 3홀 세면기 겸용, 냉온수 혼합"], ["샤워욕조 수전 DL-YB6A13", "대림바스 · 벽붙이, 샤워헤드·호스 1.5m·행거 포함"], ["바트라 수납형 레인샤워 BFB-720", "대림바스 · 벽붙이 선반형, 해바라기 헤드+핸드샤워 2WAY"], ["큐브P 원홀 세면수전 FA1611", "아메리칸스탠다드 · 원홀 대붙이, 크롬, 폽업 별도"], ["리비어 원홀 세면수전 FA1614", "아메리칸스탠다드 · 원홀 대붙이, 크롬 유광, 황동"], ["큐브P 샤워욕조 수전 FB2811", "아메리칸스탠다드 · 벽붙이 샤워욕조, 크롬, 냉온수 혼합"], ["모닝 샤워수전 HY-119", "한양수전 · 벽붙이 샤워욕조, 냉온수 혼합, 호스 포함"], ["모닝 4인치 세면수전 HY-319", "한양수전 · 4인치(102mm) 2홀 대붙이, 냉온수 혼합"]],
+    "전기·조명": [["LED 등기구 교체", "자재+설치"], ["콘센트·스위치 증설·교체", "1개소 기준"], ["오스람 LED 원형 프레임 방등 60W", "오스람(레드밴스) · LED 60W, 원형 프레임 Ø500mm, 주광색 6500K, 방등"], ["레드밴스 스마트 와이파이 원형 방등 60W", "오스람(레드밴스) · LED 60W, 500*500*75mm, 2700~6500K 색변환 · 밝기조절, WiFi+리모컨, 방등"], ["레드밴스 스마트 와이파이 직사각 방등 70W", "오스람(레드밴스) · LED 70W, 705*500*65mm, 2700~6500K 색변환 · 밝기조절, WiFi+리모컨, 방등 · 작은 거실등"], ["번개표 LED 원형 방등 50W", "번개표(금호전기) · LED 50W, 450*450*95mm, 주광색 6500K, 원형 아크릴, 방등(Q5065-R45YO)"], ["번개표 LED 기쁨 사각 방등 50W", "번개표(금호전기) · LED 50W, 520*520*65mm, 주광색 6500K, 아크릴 사각, 방등(MX3013-C5065)"], ["번개표 LED 행복 시스템 거실등 100W", "번개표(금호전기) · LED 100W, 720*700*80mm, 주광색 6500K, 직사각 시스템 거실등(Q10065-L72TO)"], ["장수램프 LED 퓨어스마트 사각 방등 60W", "장수램프 · LED 60W, 520*520*65mm, 2700~6500K 색변환 · 밝기조절 · 타이머, 리모컨, 방등"], ["장수램프 LED 퓨어스마트 거실등 180W", "장수램프 · LED 180W, 1235*705*70mm, 2700~6500K 색변환 · 밝기조절 · 타이머, 리모컨, 거실등"], ["장수램프 LED 다운라이트 3인치 5W", "장수램프 · LED 5W, 3인치 타공 75mm, 주광 · 주백 · 전구 선택, 확산형 매입등"], ["장수램프 LED 다운라이트 6인치 15W 국산형", "장수램프 · LED 15W, 6인치, 주광 · 전구 선택, 확산형 매입등, 국산"], ["더쎈 LED 3인치 다운라이트 5W 직회전 COB", "더쎈(동성조명) · LED 5W, 3인치 타공 75mm, 주광 · 주백 · 전구 선택, 직회전 COB 집중형"], ["더쎈 LED 에코 라늄 6인치 다운라이트 15W", "더쎈(동성조명) · LED 15W, 6인치 타공 150mm, 3000 · 3500 · 4000 · 6500K 선택, 플리커프리 매입등"], ["번개표 LED 3인치 회전 매입등 5W", "번개표(금호전기) · LED 5W, 3인치 타공 75mm, 주광 · 전구 선택, 회전형 일체형(MR16 할로겐 대체)"], ["번개표 LED 방습 6인치 다운라이트 15W", "번개표(금호전기) · LED 15W, 6인치 타공 150mm, 주광, 방습 · 욕실 겸용"], ["르그랑 아펠라 1구 스위치", "르그랑 · 1구 1로(단로), 16A 250V, 화이트, 플레이트 포함"], ["르그랑 아펠라 2구 스위치", "르그랑 · 2구 1로(단로), 16A 250V, 화이트, 플레이트 포함"], ["르그랑 아펠라 3구 스위치", "르그랑 · 3구 1로(단로), 16A 250V, 화이트, 플레이트 포함"], ["르그랑 아펠라 2구 콘센트", "르그랑 · 2구 접지 매입 콘센트(세로), 16A 250V, 화이트, 플레이트 포함"], ["나노 오딧세이 1구 스위치", "나노전기 · 1구 1로, 무램프, 16A 250V, 화이트, 플레이트 포함"], ["나노 오딧세이 2구 스위치", "나노전기 · 2구 1로, 무램프, 16A 250V, 화이트, 플레이트 포함"], ["나노 오딧세이 2구 콘센트", "나노전기 · 2구 접지 매입 콘센트(세로), 16A 250V, 화이트, 플레이트 포함"], ["제일 디아트 1구 스위치", "제일전기 · 1구 1로(단로), 16A 250V, 화이트, 76*123mm 플레이트 포함"], ["제일 디아트 2구 스위치", "제일전기 · 2구 1로(단로), 16A 250V, 화이트, 76*123mm 플레이트 포함"], ["제일 디아트 2구 콘센트", "제일전기 · 2구 접지 매입 콘센트(세로), 16A 250V, 화이트, 플레이트 포함"]],
     "제작가구": [["주방가구 일체 (상·하부장+상판)", "실측 길이 1m 기준"], ["붙박이장·시스템장", "높이 2.4m 기준, 1자=0.303m"]],
+    "창호": [["샤시 교체(이중창)", "침실 기준"], ["발코니 샤시 교체", "발코니/베란다 기준"], ["아파트 전체 창호 교체 (30평대)", "PVC 이중창, 전체 교체"], ["방충망 교체", "창 1짝 기준"]],
+    "철거·청소": [["실내 전체 철거 (폐기물 포함)", "마감재 전체 철거"], ["입주청소", "준공·입주청소"]],
+    "타일": [["주방 벽타일 시공", "주방 기준"], ["욕실 벽/바닥 타일 시공", "욕실 기준"], ["타일 시공비 - 벽 (자재 별도)", "압착·떠발이 공임"], ["타일 시공비 - 바닥 (자재 별도)", "압착 공임"], ["포세린 타일 자재 600×600", "600각 포세린(자재만)"], ["줄눈(에폭시) 시공", "욕실 1개소 기준"], ["ARE 36001 크림 벽타일 (300×600)", "벳센타일 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["ARE 36002 아몬드 벽타일 (300×600)", "벳센타일 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["ARE 36003 비앙코 벽타일 (300×600)", "벳센타일 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["ARE 36004 그리지오 벽타일 (300×600)", "벳센타일 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["WT3606 백색 마블 벽타일 (300×600)", "베리굿타일앤스톤 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["WT36M06 아이보리 벽타일 (300×600)", "베리굿타일앤스톤 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["WT3604 라이트베이지 벽타일 (300×600)", "베리굿타일앤스톤 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["CW 7001 화이트 유광 서브웨이 벽타일 (300×600)", "CW·WM(수입) · 300*600, 8장/박스(1.44㎡), 도기질 유광"], ["CW 7003 진그레이 유광 서브웨이 벽타일 (300×600)", "CW·WM(수입) · 300*600, 8장/박스(1.44㎡), 도기질 유광"], ["WM 38000M 백색 무광 벽타일 (300×600)", "CW·WM(수입) · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["WM 37109M 우드스틱 라이트그레이 벽타일 (300×600)", "CW·WM(수입) · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["비바 베이지 포세린 (600×600)", "화신세라믹 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["비바 블랑코 포세린 (600×600)", "화신세라믹 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["66508 화이트 테라조 포세린 (600×600)", "화신세라믹 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["테라조 컬러스 포세린 (600×600)", "화신세라믹 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["PER6008 블랙 테라조 포세린 (600×600)", "베리굿타일앤스톤 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["PER6003 그레이 테라조 포세린 (600×600)", "베리굿타일앤스톤 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["LECCE 01 라이트그레이 포세린 (600×600)", "베리굿타일앤스톤 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["VG3309 욕실 바닥 자기질 (300×300)", "베리굿타일앤스톤 · 300*300, 16장/박스(1.44㎡), 자기질 무광"], ["GGK9394 욕실 바닥 논슬립 (300×300)", "이누스(아이에스동서) · 300*300, 16장/박스(1.44㎡), 국산 자기질 무광 논슬립"], ["GGK8394 욕실 바닥 논슬립 (300×300)", "이누스(아이에스동서) · 300*300, 16장/박스(1.44㎡), 국산 자기질 무광 논슬립"], ["비바 그레이 포세린 (600×1200)", "화신세라믹 · 600*1200, 2장/박스(1.44㎡), 포세린 무광 9.5T"], ["NOVA 포세린 (600×1200)", "베리굿타일앤스톤 · 600*1200, 2장/박스(1.44㎡), 포세린 무광"], ["LC 스톤챗 화이트 포세린 (600×1200)", "화신세라믹 라우체 · 600*1200, 2장/박스(1.44㎡), 포세린 무광 컬러바디"]],
+    "필름": [["방문+문틀 필름 시공", "문짝+문틀 1틀"], ["현관문 필름 시공", "실내측 1짝"], ["베니프 우드 EW 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염(방염판 CW), 예: EW609 월넛"], ["베니프 우드 EGM 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염(방염판 RGM), 페인티드 우드, 예: EGM05"], ["베니프 프리미엄우드 NE 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염(방염판 NW), 예: NE041 화이트오크"], ["베니프 솔리드 ES 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염(방염판 RS), 예: ES130 화이트"], ["베니프 미스티 저광 솔리드 SM 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염, 저광 솔리드, 예: SM016"], ["베니프 솔리드 방염 RS 시리즈", "LX Z:IN · 1220mm*50m 롤, 방염, 예: RS130 화이트"], ["보닥 스탠다드우드 W 시리즈", "현대L&C · 1220mm*50m 롤, 비방염, 예: W933"], ["보닥 오리진우드 SPW 시리즈", "현대L&C · 1220mm*50m 롤, 비방염, 프리미엄 우드, 예: SPW45"], ["보닥 솔리드 S 시리즈", "현대L&C · 1220mm*50m 롤, 비방염, 예: S244 코튼화이트"], ["보닥 솔리드 방염 S 시리즈", "현대L&C · 1220mm*50m 롤, 방염, 예: S244"], ["보닥 슈퍼매트 SMT 시리즈", "현대L&C · 1220mm*50m 롤, 비방염, 프리미엄 무광, 예: SMT16"], ["영림 우드 PW 시리즈", "영림 · 1220mm*25m 롤, 비방염, 예: PW957"], ["영림 우드 방염 FPW 시리즈", "영림 · 1220mm*25m 롤, 방염, 예: FPW835"], ["영림 솔리드 PS 시리즈", "영림 · 1220mm*25m 롤, 비방염, 예: PS010 중백색"], ["영림 소프트매트 PSM 시리즈", "영림 · 1220mm*25m 롤, 비방염, 프리미엄 무광, 예: PSM190 포슬린"]],
   },
+  // 지금 규칙: 도배 · 마루는 공용(전체)에서만 — 앱 419에서 정해 반영하면 그 값으로 바뀐다.
+  categories: [
+    { name: "거실", excluded: ["도배", "마루"] },
+    { name: "주방", excluded: ["도배", "마루"] },
+    { name: "침실", excluded: ["도배", "마루"] },
+    { name: "욕실", excluded: ["도배", "마루"] },
+    { name: "현관", excluded: ["도배", "마루"] },
+    { name: "발코니/베란다", excluded: ["도배", "마루"] },
+    { name: "공용(전체)", excluded: [] },
+  ],
 };
 /* ════════════════════════════════════════════════════════════════════ */
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const DRAFT_KEY = "estimate-request-draft-v1";
+const DRAFT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const openedAt = Date.now();
 
 const state = {
   scope: "전체",
-  rooms: new Map(),   // room -> { trades:Set, pyeong:"" }
+  rooms: new Map(),   // room -> { trades:Set, pyeong:"", items:Map(trade -> Set(상품명)) }
   photos: [],         // { name, dataUrl }
 };
+
+// ── 공간 · 공종 설정 (앱 408 → Apps Script → 여기) ─────────────────────
+const WEB_CACHE_KEY = "estimate-web-config-v1";
+// 설정을 못 주는 스크립트(옛 버전)에 매번 묻지 않도록 쉬는 시각 — 옛 스크립트는 이 요청을 틀린 키로 세어 앱 동기화를 막는다.
+const WEB_PAUSE_KEY = "estimate-web-config-pause-until";
+const WEB_PAUSE_MS = 6 * 60 * 60 * 1000;
+// 길이 · 개수 상한 — Apps Script(웹문의.gs WEBCFG)와 같게. 접수 때 서버가 공간 20자 · 공종 20자 · 상품명 60자로 자른다.
+const WEB_LIMITS = { rooms: 30, room: 20, trades: 60, trade: 20, perTrade: 300, name: 60, sub: 200, categories: 60, category: 40 };
+
+/** 받은 설정을 검사해 쓰기 좋은 모양으로 — 모양이 틀렸거나 공간 · 공종이 비면 null(= 지금 설정 그대로). */
+function normalizeWebConfig(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const str = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+  const rooms = [...new Set((Array.isArray(raw.rooms) ? raw.rooms : []).map(r => str(r, WEB_LIMITS.room)).filter(Boolean))]
+    .slice(0, WEB_LIMITS.rooms);
+  const source = raw.products && typeof raw.products === "object" ? raw.products : {};
+  const trades = [], products = Object.create(null);   // 공종 이름이 "toString" 같은 기본 속성명이어도 안전하게
+  (Array.isArray(raw.trades) ? raw.trades : []).forEach(t => {
+    const trade = str(t, WEB_LIMITS.trade);
+    if (!trade || trade in products || trades.length >= WEB_LIMITS.trades) return;
+    const list = [], seen = new Set();
+    const given = Object.prototype.hasOwnProperty.call(source, t) && Array.isArray(source[t]) ? source[t] : [];
+    given.forEach(p => {
+      if (!Array.isArray(p) || list.length >= WEB_LIMITS.perTrade) return;
+      const name = str(p[0], WEB_LIMITS.name), sub = str(p[1], WEB_LIMITS.sub);
+      if (!name || seen.has(name)) return;
+      seen.add(name); list.push([name, sub]);
+    });
+    trades.push(trade); products[trade] = list;
+  });
+  const categories = [], seenCat = new Set();
+  (Array.isArray(raw.categories) ? raw.categories : []).forEach(c => {
+    if (!c || typeof c !== "object" || categories.length >= WEB_LIMITS.categories) return;
+    const name = str(c.name, WEB_LIMITS.category);
+    if (!name || seenCat.has(name)) return;
+    seenCat.add(name);
+    categories.push({ name, excluded: new Set((Array.isArray(c.excluded) ? c.excluded : []).map(x => str(x, 100)).filter(Boolean)) });
+  });
+  if (!rooms.length || !trades.length) return null;
+  return { rooms, trades, products, categories };
+}
+
+let WEB = normalizeWebConfig(DEFAULT_WEB);
+let webSource = "";   // 지금 쓰는 설정의 원문(JSON) — 같은 설정을 다시 받으면 다시 그리지 않는다
+
+// 공간 카드 → 공간 분류: 앱 EstimateCore RoomTradeScope.category와 같은 규칙(바꾸면 함께).
+// ① 같은 이름 ② 뒤 번호 · 띄어쓰기를 뗀 이름, "발코니/베란다"처럼 / 로 나눈 한쪽 ③ 흔한 다른 이름.
+const ROOM_SYNONYMS = {
+  "침실": ["안방", "방", "작은방", "큰방", "아이방", "자녀방", "부부침실", "서재", "드레스룸", "옷방", "알파룸"],
+  "욕실": ["화장실", "공용욕실", "안방욕실", "부부욕실", "공용화장실", "안방화장실"],
+  "발코니": ["베란다", "앞베란다", "뒷베란다", "다용도실", "세탁실"],
+  "주방": ["부엌", "키친"],
+  "거실": ["리빙룸"],
+  "공용(전체)": ["전체", "공용", "집전체"],
+};
+const squeeze = s => String(s).replace(/\s+/g, "");
+function baseName(s) {
+  let t = String(s).trim();
+  while (t && /[\p{N}\s\-_#]/u.test(t.slice(-1))) t = t.slice(0, -1);
+  return t;
+}
+function nameParts(category) {
+  const whole = squeeze(category);
+  return [whole, baseName(whole), ...whole.split(/[\/·,]/).map(baseName).filter(Boolean)];
+}
+function matchCategory(raw, names) {
+  const text = String(raw).trim();
+  if (!text) return null;
+  const exact = names.find(n => n.trim() === text);
+  if (exact) return exact;
+  const base = squeeze(baseName(text));
+  if (!base) return null;
+  return names.find(n => nameParts(n).includes(base))
+    || names.find(n => nameParts(n).some(p => Object.prototype.hasOwnProperty.call(ROOM_SYNONYMS, p) && ROOM_SYNONYMS[p].includes(base)))
+    || null;
+}
+/** 이 공간에서 안 쓰는 공종 — 분류를 못 찾으면 빈 집합(= 모든 공종). */
+function roomExcluded(room) {
+  const name = matchCategory(room, WEB.categories.map(c => c.name));
+  const category = name && WEB.categories.find(c => c.name === name);
+  return category ? category.excluded : new Set();
+}
+function roomTrades(room) {
+  const excluded = roomExcluded(room);
+  return WEB.trades.filter(t => !excluded.has(t));
+}
+function tradeAllowed(room, trade) {
+  return WEB.trades.includes(trade) && !roomExcluded(room).has(trade);
+}
+
+/** 3번 안내 — 공용(전체)에서만 고를 수 있는 공종이 있으면 그 이름을 알린다. */
+function renderRoomsDesc() {
+  let text = "공사할 공간을 고르고, 그 공간에 필요한 공사를 눌러 주세요. 잘 모르시면 공간만 골라도 됩니다.";
+  const whole = CONFIG.WHOLE_HOUSE_ROOM;
+  const others = WEB.rooms.filter(r => r !== whole);
+  if (WEB.rooms.includes(whole) && others.length) {
+    const onlyWhole = roomTrades(whole).filter(t => others.every(r => !tradeAllowed(r, t)));
+    if (onlyWhole.length) {
+      const particle = hasBatchim(onlyWhole[onlyWhole.length - 1]) ? "은" : "는";
+      text += ` ${onlyWhole.join("·")}${particle} 집 전체 기준이라 '${whole}'에서 골라 주세요.`;
+    }
+  }
+  $("#roomsDesc").textContent = text;
+}
+function hasBatchim(word) {
+  const code = word.charCodeAt(word.length - 1) - 0xAC00;
+  return code >= 0 && code <= 11171 && code % 28 !== 0;
+}
+
+/** 새 설정으로 바꾼다 — 이제 안 보이는 공간 · 공종 · 상품은 고른 것에서 뺀다(숨긴 공종이 전송에 섞이지 않게).
+    공간 평형 칸에 입력하는 중이면 칸을 떠난 뒤에 바꾼다(카드를 다시 그리면 입력 중인 칸이 사라진다). */
+function applyWebConfig(next, source) {
+  const cards = $("#roomCards");
+  if (cards.contains(document.activeElement)) {
+    cards.addEventListener("focusout", () => setTimeout(() => applyWebConfig(next, source), 0), { once: true });
+    return;
+  }
+  WEB = next; webSource = source;
+  let changed = false;
+  [...state.rooms.keys()].forEach(room => {
+    if (!WEB.rooms.includes(room)) { state.rooms.delete(room); changed = true; return; }
+    const data = state.rooms.get(room);
+    [...data.trades].forEach(t => {
+      if (!tradeAllowed(room, t)) { data.trades.delete(t); data.items.delete(t); changed = true; }
+    });
+    [...data.items].forEach(([t, set]) => {
+      [...set].forEach(n => { if (!(WEB.products[t] || []).some(([pn]) => pn === n)) { set.delete(n); changed = true; } });
+      if (!set.size) data.items.delete(t);
+    });
+  });
+  renderRoomsDesc(); renderRoomToggles(); renderRoomCards();
+  if (changed) { saveDraft(); toast("공사 항목 목록이 바뀌어 고르신 것 중 일부를 정리했어요."); }
+}
+
+function readCachedWebConfig() {
+  try {
+    const source = localStorage.getItem(WEB_CACHE_KEY) || "";
+    const next = source ? normalizeWebConfig(JSON.parse(source)) : null;
+    if (next) { WEB = next; webSource = source; }
+  } catch {}
+}
+
+/** Apps Script에서 앱이 반영한 설정을 읽는다. 못 읽거나 아직 반영한 적이 없으면 지금 설정(기본값 · 지난번 것) 그대로. */
+async function fetchWebConfig() {
+  if (!CONFIG.SCRIPT_URL) return;
+  try { if (Date.now() < Number(localStorage.getItem(WEB_PAUSE_KEY) || 0)) return; } catch {}
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10000);
+    const res = await fetch(CONFIG.SCRIPT_URL, {
+      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "webConfig" }), signal: ctrl.signal, redirect: "follow",
+    });
+    clearTimeout(timer);
+    const json = await res.json().catch(() => null);
+    if (json && json.error) {   // 설정 기능이 없는 옛 스크립트 — 한동안 묻지 않는다
+      try { localStorage.setItem(WEB_PAUSE_KEY, String(Date.now() + WEB_PAUSE_MS)); } catch {}
+      return;
+    }
+    if (!json || !json.ok || !json.config) return;
+    const source = JSON.stringify(json.config);
+    if (source === webSource) return;
+    const next = normalizeWebConfig(json.config);
+    if (!next) return;
+    try { localStorage.setItem(WEB_CACHE_KEY, source); } catch {}
+    applyWebConfig(next, source);
+  } catch {}
+}
 
 // ── 머리·꼬리 채우기 ─────────────────────────────────────────────
 $("#companyName").textContent = CONFIG.COMPANY_NAME;
@@ -484,7 +672,7 @@ function setScope(scope) {
 function renderRoomToggles() {
   const wrap = $("#roomToggles");
   wrap.innerHTML = "";
-  CONFIG.ROOMS.forEach(room => {
+  WEB.rooms.forEach(room => {
     const on = state.rooms.has(room);
     const b = document.createElement("button");
     b.type = "button"; b.className = "room-toggle";
@@ -506,7 +694,7 @@ function toggleRoom(room) {
 function renderRoomCards() {
   const wrap = $("#roomCards");
   wrap.innerHTML = "";
-  const ordered = CONFIG.ROOMS.filter(r => state.rooms.has(r));
+  const ordered = WEB.rooms.filter(r => state.rooms.has(r));
   if (!ordered.length) {
     wrap.innerHTML = `<div class="empty">위에서 공사할 공간을 골라 주세요.</div>`;
     updateBar(); return;
@@ -519,7 +707,7 @@ function renderRoomCards() {
     head.className = "room-card-head";
     const h = document.createElement("h3"); h.textContent = room; head.appendChild(h);
     // 공용(전체)는 앱이 전체 평형을 그대로 쓰므로 공간 평형 칸을 두지 않는다
-    if (state.scope === "부분" && room !== "공용(전체)") {
+    if (state.scope === "부분" && room !== CONFIG.WHOLE_HOUSE_ROOM) {
       const p = document.createElement("div");
       p.className = "room-pyeong";
       p.innerHTML = `<span class="l">이 공간</span><div class="with-suffix"><input class="input" inputmode="decimal" maxlength="5" placeholder="모름"><span class="sfx">평</span></div>`;
@@ -542,7 +730,15 @@ function renderRoomCards() {
 
     const chips = document.createElement("div");
     chips.className = "chips"; chips.setAttribute("role", "group"); chips.setAttribute("aria-label", `${room} 필요 공사`);
-    CONFIG.TRADES.filter(t => room === "공용(전체)" || !CONFIG.WHOLE_HOUSE_ONLY.includes(t)).forEach(trade => {
+    // 이 공간의 분류에서 안 쓰는 공종은 아예 보이지 않는다(앱 419 · 사용자 결정).
+    const trades = roomTrades(room);
+    if (!trades.length) {
+      const none = document.createElement("div");
+      none.className = "hint"; none.style.marginTop = "0";
+      none.textContent = "이 공간의 공사는 상담 때 함께 정해요.";
+      chips.appendChild(none);
+    }
+    trades.forEach(trade => {
       const c = document.createElement("button");
       c.type = "button"; c.className = "chip"; c.textContent = trade;
       c.setAttribute("aria-pressed", String(data.trades.has(trade)));
@@ -568,7 +764,7 @@ function renderRoomCards() {
 // 고른 공종 아래에 그 공종의 상품을 펼친다 — 여러 개 고를 수 있고, 안 골라도 된다.
 function renderProducts(room, data, wrap) {
   wrap.innerHTML = "";
-  CONFIG.TRADES.filter(t => data.trades.has(t) && (CONFIG.PRODUCTS[t] || []).length).forEach(trade => {
+  WEB.trades.filter(t => data.trades.has(t) && (WEB.products[t] || []).length).forEach(trade => {
     const picked = data.items.get(trade) || new Set();
     const g = document.createElement("div"); g.className = "product-group";
     const title = document.createElement("div"); title.className = "pg-title";
@@ -578,13 +774,13 @@ function renderProducts(room, data, wrap) {
     title.appendChild(hint); g.appendChild(title);
     const list = document.createElement("div"); list.className = "chips";
     list.setAttribute("role", "group"); list.setAttribute("aria-label", `${room} ${trade} 상품`);
-    CONFIG.PRODUCTS[trade].forEach(([name, sub]) => {
+    WEB.products[trade].forEach(([name, sub]) => {
       const b = document.createElement("button");
       b.type = "button"; b.className = "product-chip";
       b.setAttribute("aria-pressed", String(picked.has(name)));
       const n = document.createElement("span"); n.textContent = name;
-      const s = document.createElement("small"); s.textContent = sub;
-      b.append(n, s);
+      b.append(n);
+      if (sub) { const s = document.createElement("small"); s.textContent = sub; b.append(s); b.title = `${name} — ${sub}`; }
       b.addEventListener("click", () => {
         const set = data.items.get(trade) || new Set();
         if (set.has(name)) set.delete(name); else set.add(name);
@@ -705,6 +901,7 @@ function saveDraft() {
   try {
     const d = { scope: state.scope, rooms: [...state.rooms].map(([k, v]) => [k, [...v.trades], v.pyeong, [...v.items].map(([t, s]) => [t, [...s]])]) };
     draftFields.forEach(f => d[f] = $("#" + f).value);
+    d.savedAt = Date.now();
     localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
   } catch {}
 }
@@ -712,20 +909,22 @@ function loadDraft() {
   let d = null;
   try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch {}
   if (!d) return;
+  // 이름 · 연락처 · 주소가 든 초안을 이 브라우저에 오래 두지 않는다 — 7일이 지났으면(또는 시각이
+  // 없는 예전 초안이면) 지운다.
+  if (!(Date.now() - Number(d.savedAt) < DRAFT_MAX_AGE_MS)) { clearDraft(); return; }
   draftFields.forEach(f => { if (typeof d[f] === "string") $("#" + f).value = d[f]; });
   if (d.address) $("#address").readOnly = true;
   if (!Array.isArray(d.rooms)) d.rooms = [];
   d.rooms.forEach(entry => {
     if (!Array.isArray(entry)) return;
     const [k, t, p, it] = entry;
-    if (!CONFIG.ROOMS.includes(k)) return;
-    // 예전 초안(규칙 이전)의 도배·마루가 공용(전체) 밖에 남아 있으면 버린다.
-    const trades = new Set((Array.isArray(t) ? t : []).filter(x => CONFIG.TRADES.includes(x)
-      && (k === "공용(전체)" || !CONFIG.WHOLE_HOUSE_ONLY.includes(x))));
+    if (!WEB.rooms.includes(k)) return;
+    // 지금 설정에서 이 공간에 안 보이는 공종(예전 초안 · 설정이 바뀐 뒤)은 버린다.
+    const trades = new Set((Array.isArray(t) ? t : []).filter(x => tradeAllowed(k, x)));
     const items = new Map();
     (Array.isArray(it) ? it : []).forEach(([tr, names]) => {
       if (!trades.has(tr) || !Array.isArray(names)) return;
-      const valid = new Set(names.filter(n => (CONFIG.PRODUCTS[tr] || []).some(([pn]) => pn === n)));
+      const valid = new Set(names.filter(n => (WEB.products[tr] || []).some(([pn]) => pn === n)));
       if (valid.size) items.set(tr, valid);
     });
     state.rooms.set(k, { trades, pyeong: typeof p === "string" ? p : "", items });
@@ -767,12 +966,12 @@ function validate() {
 
 // ── 제출 ─────────────────────────────────────────────────────────────
 function buildPayload() {
-  const rooms = CONFIG.ROOMS.filter(r => state.rooms.has(r)).map(r => {
+  const rooms = WEB.rooms.filter(r => state.rooms.has(r)).map(r => {
     const v = state.rooms.get(r);
-    const trades = CONFIG.TRADES.filter(t => v.trades.has(t) && (r === "공용(전체)" || !CONFIG.WHOLE_HOUSE_ONLY.includes(t)));
+    const trades = WEB.trades.filter(t => v.trades.has(t) && tradeAllowed(r, t));
     // 고른 상품만 — 공종별 { 공종: [상품명…] }. 안 고른 공종은 빠진다(앱이 공종 전체를 담는다).
-    const items = {};
-    trades.forEach(t => { const set = v.items.get(t); if (set && set.size) items[t] = (CONFIG.PRODUCTS[t] || []).map(([n]) => n).filter(n => set.has(n)); });
+    const items = Object.create(null);
+    trades.forEach(t => { const set = v.items.get(t); if (set && set.size) items[t] = (WEB.products[t] || []).map(([n]) => n).filter(n => set.has(n)); });
     return { room: r, trades, items, pyeong: state.scope === "부분" ? v.pyeong : "" };
   });
   return {
@@ -849,11 +1048,14 @@ $("#againBtn").addEventListener("click", () => {
 });
 
 // ── 시작 ─────────────────────────────────────────────────────────────
+readCachedWebConfig();   // 지난번에 받은 설정이 있으면 먼저 — 새 설정은 아래 fetchWebConfig가 받아 바꾼다
+renderRoomsDesc();
 loadDraft();
 setScope(state.scope);
 renderRoomToggles();
 renderRoomCards();
 renderPhotos();
+fetchWebConfig();
 </script>
 </body>
 </html>
