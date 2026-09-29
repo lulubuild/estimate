@@ -383,13 +383,15 @@ footer a { color: inherit; }
    설정 — 이 블록만 고치면 됩니다
    ════════════════════════════════════════════════════════════════════ */
 const CONFIG = {
-  // 앱의 '구글 폼 연동 설정 → Web App 주소'와 같은 주소 (…/exec).
+  // 앱의 '웹 문의 연동 설정 → Web App 주소'와 같은 주소 (…/exec).
   // 비워 두면 미리보기 모드로 동작합니다(전송하지 않음).
   SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzRtjXk_fWwx6yxK_Vonj8sMRMild_j9hOrgCNXh34qBLupLQZqUnyu0VkwpAPULXn0/exec",
   COMPANY_NAME: "룰루타일",
   COMPANY_PHONE: "010-9896-8980",
   PRIVACY_URL: "https://lulubuild.github.io/estimate/privacy.html", // 개인정보처리방침 페이지 주소 (있으면 링크 표시)
   RETENTION: "문의일로부터 1년 (계약 시 관련 법령에 따른 기간)",
+  // 동의 기록에 남기는 처리방침 판(시행일) — privacy.html 머리의 시행일과 같게 바꾼다.
+  POLICY_VERSION: "2026-10-07",
   MAX_PHOTOS: 5,
   // 전체 평형을 그대로 쓰는 공간 — 공간 평형 칸을 두지 않는다(앱 EstimateDraft.wholeHouseRoomName).
   WHOLE_HOUSE_ROOM: "공용(전체)",
@@ -988,6 +990,9 @@ function buildPayload() {
     rooms,
     note: $("#note").value.trim(),
     photos: state.photos.map(p => ({ name: p.name, data: p.dataUrl.split(",")[1] })),
+    // 동의 기록 — 동의 여부와 그때의 처리방침 판(Apps Script가 접수 시각과 함께 '개인정보 동의' 열에 남긴다).
+    consent: $("#consent").checked,
+    consentVersion: CONFIG.POLICY_VERSION,
     website: $("#website").value,          // 스팸 방지용 숨은 칸 — 사람은 비워 둔다
     elapsed: Date.now() - openedAt,
   };
