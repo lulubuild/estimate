@@ -48,9 +48,10 @@ body {
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 button, input, textarea { font: inherit; color: inherit; }
-/* 아이패드 세로(744~1024px)에서 좌우를 꽉 채운다 — 큰 화면에서만 1100px로 묶는다(2026-09-26) */
+/* 화면 폭 3단: 폰(~599) · 7인치 · 태블릿 세로(600~1023) · 태블릿 가로 · PC(1024~, 입력 + 오른쪽 요약 두 단) */
 .wrap { max-width: 1100px; margin: 0 auto; padding: 0 var(--page-margin); }
 @media (min-width: 700px) { :root { --page-margin: 24px; --panel-padding: 28px; } }
+@media (min-width: 1024px) { .wrap { max-width: 1280px; } }
 
 /* 머리 */
 header.top { padding: 24px 0 8px; }
@@ -107,19 +108,21 @@ textarea.input { min-height: 120px; resize: vertical; line-height: 1.55; }
 .btn.primary:hover { opacity: .88; }
 .btn[disabled] { opacity: .45; cursor: default; transform: none; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+/* 누르는 자리는 44px 이상(칩 · 닫기 · 접기 줄) */
 .chip {
-  min-height: 40px; padding: 0 16px; border-radius: 999px; border: 0; cursor: pointer;
+  min-height: 44px; padding: 0 16px; border-radius: 999px; border: 0; cursor: pointer;
   background: var(--sunken); color: var(--ink); font-size: 15px; font-weight: 500;
   -webkit-tap-highlight-color: transparent; transition: background .15s, color .15s;
 }
 .chip:hover { background: var(--selected); }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }   /* 선택 = 반전 (칩 전용) */
-.seg { display: inline-flex; background: var(--sunken); border-radius: 999px; padding: 4px; gap: 4px; }
-.seg .chip { min-height: 38px; background: transparent; }
+.seg { display: inline-flex; background: var(--sunken); border-radius: 999px; padding: 2px; gap: 2px; }
+.seg .chip { min-height: 44px; background: transparent; }
 .seg .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
 
 /* 공간 카드 (앱의 13x 공간 카드와 같은 모양) */
-.rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+/* min(…, 50%) — 아주 좁은 폰(320px)에서도 2열 */
+.rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, calc(50% - 4px)), 1fr)); gap: 8px; }
 .room-toggle {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   min-height: 52px; padding: 0 14px; border-radius: var(--r-card); cursor: pointer; border: 0;
@@ -139,7 +142,7 @@ textarea.input { min-height: 120px; resize: vertical; line-height: 1.55; }
 @media (prefers-reduced-motion: reduce) { .room-card { animation: none; } }
 .room-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
 .room-card-head h3 { margin: 0; font-size: 16px; font-weight: 700; flex: 1; min-width: 80px; }
-.room-card .chip { background: var(--surface); min-height: 38px; font-size: 14px; padding: 0 14px; }
+.room-card .chip { background: var(--surface); min-height: 44px; font-size: 14px; padding: 0 14px; }
 .room-card .chip:hover { background: var(--selected); }
 .room-card .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
 /* 공종별 상품 고르기 — 고른 공종 아래에 펼쳐진다 */
@@ -147,17 +150,19 @@ textarea.input { min-height: 120px; resize: vertical; line-height: 1.55; }
 .product-group { border-top: 1px solid var(--line); padding-top: 10px; }
 .product-group > .pg-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .product-group > .pg-title span { font-weight: 400; color: var(--muted); }
-.product-chip { min-height: 44px; padding: 6px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; font-size: 14px; line-height: 1.25; display: inline-flex; flex-direction: column; justify-content: center; -webkit-tap-highlight-color: transparent; }
-.product-chip { max-width: min(100%, 340px); }
+/* 상품은 같은 폭 칸으로 — 폰 2열 · 7인치 3열 · 태블릿 4열 · PC 5열 안팎(칸 최소 140px) */
+.products .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(140px, calc(50% - 4px)), 1fr)); gap: 8px; }
+.product-chip { width: 100%; min-width: 0; min-height: 44px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; font-size: 14px; line-height: 1.25; display: flex; flex-direction: column; justify-content: center; -webkit-tap-highlight-color: transparent; }
+.product-chip > span { word-break: keep-all; overflow-wrap: anywhere; }
 /* 규격이 긴 자재(욕실 도기 · 조명)는 두 줄까지만 — 전체는 마우스를 올리면(title) 보인다 */
-.product-chip small { font-size: 11px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.product-chip small { font-size: 11px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .product-chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .product-chip[aria-pressed="true"] small { color: var(--bg); opacity: .75; }
 .room-pyeong { display: flex; align-items: center; gap: 6px; }
 .room-pyeong .input { width: 96px; min-height: 40px; padding: 8px 34px 8px 12px; background: var(--surface); text-align: right; }
 .room-pyeong .with-suffix .sfx { right: 12px; font-size: 14px; }
 .room-pyeong span.l { font-size: 13px; color: var(--muted); }
-.icon-btn { width: 36px; height: 36px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 20px; line-height: 1; }
+.icon-btn { width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 20px; line-height: 1; }
 .icon-btn:hover { background: var(--selected); color: var(--ink); }
 .empty { padding: 18px; border-radius: var(--r-card); border: 1px dashed var(--line); color: var(--muted); font-size: 14px; text-align: center; margin-top: 16px; }
 .bulk { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; font-size: 13px; color: var(--muted); }
@@ -166,7 +171,9 @@ textarea.input { min-height: 120px; resize: vertical; line-height: 1.55; }
 .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
 .ph { position: relative; aspect-ratio: 1; border-radius: var(--r-input); overflow: hidden; background: var(--sunken); }
 .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ph button { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(15,15,15,.72); color: #fff; cursor: pointer; font-size: 16px; line-height: 1; }
+/* 빼기 × — 보이는 원은 28px, 누르는 자리는 44px */
+.ph button { position: absolute; top: 0; right: 0; width: 44px; height: 44px; border: 0; padding: 0; background: transparent; cursor: pointer; font-size: 0; -webkit-tap-highlight-color: transparent; }
+.ph button::after { content: "×"; position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%; background: rgba(15,15,15,.72); color: #fff; font-size: 16px; line-height: 28px; text-align: center; }
 .ph-add { aspect-ratio: 1; border-radius: var(--r-input); border: 1px dashed var(--muted); background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer; font-size: 13px; text-align: center; padding: 6px; }
 .ph-add:hover { background: var(--sunken); color: var(--ink); }
 .ph-add b { display: block; font-size: 26px; font-weight: 400; line-height: 1; margin-bottom: 4px; }
@@ -175,7 +182,8 @@ textarea.input { min-height: 120px; resize: vertical; line-height: 1.55; }
 .consent { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
 .consent input { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
 details.policy { margin-top: 12px; background: var(--sunken); border-radius: var(--r-input); padding: 12px 14px; font-size: 14px; color: var(--muted); }
-details.policy summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+details.policy summary { cursor: pointer; color: var(--ink); font-weight: 600; padding: 12px 0; margin: -12px 0; }
+#privacyLinkWrap a { display: inline-flex; align-items: center; min-height: 44px; }
 details.policy table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 details.policy th, details.policy td { text-align: left; padding: 8px 6px; border-top: 1px solid var(--line); vertical-align: top; }
 details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
@@ -192,6 +200,44 @@ details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
 .bar-sum { flex: 1; min-width: 0; font-size: 14px; color: var(--muted); line-height: 1.35; }
 .bar-sum b { color: var(--ink); font-weight: 700; }
 .bar .btn.primary { min-width: 132px; }
+
+/* 요청 요약 카드 — 넓은 화면(1024~)에서만 오른쪽에 붙어 따라온다. 좁은 화면은 아래 요약 바 */
+.side-card { display: none; }
+.side-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.side-head h2 { margin: 0; font-size: 16px; font-weight: 700; }
+.side-head span { font-size: 13px; color: var(--muted); }
+/* 주소창이 보이는 태블릿에서도 보내기 버튼이 화면 안에 — svh를 모르는 브라우저는 앞의 vh 값 */
+.side-body { max-height: calc(100vh - 240px); max-height: calc(100svh - 200px); overflow-y: auto; margin: 0 -8px; padding: 0 8px; }
+.side-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.side-row .k { color: var(--muted); flex: none; }
+.side-row .v { text-align: right; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.side-rooms { border-top: 1px solid var(--line); padding: 6px 0; }
+.side-room { display: block; width: calc(100% + 16px); margin: 0 -8px; padding: 8px; border: 0; border-radius: var(--r-input); background: transparent; color: var(--ink); text-align: left; cursor: pointer; font-size: 14px; -webkit-tap-highlight-color: transparent; }
+.side-room:hover { background: var(--sunken); }
+.side-room b { display: block; font-weight: 700; }
+.side-room span { display: block; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.side-empty { padding: 10px 0; font-size: 14px; color: var(--muted); }
+
+/* ── 폰(~599): 여백을 한 겹으로 — 패널은 화면 끝까지, 공간 카드 안쪽 여백은 줄인다 ── */
+@media (max-width: 599px) {
+  :root { --panel-padding: 16px; }
+  .panel { margin-left: calc(-1 * var(--page-margin)); margin-right: calc(-1 * var(--page-margin)); border-radius: 0; }
+  .room-card { padding: 14px 12px; }
+  .product-chip { padding: 8px 10px; }
+}
+
+/* ── 태블릿 가로 · PC(1024~): 왼쪽 입력 · 오른쪽 요청 요약(보내기 버튼 포함), 아래 바 없음 ── */
+@media (min-width: 1024px) {
+  body { padding-bottom: 0; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+  .layout.is-done { grid-template-columns: minmax(0, 1fr); }
+  .side { position: sticky; top: 16px; margin: 16px 0; }
+  .side-card { display: block; margin: 0; padding: 20px; }
+  .bar { position: static; padding: 0; margin-top: 12px; background: transparent; border: 0; }
+  .bar-in { max-width: none; }
+  .bar-sum { display: none; }
+  .bar .btn.primary { width: 100%; min-height: 52px; font-size: 16px; }
+}
 
 /* 완료 화면 */
 .done { text-align: center; padding: 56px var(--panel-padding); }
@@ -211,6 +257,7 @@ details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
 
 .toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(12px); background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none; transition: all .2s; z-index: 40; max-width: calc(100% - 32px); text-align: center; }
 .toast.on { opacity: 1; transform: translateX(-50%); }
+@media (min-width: 1024px) { .toast { bottom: calc(24px + env(safe-area-inset-bottom)); } }   /* 넓은 화면은 아래 바가 없다 */
 .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 footer { text-align: center; font-size: 13px; color: var(--muted); padding: 8px 0 24px; }
@@ -229,6 +276,8 @@ footer a { color: inherit; }
     </ol>
   </header>
 
+  <div class="layout">
+  <main class="main">
   <form id="form" novalidate autocomplete="on">
     <div class="panel" id="formPanel">
 
@@ -359,15 +408,24 @@ footer a { color: inherit; }
       <div style="margin-top:24px"><button type="button" class="btn" id="againBtn">새 요청 작성</button></div>
     </div>
   </div>
+  </main>
+
+  <!-- 넓은 화면: 오른쪽 요청 요약 + 보내기 / 좁은 화면: 요약 카드는 숨고 .bar가 화면 아래에 붙는다 -->
+  <aside class="side" id="side" aria-label="요청 요약">
+    <div class="panel side-card">
+      <div class="side-head"><h2>요청 요약</h2><span id="sideCount" aria-live="polite"></span></div>
+      <div class="side-body" id="sideBody"></div>
+    </div>
+    <div class="bar" id="bar">
+      <div class="bar-in">
+        <div class="bar-sum" id="barSum" aria-live="polite"><b>공간 0</b> · 공사 0건</div>
+        <button type="button" class="btn primary" id="submitBtn">견적 요청 보내기</button>
+      </div>
+    </div>
+  </aside>
+  </div>
 
   <footer><span id="footerText"></span></footer>
-</div>
-
-<div class="bar" id="bar">
-  <div class="bar-in">
-    <div class="bar-sum" id="barSum" aria-live="polite"><b>공간 0</b> · 공사 0건</div>
-    <button type="button" class="btn primary" id="submitBtn">견적 요청 보내기</button>
-  </div>
 </div>
 
 <div class="layer" id="addrLayer" role="dialog" aria-modal="true" aria-label="주소 검색">
@@ -705,9 +763,10 @@ function renderRoomCards() {
     const data = state.rooms.get(room);
     const card = document.createElement("div");
     card.className = "room-card";
+    card.dataset.room = room;   // 요청 요약에서 누르면 이 카드로 옮겨 간다
     const head = document.createElement("div");
     head.className = "room-card-head";
-    const h = document.createElement("h3"); h.textContent = room; head.appendChild(h);
+    const h = document.createElement("h3"); h.textContent = room; h.tabIndex = -1; head.appendChild(h);
     // 공용(전체)는 앱이 전체 평형을 그대로 쓰므로 공간 평형 칸을 두지 않는다
     if (state.scope === "부분" && room !== CONFIG.WHOLE_HOUSE_ROOM) {
       const p = document.createElement("div");
@@ -895,6 +954,50 @@ function updateBar() {
   if (py > 0) parts.push(`${py}평`);
   if (state.photos.length) parts.push(`사진 ${state.photos.length}`);
   $("#barSum").innerHTML = parts.join(" · ");
+  renderSide(rooms, trades, py);
+}
+
+// 요청 요약 카드(넓은 화면) — 공간 · 공종 이름은 설정에서 오므로 글자로만 넣는다(innerHTML 금지).
+function renderSide(rooms, trades, py) {
+  $("#sideCount").textContent = `공간 ${rooms} · 공사 ${trades}건`;
+  const body = $("#sideBody");
+  body.textContent = "";
+  const row = (k, v) => {
+    const d = document.createElement("div"); d.className = "side-row";
+    const a = document.createElement("span"); a.className = "k"; a.textContent = k;
+    const b = document.createElement("span"); b.className = "v"; b.textContent = v;
+    d.append(a, b); body.appendChild(d);
+  };
+  row("전체 평형", py > 0 ? `${py}평` : "—");
+  row("시공 범위", state.scope === "부분" ? "부분 시공" : "전체 시공");
+  const list = document.createElement("div"); list.className = "side-rooms";
+  const ordered = WEB.rooms.filter(r => state.rooms.has(r));
+  if (!ordered.length) {
+    const e = document.createElement("div"); e.className = "side-empty";
+    e.textContent = "공사할 공간을 골라 주세요.";
+    list.appendChild(e);
+  }
+  ordered.forEach(room => {
+    const v = state.rooms.get(room);
+    const b = document.createElement("button"); b.type = "button"; b.className = "side-room";
+    const t = document.createElement("b");
+    const py2 = state.scope === "부분" && room !== CONFIG.WHOLE_HOUSE_ROOM && parseFloat(v.pyeong) > 0 ? ` · ${v.pyeong}평` : "";
+    t.textContent = room + py2;
+    const s = document.createElement("span");
+    const names = WEB.trades.filter(x => v.trades.has(x));
+    let picked = 0; v.items.forEach(set => picked += set.size);
+    s.textContent = names.length ? names.join(" · ") + (picked ? ` · 상품 ${picked}개` : "") : "공사는 상담 때 정해요";
+    b.append(t, s);
+    b.addEventListener("click", () => {
+      const card = $$(".room-card").find(c => c.dataset.room === room);
+      if (!card) return;
+      card.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+      $("h3", card).focus({ preventScroll: true });   // 키보드 · 화면낭독기도 그 카드로
+    });
+    list.appendChild(b);
+  });
+  body.appendChild(list);
+  if (state.photos.length) row("현장 사진", `${state.photos.length}장`);
 }
 
 // ── 초안 저장 (이 브라우저에만, 사진 제외) ──────────────────────────────
@@ -1032,7 +1135,8 @@ async function submit() {
     }
     clearDraft();
     $("#receipt").textContent = receipt ? `접수번호 ${receipt}` : "접수 완료";
-    $("#form").hidden = true; $("#bar").hidden = true; $("#donePanel").hidden = false;
+    $("#form").hidden = true; $("#bar").hidden = true; $("#side").hidden = true; $("#donePanel").hidden = false;
+    $(".layout").classList.add("is-done");
     document.body.style.paddingBottom = "0";
     window.scrollTo({ top: 0, behavior: "smooth" });
   } catch (err) {
@@ -1047,7 +1151,8 @@ $("#againBtn").addEventListener("click", () => {
   $("#form").reset(); state.rooms.clear(); state.photos = []; setScope("전체");
   $("#address").readOnly = true; $("#pyeong").dispatchEvent(new Event("input"));
   renderRoomToggles(); renderRoomCards(); renderPhotos();
-  $("#form").hidden = false; $("#bar").hidden = false; $("#donePanel").hidden = true;
+  $("#form").hidden = false; $("#bar").hidden = false; $("#side").hidden = false; $("#donePanel").hidden = true;
+  $(".layout").classList.remove("is-done");
   document.body.style.paddingBottom = "";
   window.scrollTo({ top: 0 });
 });
