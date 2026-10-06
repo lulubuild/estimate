@@ -240,6 +240,9 @@ table.mx { border-collapse: separate; border-spacing: 6px; margin: -6px 0; }
 .cell .c-main { font-size: 13px; font-weight: 600; line-height: 1.25; text-align: center; word-break: keep-all; overflow-wrap: anywhere;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .cell .c-sub { font-size: 11px; line-height: 1.2; color: var(--sel); font-weight: 500; white-space: nowrap; }
+.cell.need { border-color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); background: var(--danger-soft); color: var(--danger); }   /* 담겼는데 상품 없음 — 보내기 전에 골라야 함 */
+.cell.need .c-sub { color: var(--danger); }
+[data-field="rooms"].invalid .col-head.empty .col-sub { color: var(--danger); font-weight: 600; }
 .cell.off { background: transparent; border-style: dashed; border-color: var(--line); opacity: .5; font-size: 15px; cursor: default; }
 .cell.off:hover { border-color: var(--line); }
 .mx-hint { font-size: 13px; color: var(--muted); margin-top: 10px; }
@@ -360,6 +363,9 @@ details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
 .layer.sheet .layer-box { height: auto; max-height: min(680px, 88vh); max-width: 640px; }
 .sheet-body { padding: 18px 20px; overflow-y: auto; flex: 1; overscroll-behavior: contain; }
 .sheet-hint { margin: 0 0 14px; font-size: 15px; color: var(--muted); }
+.sheet-group { margin: 22px 0 10px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.sheet-hint + .sheet-group { margin-top: 4px; }
+.chip small { margin-left: 6px; font-size: 12px; font-weight: 500; color: var(--muted); }
 .sheet-foot { display: flex; gap: 10px; justify-content: flex-end; padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line-soft); }
 .sheet-foot .btn { min-height: 48px; font-size: 17px; }
 
@@ -464,10 +470,10 @@ footer .sep { color: var(--line); }
       <!-- ③ 공간별 필요 공사 (앱 1209 체크표와 같은 방식 — 가격 없음) -->
       <section class="section" aria-labelledby="s3" data-field="rooms">
         <div class="sec-head"><h2 class="sec-title" id="s3">공간별 공사. <span>필요한 칸을 눌러 상품을 고르세요.</span></h2></div>
-        <p class="sec-desc" id="roomsDesc">공사할 공간을 고르면 아래 표에 열로 생깁니다. 필요한 칸을 눌러 상품을 골라 주세요. 잘 모르시면 '상품은 상담 때'를 누르면 됩니다.</p>
+        <p class="sec-desc" id="roomsDesc">공사할 공간을 고르면 아래 표에 열로 생깁니다. 필요한 칸을 눌러 상품을 하나 이상 골라 주세요.</p>
         <div class="rooms" id="roomToggles" role="group" aria-label="공간 선택"></div>
         <div id="matrixWrap"></div>
-        <div class="err" style="margin-top:12px">공사할 공간을 하나 이상 골라 주세요.</div>
+        <div class="err" id="roomsErr" style="margin-top:12px">공사할 공간을 하나 이상 골라 주세요.</div>
       </section>
 
       <!-- ④ 사진 · 요청사항 (앱 1106) -->
@@ -726,7 +732,7 @@ function tradeAllowed(room, trade) {
 
 /** 3번 안내 — 공용(전체)에서만 고를 수 있는 공종이 있으면 그 이름을 알린다. */
 function renderRoomsDesc() {
-  let text = "공사할 공간을 고르면 아래 표에 열로 생깁니다. 필요한 칸을 눌러 상품을 골라 주세요. 잘 모르시면 '상품은 상담 때'를 누르면 됩니다. 공종 이름을 누르면 여러 공간에 한 번에 담깁니다.";
+  let text = "공사할 공간을 고르면 아래 표에 열로 생깁니다. 필요한 칸을 눌러 상품을 하나 이상 골라 주세요. 공종 이름을 누르면 여러 공간에 같은 상품을 한 번에 담을 수 있습니다.";
   const whole = CONFIG.WHOLE_HOUSE_ROOM;
   const others = WEB.rooms.filter(r => r !== whole);
   if (WEB.rooms.includes(whole) && others.length) {
@@ -959,6 +965,7 @@ function renderMatrix() {
     const name = document.createElement("div"); name.className = "col-name"; name.textContent = room;
     const sub = document.createElement("div"); sub.className = "col-sub";
     sub.textContent = data.trades.size ? `공사 ${data.trades.size}건` : "공사 없음";
+    if (!roomHasWork(room)) th.classList.add("empty");
     th.append(name, sub);
     // 부분 시공 — 공간 평형(공용(전체)는 앱이 전체 평형을 그대로 쓰므로 칸이 없다)
     if (state.scope === "부분" && room !== CONFIG.WHOLE_HOUSE_ROOM) {
@@ -1047,19 +1054,22 @@ function cellButton(room, trade) {
     b.textContent = "+";
     b.setAttribute("aria-label", hasProducts ? `${room} ${trade} 상품 고르기` : `${room}에 ${trade} 담기`);
   } else {
-    // 담긴 칸: 고른 상품 이름(외 N개) · 상품을 안 고르고 '상품은 상담 때'를 누른 칸은 '상담 때 선택'
-    b.classList.add("on");
+    // 담긴 칸: 고른 상품 이름(외 N개). 상품은 필수(사용자 결정 2026-10-07) — 상품 없이 담긴 칸(예전 초안 · 설정에서 상품이 빠짐)은 빨간 '상품 고르기'
     const picked = pickedNames(data, trade);
+    const need = hasProducts && !picked.length;
+    b.classList.add(need ? "need" : "on");
     const main = document.createElement("span"); main.className = "c-main";
     const sub = document.createElement("span"); sub.className = "c-sub";
     if (picked.length) {
       main.textContent = picked[0];
       sub.textContent = picked.length > 1 ? `외 ${picked.length - 1}개` : "선택";
+    } else if (need) {
+      main.textContent = "상품 고르기"; sub.textContent = "필수";
     } else {
-      main.textContent = hasProducts ? "상담 때 선택" : "✓ 선택";
+      main.textContent = "✓ 선택";
     }
     b.append(main, sub);
-    b.setAttribute("aria-label", `${room} ${trade}: ${picked.length ? picked.join(", ") : (hasProducts ? "상품은 상담 때 선택" : "선택")}${hasProducts ? " — 누르면 상품 고르기" : " — 누르면 빼기"}`);
+    b.setAttribute("aria-label", `${room} ${trade}: ${picked.length ? picked.join(", ") : (need ? "상품을 아직 고르지 않음" : "선택")}${hasProducts ? " — 누르면 상품 고르기" : " — 누르면 빼기"}`);
   }
   // 누르면 바로 상품 팝업(사용자 결정 2026-10-07 — '✓ 필요 · 상품 고르기' 단계 없음). 상품이 없는 공종만 눌러서 담기/빼기.
   b.addEventListener("click", () => {
@@ -1106,7 +1116,7 @@ document.addEventListener("keydown", e => {
 });
 
 // 칸 팝업 — 그 공간 · 공종의 상품 고르기(여러 개). 상품을 하나라도 고르면 담기고, 다 빼면 빈 칸으로.
-// 상품을 모르면 '상품은 상담 때'(상품 없이 담김 → 칸에 '상담 때 선택'). 아무것도 안 고르고 닫으면 빈 칸 그대로.
+// 상품은 필수(사용자 결정 2026-10-07 — '상품은 상담 때' 없음). 아무것도 안 고르고 닫으면 빈 칸 그대로.
 function openCellSheet(room, trade) {
   const data = state.rooms.get(room);
   const cellOf = () => $(`.cell[data-room="${CSS.escape(room)}"][data-trade="${CSS.escape(trade)}"]`);
@@ -1120,8 +1130,6 @@ function openCellSheet(room, trade) {
     };
     if (data.trades.has(trade)) {
       add("이 공사 빼기", false, () => { data.trades.delete(trade); data.items.delete(trade); afterChange(); closeSheet(); });
-    } else {
-      add("상품은 상담 때", false, () => { data.items.delete(trade); data.trades.add(trade); afterChange(); closeSheet(); });
     }
     add("완료", true, closeSheet);
   };
@@ -1133,8 +1141,8 @@ function openCellSheet(room, trade) {
       setHint = () => {
         const n = pickedNames(data, trade).length;
         hint.textContent = n ? `${n}개 골랐어요. 여러 개 고를 수 있어요.`
-          : data.trades.has(trade) ? "상품은 상담 때 정하기로 했어요. 원하시면 지금 골라도 돼요."
-          : "원하시는 상품을 골라 주세요. 잘 모르시면 아래 '상품은 상담 때'를 눌러 주세요.";
+          : data.trades.has(trade) ? "상품을 하나 이상 골라 주세요. 고르지 않으면 견적 요청을 보낼 수 없어요."
+          : "원하시는 상품을 골라 주세요(여러 개 가능).";
       };
       setHint(); body.appendChild(hint);
       const list = document.createElement("div"); list.className = "product-grid";
@@ -1165,17 +1173,91 @@ function openCellSheet(room, trade) {
   renderFoot();
 }
 
-// 공종 팝업 — 이 공사가 필요한 공간을 한 번에 고른다(앱 1304와 같은 구실). 표에 없는 공간을 누르면 열이 생긴다.
+// 공종 팝업 — 여러 공간에 같은 상품을 한 번에 담는다(앱 1304와 같은 구실 · 상품 필수, 사용자 결정 2026-10-07).
+// 공간과 상품을 고르고 'N곳에 담기' → 고른 공간 모두 그 상품으로(이미 담긴 공간은 새로 고른 상품으로 바뀜). 표에 없는 공간은 새 열.
+// 상품이 없는 공종(설정에 상품 0개)은 예전처럼 공간만 눌러 담기/빼기 — openTradeSheetRooms.
 function openTradeSheet(trade) {
   const rowOf = () => $(`.row-btn[data-trade="${CSS.escape(trade)}"]`);
   const rooms = [...WEB.rooms].sort(koSort).filter(r => tradeAllowed(r, trade));
+  const products = WEB.products[trade] || [];
+  if (!rooms.length || !products.length) { openTradeSheetRooms(trade, rooms, rowOf); return; }
+  const selRooms = new Set(), selItems = new Set();
+  let applyBtn = null;
+  const refresh = () => {
+    if (!applyBtn) return;
+    applyBtn.disabled = !(selRooms.size && selItems.size);
+    applyBtn.textContent = selRooms.size ? `${selRooms.size}곳에 담기` : "담기";
+  };
+  openSheet({
+    title: `${trade} — 여러 공간에 한 번에`,
+    returnFocus: rowOf,
+    build(body) {
+      const p = document.createElement("p"); p.className = "sheet-hint";
+      p.textContent = "공간과 상품을 고르면 고른 공간 모두에 같은 상품이 담겨요. 이미 담긴 공간은 새로 고른 상품으로 바뀝니다.";
+      const h1 = document.createElement("div"); h1.className = "sheet-group"; h1.textContent = "공간";
+      const list = document.createElement("div"); list.className = "chips";
+      list.setAttribute("role", "group"); list.setAttribute("aria-label", `${trade} 담을 공간`);
+      rooms.forEach(room => {
+        const c = document.createElement("button");
+        c.type = "button"; c.className = "chip"; c.textContent = room;
+        const had = state.rooms.has(room) && state.rooms.get(room).trades.has(trade);
+        if (had) { const s = document.createElement("small"); s.textContent = "담김"; c.appendChild(s); }
+        c.setAttribute("aria-label", had ? `${room} (이미 담김)` : room);
+        c.setAttribute("aria-pressed", "false");
+        c.addEventListener("click", () => {
+          if (selRooms.has(room)) selRooms.delete(room); else selRooms.add(room);
+          c.setAttribute("aria-pressed", String(selRooms.has(room)));
+          refresh();
+        });
+        list.appendChild(c);
+      });
+      const h2 = document.createElement("div"); h2.className = "sheet-group"; h2.textContent = "상품 (여러 개 가능)";
+      const grid = document.createElement("div"); grid.className = "product-grid";
+      grid.setAttribute("role", "group"); grid.setAttribute("aria-label", `${trade} 상품`);
+      products.forEach(([name, sub]) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "product-chip"; b.setAttribute("aria-pressed", "false");
+        const n = document.createElement("span"); n.textContent = name;
+        b.append(n);
+        if (sub) { const s = document.createElement("small"); s.textContent = sub; b.append(s); b.title = `${name} — ${sub}`; }
+        b.addEventListener("click", () => {
+          if (selItems.has(name)) selItems.delete(name); else selItems.add(name);
+          b.setAttribute("aria-pressed", String(selItems.has(name)));
+          refresh();
+        });
+        grid.appendChild(b);
+      });
+      body.append(p, h1, list, h2, grid);
+    },
+    actions: [],
+  });
+  const foot = $("#sheetFoot"); foot.innerHTML = "";
+  applyBtn = document.createElement("button");
+  applyBtn.type = "button"; applyBtn.className = "btn primary";
+  applyBtn.addEventListener("click", () => {
+    if (!selRooms.size || !selItems.size) return;
+    const names = productNames(trade).filter(n => selItems.has(n));
+    const count = selRooms.size;
+    selRooms.forEach(room => {
+      if (!state.rooms.has(room)) state.rooms.set(room, newRoom());
+      const data = state.rooms.get(room);
+      data.trades.add(trade); data.items.set(trade, new Set(names));
+    });
+    afterChange(); closeSheet();
+    toast(`${trade} — ${count}곳에 담았어요.`);
+  });
+  foot.appendChild(applyBtn);
+  refresh();
+}
+// 상품이 없는 공종 — 이 공사가 필요한 공간만 고른다(표에 없는 공간을 누르면 열이 생긴다).
+function openTradeSheetRooms(trade, rooms, rowOf) {
   openSheet({
     title: `${trade} — 필요한 공간`,
     returnFocus: rowOf,
     build(body) {
       const p = document.createElement("p"); p.className = "sheet-hint";
       p.textContent = rooms.length
-        ? "이 공사가 필요한 공간을 모두 눌러 주세요. 표에 없는 공간은 새 열로 생깁니다. 상품은 표의 칸을 눌러 고릅니다."
+        ? "이 공사가 필요한 공간을 모두 눌러 주세요. 표에 없는 공간은 새 열로 생깁니다."
         : "이 공사는 상담 때 함께 정해요.";
       body.appendChild(p);
       if (!rooms.length) return;
@@ -1338,7 +1420,7 @@ function renderSide(rooms, trades, py) {
     const s = document.createElement("span");
     const names = WEB.trades.filter(x => v.trades.has(x));
     let picked = 0; v.items.forEach(set => picked += set.size);
-    s.textContent = names.length ? names.join(" · ") + (picked ? ` · 상품 ${picked}개` : "") : "공사는 상담 때 정해요";
+    s.textContent = names.length ? names.join(" · ") + (picked ? ` · 상품 ${picked}개` : "") : "아직 고른 상품이 없어요";
     b.append(t, s);
     b.addEventListener("click", () => {
       const th = $$(".mx .col-head").find(c => c.dataset.room === room);
@@ -1403,6 +1485,33 @@ function setInvalid(field) { const el = $(`[data-field="${field}"]`); if (el) el
 function clearInvalid(field) { const el = $(`[data-field="${field}"]`); if (el) el.classList.remove("invalid"); }
 $("#consent").addEventListener("change", () => clearInvalid("consent"));
 
+/** 이 공간에 담긴 공사가 있는가(이 공간에서 고를 수 있는 공종만 — 전송과 같은 기준). */
+function roomHasWork(room) {
+  const data = state.rooms.get(room);
+  return !!data && WEB.trades.some(t => data.trades.has(t) && tradeAllowed(room, t));
+}
+/** 3번 검사 — 공간 하나 이상 · 상품을 안 고른 칸 없음 · 상품이 하나도 없는 공간 없음(사용자 결정 2026-10-07 — 상품 필수).
+    문제가 없으면 null, 있으면 { text, target(): 화면을 옮길 칸 }. */
+function roomsProblem() {
+  if (!state.rooms.size) return { text: "공사할 공간을 하나 이상 골라 주세요.", target: null };
+  const rooms = [...state.rooms.keys()].sort(koSort);
+  const need = [];
+  WEB.trades.forEach(t => rooms.forEach(room => {   // 표 순서(위 → 아래, 왼 → 오른)
+    const data = state.rooms.get(room);
+    if (data.trades.has(t) && tradeAllowed(room, t) && productNames(t).length && !pickedNames(data, t).length) need.push([room, t]);
+  }));
+  if (need.length) {
+    const [room, trade] = need[0];
+    return { text: `상품을 고르지 않은 칸이 ${need.length}개 있어요. 빨간 칸을 눌러 상품을 골라 주세요.`,
+             target: () => $(`.cell[data-room="${CSS.escape(room)}"][data-trade="${CSS.escape(trade)}"]`) };
+  }
+  const empty = rooms.filter(room => !roomHasWork(room));
+  if (empty.length) {
+    return { text: `${empty.join(", ")}에 고른 상품이 없어요. 상품을 고르거나 위에서 공간을 빼 주세요.`,
+             target: () => $$(".mx .col-head").find(c => c.dataset.room === empty[0]) };
+  }
+  return null;
+}
 function validate() {
   const bad = [];
   if (!$("#name").value.trim()) bad.push("name");
@@ -1415,14 +1524,23 @@ function validate() {
   if (!(py >= 1 && py <= 500)) bad.push("pyeong");
   const s = $("#startDate").value, e = $("#endDate").value;
   if (s && e && e < s) bad.push("endDate");
-  if (!state.rooms.size) bad.push("rooms");
+  const roomsIssue = roomsProblem();
+  if (roomsIssue) { bad.push("rooms"); $("#roomsErr").textContent = roomsIssue.text; }
   if (!$("#consent").checked) bad.push("consent");
   bad.forEach(setInvalid);
   if (bad.length) {
     const first = $(`[data-field="${bad[0]}"]`);
-    first.scrollIntoView({ behavior: "smooth", block: "center" });
-    const focusable = $("input, textarea", first);
-    if (focusable && !focusable.readOnly) setTimeout(() => focusable.focus({ preventScroll: true }), 300);
+    const target = bad[0] === "rooms" && roomsIssue.target ? roomsIssue.target() : null;
+    if (target) {
+      // 그 칸(또는 열 머리)으로 — 표가 넓으면 옆으로도 민다
+      target.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+      setTimeout(() => target.focus({ preventScroll: true }), 300);
+    } else {
+      first.scrollIntoView({ behavior: "smooth", block: "center" });
+      const focusable = $("input, textarea", first);
+      if (focusable && !focusable.readOnly) setTimeout(() => focusable.focus({ preventScroll: true }), 300);
+    }
+    toast(bad[0] === "rooms" ? roomsIssue.text : "빠진 항목을 확인해 주세요.");
   }
   return bad.length === 0;
 }
@@ -1466,7 +1584,7 @@ $("#form").addEventListener("submit", e => { e.preventDefault(); submit(); });
 
 async function submit() {
   if (sending) return;
-  if (!validate()) { toast("빠진 항목을 확인해 주세요."); return; }
+  if (!validate()) return;   // 안내 글은 validate가 띄운다
   const payload = buildPayload();
   const btn = $("#submitBtn");
   sending = true; btn.disabled = true; btn.innerHTML = `<span class="spinner" aria-hidden="true"></span>보내는 중`;
