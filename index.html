@@ -39,6 +39,7 @@
   --accent: #065FD4;      /* written (활성) */
   --line: #E5E5E5;
   --accent-soft: #E8F0FC; /* 체크표에서 담긴 칸 */
+  --focus-ring: rgba(6, 95, 212, .18);   /* 입력칸을 누르면 테두리 바깥 옅은 띠 */
   --brand: #FF0000;       /* 로고 전용 */
   --danger: #CC0000;
   --page-margin: 16px;
@@ -51,14 +52,14 @@
   :root:not([data-theme="light"]) {
     --bg: #0F0F0F; --surface: #1F1F1F; --sunken: #272727; --selected: #373737;
     --ink: #F1F1F1; --muted: #AAAAAA; --accent: #3EA6FF; --line: #303030; --danger: #FF6B6B;
-    --accent-soft: #15314D;
+    --accent-soft: #15314D; --focus-ring: rgba(62, 166, 255, .28);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0F0F0F; --surface: #1F1F1F; --sunken: #272727; --selected: #373737;
   --ink: #F1F1F1; --muted: #AAAAAA; --accent: #3EA6FF; --line: #303030; --danger: #FF6B6B;
-  --accent-soft: #15314D;
+  --accent-soft: #15314D; --focus-ring: rgba(62, 166, 255, .28);
   color-scheme: dark;
 }
 
@@ -104,7 +105,7 @@ a.btn { text-decoration: none; }
 .sec-desc { margin: -8px 0 14px; font-size: 14px; color: var(--muted); }
 
 /* 입력칸 */
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .grid .full { grid-column: 1 / -1; }
 @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
 label.f { display: block; }
@@ -112,9 +113,21 @@ label.f { display: block; }
 .req { color: var(--accent); margin-left: 2px; }
 .input, textarea.input {
   width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid transparent; border-radius: var(--r-input);
-  background: var(--sunken); outline: none; font-size: 16px; transition: border-color .15s, background .15s;
+  background: var(--sunken); outline: none; font-size: 16px; transition: border-color .15s, box-shadow .15s;
 }
-.input:focus { border-color: var(--accent); background: var(--surface); }
+/* 누르면 파란 테두리 + 바깥 옅은 띠 — 바탕은 회색 그대로(흰 패널에 섞여 칸이 사라져 보이지 않게) */
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+/* 날짜 칸 — 사파리(아이폰 · 아이패드)는 기본 모양이면 width를 무시하고 칸 폭을 넘어 옆 칸에 붙는다 */
+input[type="date"].input { -webkit-appearance: none; appearance: none; display: block; min-width: 0; width: 100%; color: var(--ink); }
+input[type="date"].input::-webkit-date-and-time-value { text-align: left; min-height: 1.5em; }
+input[type="date"].input:not(.has-value) { color: var(--muted); }
+/* 공사 희망 기간 — [시작일] ~ [완공일] 한 줄, 아주 좁은 폰은 위아래 */
+.period { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 0 10px; max-width: 640px; }   /* 넓은 화면에서 두 칸이 너무 길어지지 않게 */
+.period-item { display: block; min-width: 0; }
+.period-item .pl { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.period .tilde { height: 48px; display: flex; align-items: center; color: var(--muted); font-size: 18px; }
+@media (max-width: 379px) { .period { grid-template-columns: minmax(0, 1fr); gap: 10px; } .period .tilde { display: none; } }
+.opt { font-weight: 400; }
 .input[readonly] { color: var(--muted); }
 #address[readonly] { cursor: pointer; }
 #address[readonly]:not(:placeholder-shown) { color: var(--ink); }
@@ -338,9 +351,9 @@ footer a { color: inherit; }
 
 <div class="wrap">
   <header class="top">
+    <!-- 전화 상담은 견적 요청을 받은 뒤에만 — 번호는 접수 완료 화면에서 보인다(사용자 결정 2026-10-07) -->
     <div class="top-row">
       <div class="brand"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6 1.8 11.2l1.3 1.5L5 11.1V21h5.5v-6h3v6H19v-9.9l1.9 1.6 1.3-1.5z"/></svg><span id="companyName">룰루타일</span></div>
-      <a class="btn" id="callBtn" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg><span>전화 상담</span></a>
     </div>
     <h1>온라인 견적 요청</h1>
     <p class="lead">평형과 공사할 공간만 알려주세요. 담당자가 견적을 준비해 연락드립니다.</p>
@@ -412,15 +425,16 @@ footer a { color: inherit; }
             </div>
             <div class="hint" id="scopeHint">집 전체를 공사합니다.</div>
           </div>
-          <label class="f">
-            <span class="l">공사 희망일</span>
-            <input class="input" type="date" id="startDate">
-          </label>
-          <label class="f" data-field="endDate">
-            <span class="l">완공 희망일</span>
-            <input class="input" type="date" id="endDate">
-            <div class="err">완공 희망일은 공사 희망일 이후여야 합니다.</div>
-          </label>
+          <!-- 공사 희망 기간 — 시작일 ~ 완공일 한 줄(전송 칸 이름 startDate · endDate 그대로) -->
+          <div class="f full" data-field="endDate">
+            <span class="l" id="periodLabel">공사 희망 기간 <span class="opt">(선택)</span></span>
+            <div class="period" role="group" aria-labelledby="periodLabel">
+              <label class="period-item"><span class="pl">시작일</span><input class="input" type="date" id="startDate" aria-label="공사 희망 시작일"></label>
+              <span class="tilde" aria-hidden="true">~</span>
+              <label class="period-item"><span class="pl">완공일</span><input class="input" type="date" id="endDate" aria-label="완공 희망일"></label>
+            </div>
+            <div class="err">완공일은 시작일 이후로 골라 주세요.</div>
+          </div>
         </div>
       </section>
 
@@ -464,7 +478,7 @@ footer a { color: inherit; }
             <tr><th>수집 항목</th><td>이름, 연락처, 현장 주소·우편번호, 평형, 공간별 필요 공사, 공사·완공 희망일, 현장 사진, 요청사항</td></tr>
             <tr><th>이용 목적</th><td>인테리어 견적 산출 및 상담 연락 (Google 시트·드라이브에 보관 — 국외 이전 포함, 처리방침 참고)</td></tr>
             <tr><th>보유 기간</th><td id="retentionText">문의일로부터 1년 (계약 시 관련 법령에 따른 기간)</td></tr>
-            <tr><th>동의 거부</th><td>동의하지 않으실 수 있으며, 이 경우 온라인 견적 요청을 할 수 없습니다. 전화로 문의해 주세요.</td></tr>
+            <tr><th>동의 거부</th><td>동의하지 않으실 수 있으며, 이 경우 온라인 견적 요청을 할 수 없습니다.</td></tr>
           </table>
           <p style="margin:10px 0 0" id="privacyLinkWrap" hidden><a id="privacyLink" href="#" target="_blank" rel="noopener">개인정보처리방침 전문 보기</a></p>
         </details>
@@ -486,7 +500,7 @@ footer a { color: inherit; }
         <li>견적서 발송<span>실측을 바탕으로 견적서를 보내 드립니다</span></li>
       </ol>
       <div class="done-actions">
-        <a class="btn primary" id="donePhone" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg><span>전화하기</span></a>
+        <a class="btn primary" id="donePhone" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg><span id="donePhoneText">전화하기</span></a>
         <button type="button" class="btn" id="againBtn">새 요청 작성</button>
       </div>
     </div>
@@ -781,10 +795,10 @@ async function fetchWebConfig() {
 // ── 머리·꼬리 채우기 ─────────────────────────────────────────────
 $("#companyName").textContent = CONFIG.COMPANY_NAME;
 document.title = `온라인 견적 요청 · ${CONFIG.COMPANY_NAME}`;
-$("#footerText").textContent = `${CONFIG.COMPANY_NAME} · ${CONFIG.COMPANY_PHONE}`;
-const TEL = "tel:" + CONFIG.COMPANY_PHONE.replace(/[^\d+]/g, "");
-[$("#callBtn"), $("#donePhone")].forEach(a => { a.href = TEL; a.title = CONFIG.COMPANY_PHONE; });
-$("#callBtn").setAttribute("aria-label", `전화 상담 ${CONFIG.COMPANY_PHONE}`);
+// 전화번호는 접수 완료 화면에서만(머리 · 바닥글에는 상호만). 보내기 실패 안내에는 남긴다 — 요청을 보내려다 막힌 고객의 연락 길.
+$("#footerText").textContent = CONFIG.COMPANY_NAME;
+$("#donePhone").href = "tel:" + CONFIG.COMPANY_PHONE.replace(/[^\d+]/g, "");
+$("#donePhoneText").textContent = `전화하기 ${CONFIG.COMPANY_PHONE}`;
 $("#donePhone").setAttribute("aria-label", `전화하기 ${CONFIG.COMPANY_PHONE}`);
 $("#maxPhotosLabel").textContent = CONFIG.MAX_PHOTOS;
 $("#retentionText").textContent = CONFIG.RETENTION;
@@ -821,6 +835,14 @@ $("#pyeong").addEventListener("input", e => {
   $("#pyeongHint").textContent = n > 0 ? `약 ${(n * 3.305785).toFixed(1)}㎡ · 공급면적 기준` : "공급면적 기준으로 적어 주세요.";
   updateBar();
 });
+
+// ── 공사 희망 기간 — 빈 칸은 흐린 글자, 완공일 달력은 시작일부터 ─────────────────
+function syncDates() {
+  const s = $("#startDate"), e = $("#endDate");
+  s.classList.toggle("has-value", !!s.value); e.classList.toggle("has-value", !!e.value);
+  e.min = s.value || "";
+}
+["startDate", "endDate"].forEach(id => ["input", "change"].forEach(t => $("#" + id).addEventListener(t, syncDates)));
 
 // ── 시공 범위 (전체 / 부분) ─────────────────────────────────────────
 $$("[data-scope]").forEach(b => b.addEventListener("click", () => setScope(b.dataset.scope)));
@@ -1450,7 +1472,7 @@ $("#againBtn").addEventListener("click", () => {
   $("#form").reset(); state.rooms.clear(); state.photos = []; setScope("전체"); ensureWholeRoom();
   const a = $("#address"); a.readOnly = true; a.placeholder = "눌러서 주소 검색";
   $("#detailWrap").hidden = true; $("#zipWrap").hidden = true;
-  $("#pyeong").dispatchEvent(new Event("input"));
+  $("#pyeong").dispatchEvent(new Event("input")); syncDates();
   renderRoomToggles(); renderMatrix(); renderPhotos(); saveDraft();
   $("#form").hidden = false; $("#bar").hidden = false; $("#side").hidden = false; $("#donePanel").hidden = true;
   setProcessStep(1);
@@ -1465,6 +1487,7 @@ renderRoomsDesc();
 loadDraft();
 if (!state.rooms.size) ensureWholeRoom();   // 처음(또는 공간을 다 뺀 초안) — 전체 시공의 '공용(전체)' 열
 setScope(state.scope);
+syncDates();
 renderRoomToggles();
 renderMatrix();
 renderPhotos();
