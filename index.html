@@ -270,6 +270,7 @@ table.mx { border-collapse: separate; border-spacing: 6px; margin: -6px 0; }
 
 /* 동의 */
 .consent-card { background: var(--bg-alt); border-radius: var(--r-card); padding: 20px; }
+.consent-card + .consent-card { margin-top: 12px; }
 .consent { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
 .consent input { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
 .consent b { font-weight: 600; }
@@ -495,19 +496,27 @@ footer .sep { color: var(--line); }
         <label class="hp" aria-hidden="true">웹사이트<input id="website" tabindex="-1" autocomplete="off"></label>
       </section>
 
-      <!-- 개인정보 동의 -->
-      <section class="section" data-field="consent" id="consentSection">
-        <div class="consent-card">
+      <!-- 입력 정보 사실 확인(2026-10-07 사용자 결정 — 허위 정보 문의 줄이기) · 개인정보 동의 -->
+      <section class="section" id="consentSection">
+        <div class="consent-card" data-field="truth">
+          <label class="consent">
+            <input type="checkbox" id="infoConfirm">
+            <span><b>입력한 정보가 사실임을 확인합니다.</b><span class="req">*</span>
+            <small>실제 문의자의 정보가 아닌 경우 견적 수정 및 실측 서비스가 제공되지 않습니다.</small></span>
+          </label>
+          <div class="err">입력한 정보가 사실인지 확인해 주세요.</div>
+        </div>
+        <div class="consent-card" data-field="consent">
           <label class="consent">
             <input type="checkbox" id="consent">
             <span><b>개인정보 수집·이용에 동의합니다.</b><span class="req">*</span>
-            <small>견적 안내와 상담 연락에만 사용합니다.</small></span>
+            <small>견적 안내 · 상담 연락과 허위·반복 접수 방지에만 사용합니다.</small></span>
           </label>
           <details class="policy">
             <summary>수집 항목 자세히 보기</summary>
             <table>
-              <tr><th>수집 항목</th><td>이름, 연락처, 현장 주소·우편번호, 평형, 공간별 필요 공사, 공사·완공 희망일, 현장 사진, 요청사항</td></tr>
-              <tr><th>이용 목적</th><td>인테리어 견적 산출 및 상담 연락 (Google 시트·드라이브에 보관 — 국외 이전 포함, 처리방침 참고)</td></tr>
+              <tr><th>수집 항목</th><td>이름, 연락처, 현장 주소·우편번호, 평형, 공간별 필요 공사, 공사·완공 희망일, 현장 사진, 요청사항<span id="deviceItem" hidden>, 기기 구분용 임의 번호(이 브라우저에 저장 · 이름·연락처와 무관한 무작위 값)</span></td></tr>
+              <tr><th>이용 목적</th><td>인테리어 견적 산출 및 상담 연락, 허위·반복 접수 방지 (Google 시트·드라이브에 보관 — 국외 이전 포함, 처리방침 참고)</td></tr>
               <tr><th>보유 기간</th><td id="retentionText">문의일로부터 1년 (계약 시 관련 법령에 따른 기간)</td></tr>
               <tr><th>동의 거부</th><td>동의하지 않으실 수 있으며, 이 경우 온라인 견적 요청을 할 수 없습니다.</td></tr>
             </table>
@@ -583,6 +592,8 @@ const CONFIG = {
   RETENTION: "문의일로부터 1년 (계약 시 관련 법령에 따른 기간)",
   // 동의 기록에 남기는 처리방침 판(시행일) — privacy.html 머리의 시행일과 같게 바꾼다.
   POLICY_VERSION: "2026-10-07",
+  // 공지 중인 다음 처리방침(시행 7일 전 공지 — 처리방침 10항). 시행 시각부터 판이 바뀌고 기기 구분 번호를 보낸다(2026-10-07).
+  NEXT_POLICY: { version: "2026-10-14", from: "2026-10-14T00:00:00+09:00" },
   MAX_PHOTOS: 5,
   // 전체 평형을 그대로 쓰는 공간 — 공간 평형 칸을 두지 않는다(앱 EstimateDraft.wholeHouseRoomName).
   WHOLE_HOUSE_ROOM: "공용(전체)",
@@ -630,6 +641,30 @@ const DEFAULT_WEB = {
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const DRAFT_KEY = "estimate-request-draft-v1";
+
+/* 기기 구분 번호 — 이 브라우저에 한 번 만든 무작위 값(이름 · 연락처와 무관). 같은 기기에서 오는 반복 · 허위 접수를
+   Apps Script가 세고, 업체가 앱에서 차단할 때 쓴다(2026-10-07). 처리방침 시행(NEXT_POLICY.from) 전에는 만들지도 보내지도 않는다.
+   ⚠️ 초안 지우기(clearDraft) · 새 요청 작성에서 지우지 않는다 — 같은 기기를 알아보는 값이다. */
+const DEVICE_KEY = "estimate-device-v1";
+let memoryDeviceId = "";
+const policyNextActive = () => Date.now() >= Date.parse(CONFIG.NEXT_POLICY.from);
+const policyVersion = () => policyNextActive() ? CONFIG.NEXT_POLICY.version : CONFIG.POLICY_VERSION;
+function newDeviceId() {
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  return btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function deviceId() {
+  if (!policyNextActive()) return "";
+  try {
+    let v = localStorage.getItem(DEVICE_KEY) || "";
+    if (!/^[A-Za-z0-9_-]{22}$/.test(v)) { v = newDeviceId(); localStorage.setItem(DEVICE_KEY, v); }
+    return v;
+  } catch {
+    // 저장소를 못 쓰는 브라우저(사생활 보호 모드 등) — 이 페이지를 연 동안만 같은 값
+    return memoryDeviceId || (memoryDeviceId = newDeviceId());
+  }
+}
 const DRAFT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const openedAt = Date.now();
 /** Apps Script가 설정과 함께 준 서명된 발급 시각(P3) — 접수 때 그대로 돌려보낸다. 브라우저에 저장하지 않는다. */
@@ -1484,6 +1519,7 @@ $("#form").addEventListener("input", e => { if (e.target.closest("[data-field]")
 function setInvalid(field) { const el = $(`[data-field="${field}"]`); if (el) el.classList.add("invalid"); return el; }
 function clearInvalid(field) { const el = $(`[data-field="${field}"]`); if (el) el.classList.remove("invalid"); }
 $("#consent").addEventListener("change", () => clearInvalid("consent"));
+$("#infoConfirm").addEventListener("change", () => clearInvalid("truth"));
 
 /** 이 공간에 담긴 공사가 있는가(이 공간에서 고를 수 있는 공종만 — 전송과 같은 기준). */
 function roomHasWork(room) {
@@ -1526,6 +1562,7 @@ function validate() {
   if (s && e && e < s) bad.push("endDate");
   const roomsIssue = roomsProblem();
   if (roomsIssue) { bad.push("rooms"); $("#roomsErr").textContent = roomsIssue.text; }
+  if (!$("#infoConfirm").checked) bad.push("truth");
   if (!$("#consent").checked) bad.push("consent");
   bad.forEach(setInvalid);
   if (bad.length) {
@@ -1571,7 +1608,9 @@ function buildPayload() {
     photos: state.photos.map(p => ({ name: p.name, data: p.dataUrl.split(",")[1] })),
     // 동의 기록 — 동의 여부와 그때의 처리방침 판(Apps Script가 접수 시각과 함께 '개인정보 동의' 열에 남긴다).
     consent: $("#consent").checked,
-    consentVersion: CONFIG.POLICY_VERSION,
+    consentVersion: policyVersion(),
+    infoConfirmed: $("#infoConfirm").checked,   // '입력한 정보가 사실임을 확인합니다' — '개인정보 동의' 열에 함께 남는다
+    device: deviceId(),                         // 기기 구분 번호 — 처리방침 시행 전에는 ""(Apps Script가 비면 건너뛴다)
     website: $("#website").value,          // 스팸 방지용 숨은 칸 — 사람은 비워 둔다
     elapsed: Date.now() - openedAt,
     issued: issuedStamp,                  // 서명된 발급 시각 — 없으면 접수는 되지만 '확인 필요'로 적힌다
@@ -1637,6 +1676,7 @@ $("#againBtn").addEventListener("click", () => {
 });
 
 // ── 시작 ─────────────────────────────────────────────────────────────
+$("#deviceItem").hidden = !policyNextActive();
 readCachedWebConfig();   // 지난번에 받은 설정이 있으면 먼저 — 새 설정은 아래 fetchWebConfig가 받아 바꾼다
 renderRoomsDesc();
 loadDraft();
