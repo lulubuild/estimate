@@ -329,6 +329,7 @@ details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
 /* ── 폰(~599) ── */
 @media (max-width: 599px) {
   .mx-scroll { --cell-min: 76px; }   /* 360px 폰에서도 공간 3열이 한 화면 */
+  .row-btn { padding-right: 6px; }   /* 공종 이름이 다섯 글자(철거·청소 등)여도 360px 폰에서 3열 */
   .product-chip { padding: 10px; }
   .layer.sheet { align-items: flex-end; padding: 0; }
   .layer.sheet .layer-box { max-width: none; border-radius: var(--r-card) var(--r-card) 0 0; }
@@ -462,8 +463,8 @@ footer .sep { color: var(--line); }
 
       <!-- ③ 공간별 필요 공사 (앱 1209 체크표와 같은 방식 — 가격 없음) -->
       <section class="section" aria-labelledby="s3" data-field="rooms">
-        <div class="sec-head"><h2 class="sec-title" id="s3">공간별 공사. <span>필요한 칸만 체크하세요.</span></h2></div>
-        <p class="sec-desc" id="roomsDesc">공사할 공간을 고르면 아래 표에 열로 생깁니다. 필요한 칸을 눌러 체크해 주세요. 잘 모르시면 공간만 골라도 됩니다.</p>
+        <div class="sec-head"><h2 class="sec-title" id="s3">공간별 공사. <span>필요한 칸을 눌러 상품을 고르세요.</span></h2></div>
+        <p class="sec-desc" id="roomsDesc">공사할 공간을 고르면 아래 표에 열로 생깁니다. 필요한 칸을 눌러 상품을 골라 주세요. 잘 모르시면 '상품은 상담 때'를 누르면 됩니다.</p>
         <div class="rooms" id="roomToggles" role="group" aria-label="공간 선택"></div>
         <div id="matrixWrap"></div>
         <div class="err" style="margin-top:12px">공사할 공간을 하나 이상 골라 주세요.</div>
@@ -725,7 +726,7 @@ function tradeAllowed(room, trade) {
 
 /** 3번 안내 — 공용(전체)에서만 고를 수 있는 공종이 있으면 그 이름을 알린다. */
 function renderRoomsDesc() {
-  let text = "공사할 공간을 고르면 아래 표에 열로 생깁니다. 필요한 칸을 눌러 체크해 주세요. 체크한 칸을 다시 누르면 원하는 상품을 고를 수 있고(선택), 공종 이름을 누르면 여러 공간에 한 번에 담깁니다.";
+  let text = "공사할 공간을 고르면 아래 표에 열로 생깁니다. 필요한 칸을 눌러 상품을 골라 주세요. 잘 모르시면 '상품은 상담 때'를 누르면 됩니다. 공종 이름을 누르면 여러 공간에 한 번에 담깁니다.";
   const whole = CONFIG.WHOLE_HOUSE_ROOM;
   const others = WEB.rooms.filter(r => r !== whole);
   if (WEB.rooms.includes(whole) && others.length) {
@@ -927,7 +928,7 @@ function afterChange() {
   renderRoomToggles(); renderMatrix(); saveDraft();
 }
 
-// 표 — 공종 = 행, 공간 = 열(고른 공간만). 빈 칸은 누르면 체크, 체크한 칸은 누르면 상품 팝업.
+// 표 — 공종 = 행, 공간 = 열(고른 공간만). 칸을 누르면 바로 상품 팝업.
 function renderMatrix() {
   const wrap = $("#matrixWrap");
   const prev = $(".mx-scroll", wrap);
@@ -986,7 +987,7 @@ function renderMatrix() {
     const n = productNames(trade).length;
     rb.innerHTML = "<b></b><span></span>";
     rb.firstChild.textContent = trade;
-    rb.lastChild.textContent = used ? `${used}곳 체크` : (n ? `상품 ${n}` : "");
+    rb.lastChild.textContent = used ? `${used}곳 선택` : (n ? `상품 ${n}` : "");
     rb.setAttribute("aria-label", `${trade} — 여러 공간에 한 번에 담기`);
     rb.addEventListener("click", () => openTradeSheet(trade));
     th.appendChild(rb); tr.appendChild(th);
@@ -1044,8 +1045,9 @@ function cellButton(room, trade) {
   const hasProducts = productNames(trade).length > 0;
   if (!data.trades.has(trade)) {
     b.textContent = "+";
-    b.setAttribute("aria-label", `${room}에 ${trade} 체크`);
+    b.setAttribute("aria-label", hasProducts ? `${room} ${trade} 상품 고르기` : `${room}에 ${trade} 담기`);
   } else {
+    // 담긴 칸: 고른 상품 이름(외 N개) · 상품을 안 고르고 '상품은 상담 때'를 누른 칸은 '상담 때 선택'
     b.classList.add("on");
     const picked = pickedNames(data, trade);
     const main = document.createElement("span"); main.className = "c-main";
@@ -1054,16 +1056,16 @@ function cellButton(room, trade) {
       main.textContent = picked[0];
       sub.textContent = picked.length > 1 ? `외 ${picked.length - 1}개` : "선택";
     } else {
-      main.textContent = "✓ 필요";
-      sub.textContent = hasProducts ? "상품 고르기" : "";
+      main.textContent = hasProducts ? "상담 때 선택" : "✓ 선택";
     }
     b.append(main, sub);
-    b.setAttribute("aria-label", `${room} ${trade}: ${picked.length ? picked.join(", ") : "필요"}${hasProducts ? " — 누르면 상품 고르기" : " — 누르면 빼기"}`);
+    b.setAttribute("aria-label", `${room} ${trade}: ${picked.length ? picked.join(", ") : (hasProducts ? "상품은 상담 때 선택" : "선택")}${hasProducts ? " — 누르면 상품 고르기" : " — 누르면 빼기"}`);
   }
+  // 누르면 바로 상품 팝업(사용자 결정 2026-10-07 — '✓ 필요 · 상품 고르기' 단계 없음). 상품이 없는 공종만 눌러서 담기/빼기.
   b.addEventListener("click", () => {
-    if (!data.trades.has(trade)) { data.trades.add(trade); afterChange(); return; }   // 빈 칸 = 바로 체크
-    if (!hasProducts) { data.trades.delete(trade); data.items.delete(trade); afterChange(); return; }
-    openCellSheet(room, trade);
+    if (hasProducts) { openCellSheet(room, trade); return; }
+    if (data.trades.has(trade)) data.trades.delete(trade); else data.trades.add(trade);
+    afterChange();
   });
   return b;
 }
@@ -1103,18 +1105,36 @@ document.addEventListener("keydown", e => {
   else $("#addrLayer").classList.remove("on");
 });
 
-// 칸 팝업 — 그 공간 · 공종의 상품 고르기(여러 개, 안 골라도 됨). 체크는 칸을 누른 순간 이미 됐다.
+// 칸 팝업 — 그 공간 · 공종의 상품 고르기(여러 개). 상품을 하나라도 고르면 담기고, 다 빼면 빈 칸으로.
+// 상품을 모르면 '상품은 상담 때'(상품 없이 담김 → 칸에 '상담 때 선택'). 아무것도 안 고르고 닫으면 빈 칸 그대로.
 function openCellSheet(room, trade) {
   const data = state.rooms.get(room);
   const cellOf = () => $(`.cell[data-room="${CSS.escape(room)}"][data-trade="${CSS.escape(trade)}"]`);
+  let setHint = () => {};
+  const renderFoot = () => {
+    const foot = $("#sheetFoot"); foot.innerHTML = "";
+    const add = (label, primary, onClick) => {
+      const btn = document.createElement("button");
+      btn.type = "button"; btn.className = "btn" + (primary ? " primary" : ""); btn.textContent = label;
+      btn.addEventListener("click", onClick); foot.appendChild(btn);
+    };
+    if (data.trades.has(trade)) {
+      add("이 공사 빼기", false, () => { data.trades.delete(trade); data.items.delete(trade); afterChange(); closeSheet(); });
+    } else {
+      add("상품은 상담 때", false, () => { data.items.delete(trade); data.trades.add(trade); afterChange(); closeSheet(); });
+    }
+    add("완료", true, closeSheet);
+  };
   openSheet({
     title: `${room} · ${trade}`,
     returnFocus: cellOf,
     build(body) {
       const hint = document.createElement("p"); hint.className = "sheet-hint";
-      const setHint = () => {
+      setHint = () => {
         const n = pickedNames(data, trade).length;
-        hint.textContent = n ? `${n}개 골랐어요. 여러 개 고를 수 있어요.` : "원하시는 상품이 있으면 골라 주세요. 고르지 않으면 상담 때 정해요.";
+        hint.textContent = n ? `${n}개 골랐어요. 여러 개 고를 수 있어요.`
+          : data.trades.has(trade) ? "상품은 상담 때 정하기로 했어요. 원하시면 지금 골라도 돼요."
+          : "원하시는 상품을 골라 주세요. 잘 모르시면 아래 '상품은 상담 때'를 눌러 주세요.";
       };
       setHint(); body.appendChild(hint);
       const list = document.createElement("div"); list.className = "product-grid";
@@ -1130,19 +1150,19 @@ function openCellSheet(room, trade) {
         b.addEventListener("click", () => {
           const set = data.items.get(trade) || new Set();
           if (set.has(name)) set.delete(name); else set.add(name);
-          if (set.size) data.items.set(trade, set); else data.items.delete(trade);
+          // 상품이 있으면 담기, 마지막 상품을 빼면 빈 칸으로
+          if (set.size) { data.items.set(trade, set); data.trades.add(trade); }
+          else { data.items.delete(trade); data.trades.delete(trade); }
           b.setAttribute("aria-pressed", String(set.has(name)));
-          setHint(); afterChange();
+          setHint(); renderFoot(); afterChange();
         });
         list.appendChild(b);
       });
       body.appendChild(list);
     },
-    actions: [
-      { label: "이 공사 빼기", onClick() { data.trades.delete(trade); data.items.delete(trade); afterChange(); closeSheet(); } },
-      { label: "완료", primary: true, onClick: closeSheet },
-    ],
+    actions: [],
   });
+  renderFoot();
 }
 
 // 공종 팝업 — 이 공사가 필요한 공간을 한 번에 고른다(앱 1304와 같은 구실). 표에 없는 공간을 누르면 열이 생긴다.
@@ -1155,7 +1175,7 @@ function openTradeSheet(trade) {
     build(body) {
       const p = document.createElement("p"); p.className = "sheet-hint";
       p.textContent = rooms.length
-        ? "이 공사가 필요한 공간을 모두 눌러 주세요. 표에 없는 공간은 새 열로 생깁니다. 상품은 표의 칸을 다시 눌러 고릅니다."
+        ? "이 공사가 필요한 공간을 모두 눌러 주세요. 표에 없는 공간은 새 열로 생깁니다. 상품은 표의 칸을 눌러 고릅니다."
         : "이 공사는 상담 때 함께 정해요.";
       body.appendChild(p);
       if (!rooms.length) return;
