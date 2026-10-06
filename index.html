@@ -87,13 +87,6 @@ h1 { font-size: 26px; line-height: 1.3; margin: 18px 0 6px; font-weight: 700; le
 .top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 a.btn { text-decoration: none; }
 .btn svg { width: 18px; height: 18px; flex: none; }
-/* 진행 절차 3칸 — 요청 뒤에 무엇이 오는지 */
-.process { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; max-width: 720px; margin: 18px 0 4px; padding: 0; list-style: none; }
-.process li { background: var(--surface); border-radius: var(--r-card); padding: 12px 14px; font-size: 14px; font-weight: 600; line-height: 1.35; word-break: keep-all; }
-.process li small { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 700; color: var(--accent); }
-.process li.now { box-shadow: inset 0 0 0 1.5px var(--accent); }
-.process li.past { color: var(--muted); }
-.process li.past small { color: var(--muted); }
 
 /* 패널 = 앱의 macPanel: 한 장 + 구분선 */
 .panel { background: var(--surface); border-radius: var(--r-card); margin: 16px 0; overflow: hidden; }
@@ -301,7 +294,6 @@ details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
   .layer.sheet { align-items: flex-end; padding: 0; }
   .layer.sheet .layer-box { max-width: none; border-radius: 16px 16px 0 0; }
   .sheet-foot .btn { flex: 1; }
-  .process li { padding: 10px; font-size: 13px; }
 }
 
 /* ── 태블릿 가로 · PC(1024~): 왼쪽 입력 · 오른쪽 요청 요약(보내기 버튼 포함), 아래 바 없음 ── */
@@ -325,10 +317,6 @@ details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
 .done p { margin: 4px 0; color: var(--muted); }
 .receipt { display: inline-block; margin: 16px 0 4px; padding: 10px 18px; border-radius: 999px; background: var(--sunken); font-weight: 700; letter-spacing: .02em; }
 .demo-note { margin-top: 16px; font-size: 13px; color: var(--danger); }
-.next { max-width: 420px; margin: 24px auto 0; padding: 0; list-style: none; text-align: left; counter-reset: n; }
-.next li { position: relative; padding: 12px 0 12px 40px; border-top: 1px solid var(--line); font-size: 15px; counter-increment: n; }
-.next li::before { content: counter(n); position: absolute; left: 0; top: 10px; width: 28px; height: 28px; border-radius: 50%; background: var(--sunken); color: var(--accent); font-size: 14px; font-weight: 700; display: grid; place-items: center; }
-.next li span { display: block; font-size: 13px; color: var(--muted); }
 .done-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
 
 /* 주소 검색 레이어 */
@@ -357,11 +345,6 @@ footer a { color: inherit; }
     </div>
     <h1>온라인 견적 요청</h1>
     <p class="lead">평형과 공사할 공간만 알려주세요. 담당자가 견적을 준비해 연락드립니다.</p>
-    <ol class="process" aria-label="진행 절차">
-      <li class="now" data-step="1"><small>1단계 · 지금</small>견적 요청</li>
-      <li data-step="2"><small>2단계</small>전화 상담 · 현장 실측</li>
-      <li><small>3단계</small>견적서 발송</li>
-    </ol>
   </header>
 
   <div class="layout">
@@ -494,11 +477,6 @@ footer a { color: inherit; }
       <p>담당자가 확인 후 연락드리겠습니다.</p>
       <div class="receipt" id="receipt">접수번호</div>
       <p class="demo-note" id="demoNote" hidden>미리보기 모드 — 연동 주소가 비어 있어 실제로 전송되지 않았습니다.</p>
-      <ol class="next" aria-label="다음 순서">
-        <li>요청 내용 확인<span>보내 주신 평형 · 공사 · 사진을 살펴봅니다</span></li>
-        <li>전화 상담 · 현장 실측<span>남겨 주신 번호로 연락드려 일정을 정합니다</span></li>
-        <li>견적서 발송<span>실측을 바탕으로 견적서를 보내 드립니다</span></li>
-      </ol>
       <div class="done-actions">
         <a class="btn primary" id="donePhone" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg><span id="donePhoneText">전화하기</span></a>
         <button type="button" class="btn" id="againBtn">새 요청 작성</button>
@@ -1412,15 +1390,6 @@ function buildPayload() {
   };
 }
 
-/** 머리의 진행 절차 — 접수하면 1단계 완료 · 2단계 다음. */
-function setProcessStep(step) {
-  const s1 = $('.process [data-step="1"]'), s2 = $('.process [data-step="2"]');
-  s1.className = step === 1 ? "now" : "past";
-  s2.className = step === 2 ? "now" : "";
-  $("small", s1).textContent = step === 1 ? "1단계 · 지금" : "1단계 · 접수 완료";
-  $("small", s2).textContent = step === 2 ? "2단계 · 다음" : "2단계";
-}
-
 let sending = false;
 $("#submitBtn").addEventListener("click", submit);
 $("#form").addEventListener("submit", e => { e.preventDefault(); submit(); });
@@ -1456,7 +1425,6 @@ async function submit() {
     clearDraft();
     $("#receipt").textContent = receipt ? `접수번호 ${receipt}` : "접수 완료";
     $("#form").hidden = true; $("#bar").hidden = true; $("#side").hidden = true; $("#donePanel").hidden = false;
-    setProcessStep(2);
     $(".layout").classList.add("is-done");
     document.body.style.paddingBottom = "0";
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1475,7 +1443,6 @@ $("#againBtn").addEventListener("click", () => {
   $("#pyeong").dispatchEvent(new Event("input")); syncDates();
   renderRoomToggles(); renderMatrix(); renderPhotos(); saveDraft();
   $("#form").hidden = false; $("#bar").hidden = false; $("#side").hidden = false; $("#donePanel").hidden = true;
-  setProcessStep(1);
   $(".layout").classList.remove("is-done");
   document.body.style.paddingBottom = "";
   window.scrollTo({ top: 0 });
