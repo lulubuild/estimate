@@ -20,329 +20,372 @@
 <meta property="og:image:height" content="630">
 <meta property="og:locale" content="ko_KR">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#F9F9F9" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0F0F0F" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23FF0000' d='M12 2.6 1.8 11.2l1.3 1.5L5 11.1V21h5.5v-6h3v6H19v-9.9l1.9 1.6 1.3-1.5z'/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <!-- 원본(비압축) 파일 + 무결성 해시 — jsDelivr가 그때그때 줄이는 .min 파일은 해시가 바뀔 수 있어 쓰지 않는다. -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" integrity="sha384-2nNKoOPayicGa+aRguOQuiZP+RqQ4G3jalfDeOgftkKD7zBM2gJXTwcFqCZltdv0" crossorigin="anonymous">
 <style>
-/* ── 색·치수 토큰: 앱의 MacStyle(유튜브 컨셉)과 같은 값 ─────────────── */
+/* ── 색 · 치수 토큰: 애플풍(2026-10-07 사용자 결정 — 웹 견적요청 페이지만, 앱은 유튜브 컨셉 그대로) ──
+   흰 바탕 · 연회색 구간 · 짙은 글자 · 회색 부제 · 파란 알약 버튼 · 선택 = 파란 테두리. 애플 로고 · 이름 · 이미지 · 글꼴 파일은 쓰지 않는다. */
 :root {
-  --bg: #F9F9F9;          /* background */
-  --surface: #FFFFFF;     /* surface */
-  --sunken: #F2F2F2;      /* surfaceSunken */
-  --selected: #E5E5E5;    /* surfaceSelected */
-  --ink: #0F0F0F;         /* ink */
-  --muted: #606060;       /* inkMuted */
-  --accent: #065FD4;      /* written (활성) */
-  --line: #E5E5E5;
-  --accent-soft: #E8F0FC; /* 체크표에서 담긴 칸 */
-  --focus-ring: rgba(6, 95, 212, .18);   /* 입력칸을 누르면 테두리 바깥 옅은 띠 */
-  --brand: #FF0000;       /* 로고 전용 */
-  --danger: #CC0000;
-  --page-margin: 16px;
-  --panel-padding: 20px;
-  --r-card: 12px;
-  --r-input: 10px;
+  --bg: #FFFFFF;            /* 페이지 */
+  --bg-alt: #F5F5F7;        /* 연회색 구간 · 요약 카드 · 보조 버튼 */
+  --surface: #FFFFFF;       /* 타일 · 입력칸 · 팝업 */
+  --fill: #E8E8ED;          /* 보조 버튼 · 닫기 동그라미 */
+  --ink: #1D1D1F;
+  --muted: #6E6E73;
+  --line: #D2D2D7;          /* 타일 · 입력칸 테두리 */
+  --line-soft: #E8E8ED;     /* 구간 구분선 */
+  --accent: #0071E3;        /* 주요 버튼 · 선택 테두리 */
+  --accent-hover: #0077ED;
+  --link: #0066CC;
+  --accent-soft: rgba(0, 113, 227, .06);   /* 체크한 칸 바탕 */
+  --focus-ring: rgba(0, 113, 227, .2);      /* 입력칸을 누르면 테두리 바깥 옅은 띠 */
+  --brand: #FF0000;         /* 로고 전용 */
+  --danger: #E30000;
+  --danger-soft: #FFF2F4;
+  --glass: rgba(255, 255, 255, .72);        /* 위 · 아래 반투명 바 */
+  --page-margin: 20px;
+  --r-tile: 12px;
+  --r-card: 18px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0F0F0F; --surface: #1F1F1F; --sunken: #272727; --selected: #373737;
-    --ink: #F1F1F1; --muted: #AAAAAA; --accent: #3EA6FF; --line: #303030; --danger: #FF6B6B;
-    --accent-soft: #15314D; --focus-ring: rgba(62, 166, 255, .28);
+    --bg: #000000; --bg-alt: #161617; --surface: #1D1D1F; --fill: #2C2C2E;
+    --ink: #F5F5F7; --muted: #86868B; --line: #424245; --line-soft: #2C2C2E;
+    --accent: #0071E3; --accent-hover: #0077ED; --link: #2997FF;
+    --accent-soft: rgba(41, 151, 255, .12); --focus-ring: rgba(41, 151, 255, .3);
+    --danger: #FF453A; --danger-soft: rgba(255, 69, 58, .12); --glass: rgba(22, 22, 23, .72);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0F0F0F; --surface: #1F1F1F; --sunken: #272727; --selected: #373737;
-  --ink: #F1F1F1; --muted: #AAAAAA; --accent: #3EA6FF; --line: #303030; --danger: #FF6B6B;
-  --accent-soft: #15314D; --focus-ring: rgba(62, 166, 255, .28);
+  --bg: #000000; --bg-alt: #161617; --surface: #1D1D1F; --fill: #2C2C2E;
+  --ink: #F5F5F7; --muted: #86868B; --line: #424245; --line-soft: #2C2C2E;
+  --accent: #0071E3; --accent-hover: #0077ED; --link: #2997FF;
+  --accent-soft: rgba(41, 151, 255, .12); --focus-ring: rgba(41, 151, 255, .3);
+  --danger: #FF453A; --danger-soft: rgba(255, 69, 58, .12); --glass: rgba(22, 22, 23, .72);
   color-scheme: dark;
 }
+/* 선택 테두리 · 체크 표시는 다크에서 한 단계 밝은 파랑 */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --sel: #2997FF; } }
+:root { --sel: var(--accent); }
+:root[data-theme="dark"] { --sel: #2997FF; }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }   /* display를 정한 칸(.f · .ph-add 등)도 hidden이면 숨긴다 */
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 64px; }   /* 위 고정 바에 가리지 않게 */
 body {
   margin: 0; background: var(--bg); color: var(--ink);
-  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-  font-size: 16px; line-height: 1.5; letter-spacing: -0.01em;
-  padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  /* 애플 기기는 시스템 글꼴(SF · Apple SD Gothic Neo), 그 밖은 Pretendard */
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif;
+  font-size: 17px; line-height: 1.47; letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: calc(92px + env(safe-area-inset-bottom));
 }
-button, input, textarea { font: inherit; color: inherit; }
-/* 화면 폭 3단: 폰(~599) · 7인치 · 태블릿 세로(600~1023) · 태블릿 가로 · PC(1024~, 입력 + 오른쪽 요약 두 단) */
-.wrap { max-width: 1100px; margin: 0 auto; padding: 0 var(--page-margin); }
-@media (min-width: 700px) { :root { --page-margin: 24px; --panel-padding: 28px; } }
-@media (min-width: 1024px) { .wrap { max-width: 1280px; } }
+button, input, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
+a { color: var(--link); }
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 var(--page-margin); }
+@media (min-width: 1024px) { .wrap { max-width: 1180px; } :root { --page-margin: 32px; } }
 
-/* 머리 */
-header.top { padding: 24px 0 8px; }
-.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; }
-.brand-mark { width: 26px; height: 26px; flex: none; color: var(--brand); }
-h1 { font-size: 26px; line-height: 1.3; margin: 18px 0 6px; font-weight: 700; letter-spacing: -0.02em; }
-.lead { margin: 0; color: var(--muted); font-size: 15px; }
-.top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-a.btn { text-decoration: none; }
-.btn svg { width: 18px; height: 18px; flex: none; }
+/* 위 반투명 바 — 상호 · '견적 요청' */
+.nav { position: sticky; top: 0; z-index: 20; background: var(--glass);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--line-soft); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .nav { background: var(--bg); } }
+.nav-in { height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 19px; letter-spacing: -0.02em; }
+.brand-mark { width: 22px; height: 22px; flex: none; color: var(--brand); }
+/* 보이는 알약은 작게(애플 바처럼), 누르는 자리는 44px */
+.nav-cta { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.nav-cta span { background: var(--accent); color: #fff; border-radius: 980px; padding: 5px 14px; font-size: 13px; font-weight: 500; letter-spacing: 0; transition: background .15s; }
+.nav-cta:hover span { background: var(--accent-hover); }
 
-/* 패널 = 앱의 macPanel: 한 장 + 구분선 */
-.panel { background: var(--surface); border-radius: var(--r-card); margin: 16px 0; overflow: hidden; }
-.section { padding: var(--panel-padding); }
-.section + .section { border-top: 1px solid var(--line); }
-.sec-head { display: flex; align-items: baseline; gap: 10px; margin: 0 0 14px; }
-.sec-num { font-size: 13px; font-weight: 700; color: var(--accent); }
-.sec-title { font-size: 18px; font-weight: 700; margin: 0; }
-.sec-desc { margin: -8px 0 14px; font-size: 14px; color: var(--muted); }
+/* 머리 — 큰 제목 + 회색 부제, 가운데 */
+header.hero { text-align: center; padding: 48px 0 8px; }
+h1 { font-size: 40px; line-height: 1.1; margin: 0; font-weight: 700; letter-spacing: -0.025em; }
+.lead { margin: 14px auto 0; max-width: 560px; color: var(--muted); font-size: 19px; line-height: 1.42; font-weight: 500; word-break: keep-all; }
+@media (min-width: 734px) { header.hero { padding: 72px 0 16px; } h1 { font-size: 56px; } .lead { font-size: 21px; } }
 
-/* 입력칸 */
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+/* 입력 구간 — 판 없이 흰 바탕, 구간 사이 가는 선 */
+.panel { margin: 0; }
+.section { padding: 40px 0; }
+.section + .section { border-top: 1px solid var(--line-soft); }
+.sec-head { margin: 0 0 24px; }
+/* 애플 스토어 구성 화면처럼 '굵은 이름. 회색 설명' */
+.sec-title { font-size: 26px; line-height: 1.2; font-weight: 700; margin: 0; letter-spacing: -0.02em; word-break: keep-all; }
+.sec-title span { color: var(--muted); }
+@media (min-width: 734px) { .sec-title { font-size: 32px; } .section { padding: 56px 0; } }
+.sec-desc { margin: -12px 0 20px; font-size: 15px; color: var(--muted); word-break: keep-all; }
+.group-label { display: block; font-size: 15px; font-weight: 600; margin: 0 0 10px; }
+.group-label .opt, .opt { font-weight: 400; color: var(--muted); }
+
+/* 입력칸 — 칸 안 떠오르는 라벨 */
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .grid .full { grid-column: 1 / -1; }
-@media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.f { display: block; min-width: 0; }
 label.f { display: block; }
-.f > span.l { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
-.req { color: var(--accent); margin-left: 2px; }
+.fl { position: relative; display: block; min-width: 0; }
 .input, textarea.input {
-  width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid transparent; border-radius: var(--r-input);
-  background: var(--sunken); outline: none; font-size: 16px; transition: border-color .15s, box-shadow .15s;
+  width: 100%; height: 56px; padding: 24px 16px 6px; border: 1px solid var(--line); border-radius: var(--r-tile);
+  background: var(--surface); outline: none; font-size: 17px; line-height: 1.3;
+  transition: border-color .15s, box-shadow .15s; -webkit-appearance: none; appearance: none;
 }
-/* 누르면 파란 테두리 + 바깥 옅은 띠 — 바탕은 회색 그대로(흰 패널에 섞여 칸이 사라져 보이지 않게) */
-.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+.fl-label { position: absolute; left: 17px; top: 16px; font-size: 17px; line-height: 24px; color: var(--muted); pointer-events: none;
+  transform-origin: left top; transition: transform .15s ease, color .15s; white-space: nowrap; max-width: calc(100% - 34px); overflow: hidden; text-overflow: ellipsis; }
+.input:focus + .fl-label, .input:not(:placeholder-shown) + .fl-label, .fl.always .fl-label { transform: translateY(-9px) scale(.71); }
+@media (prefers-reduced-motion: reduce) { .fl-label { transition: none; } }
+/* 누르면 파란 테두리 + 바깥 옅은 띠 */
+.input:focus { border-color: var(--sel); box-shadow: 0 0 0 3px var(--focus-ring); }
+.req { color: var(--muted); margin-left: 1px; }
+#address[readonly] { cursor: pointer; }
+textarea.input { height: auto; min-height: 132px; padding-top: 28px; resize: vertical; line-height: 1.5; }
+.fl.ta .fl-label { top: 16px; }
+.sfx { position: absolute; right: 16px; top: 25px; line-height: 24px; color: var(--muted); pointer-events: none; }   /* 입력값 줄과 같은 높이 */
+.fl.with-sfx .input { padding-right: 44px; }
+.row { display: flex; gap: 8px; align-items: flex-start; }
+.row .fl { flex: 1; }
+.hint { font-size: 13px; color: var(--muted); margin-top: 8px; padding: 0 4px; }
+.err { font-size: 13px; color: var(--danger); margin-top: 8px; padding: 0 4px; display: none; }
+.invalid .err { display: block; }
+.invalid .input { border-color: var(--danger); background: var(--danger-soft); }
 /* 날짜 칸 — 사파리(아이폰 · 아이패드)는 기본 모양이면 width를 무시하고 칸 폭을 넘어 옆 칸에 붙는다 */
-input[type="date"].input { -webkit-appearance: none; appearance: none; display: block; min-width: 0; width: 100%; color: var(--ink); }
-input[type="date"].input::-webkit-date-and-time-value { text-align: left; min-height: 1.5em; }
+input[type="date"].input { display: block; min-width: 0; width: 100%; color: var(--ink); }
+input[type="date"].input::-webkit-date-and-time-value { text-align: left; min-height: 1.3em; }
 input[type="date"].input:not(.has-value) { color: var(--muted); }
 /* 공사 희망 기간 — [시작일] ~ [완공일] 한 줄, 아주 좁은 폰은 위아래 */
-.period { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 0 10px; max-width: 640px; }   /* 넓은 화면에서 두 칸이 너무 길어지지 않게 */
-.period-item { display: block; min-width: 0; }
-.period-item .pl { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-.period .tilde { height: 48px; display: flex; align-items: center; color: var(--muted); font-size: 18px; }
+.period { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 0 10px; max-width: 640px; }
+.period .tilde { color: var(--muted); font-size: 18px; }
 @media (max-width: 379px) { .period { grid-template-columns: minmax(0, 1fr); gap: 10px; } .period .tilde { display: none; } }
-.opt { font-weight: 400; }
-.input[readonly] { color: var(--muted); }
-#address[readonly] { cursor: pointer; }
-#address[readonly]:not(:placeholder-shown) { color: var(--ink); }
-textarea.input { min-height: 120px; resize: vertical; line-height: 1.55; }
-.with-suffix { position: relative; }
-.with-suffix .input { padding-right: 44px; }
-.with-suffix .sfx { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
-.row { display: flex; gap: 8px; }
-.row .input { flex: 1; min-width: 0; }
-.hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
-.err { font-size: 13px; color: var(--danger); margin-top: 6px; display: none; }
-.invalid .err { display: block; }
-.invalid .input { border-color: var(--danger); }
 
-/* 알약 버튼·칩 */
+/* 버튼 — 파란 알약(주요) · 연회색 알약(보조) */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  min-height: 44px; padding: 0 18px; border-radius: 999px; border: 0; cursor: pointer;
-  background: var(--sunken); color: var(--ink); font-weight: 600; font-size: 15px; white-space: nowrap;
-  -webkit-tap-highlight-color: transparent; transition: background .15s, transform .1s;
+  min-height: 44px; padding: 0 20px; border-radius: 980px; border: 0; cursor: pointer;
+  background: var(--fill); color: var(--ink); font-weight: 500; font-size: 15px; white-space: nowrap; text-decoration: none;
+  -webkit-tap-highlight-color: transparent; transition: background .15s, opacity .15s;
 }
-.btn:hover { background: var(--selected); }
-.btn:active { transform: scale(.98); }
-.btn.primary { background: var(--ink); color: var(--bg); }
-.btn.primary:hover { opacity: .88; }
-.btn[disabled] { opacity: .45; cursor: default; transform: none; }
+.btn:hover { opacity: .85; }
+.btn.primary { background: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-hover); opacity: 1; }
+.btn[disabled] { opacity: .45; cursor: default; }
+.btn svg { width: 18px; height: 18px; flex: none; }
+#addrBtn { height: 56px; border-radius: var(--r-tile); padding: 0 18px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-/* 누르는 자리는 44px 이상(칩 · 닫기 · 접기 줄) */
 .chip {
-  min-height: 44px; padding: 0 16px; border-radius: 999px; border: 0; cursor: pointer;
-  background: var(--sunken); color: var(--ink); font-size: 15px; font-weight: 500;
-  -webkit-tap-highlight-color: transparent; transition: background .15s, color .15s;
+  min-height: 44px; padding: 0 18px; border-radius: 980px; border: 1px solid var(--line); cursor: pointer;
+  background: var(--surface); color: var(--ink); font-size: 15px; font-weight: 500;
+  -webkit-tap-highlight-color: transparent; transition: border-color .15s, box-shadow .15s;
 }
-.chip:hover { background: var(--selected); }
-.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }   /* 선택 = 반전 (칩 전용) */
-.seg { display: inline-flex; background: var(--sunken); border-radius: 999px; padding: 2px; gap: 2px; }
-.seg .chip { min-height: 44px; background: transparent; }
-.seg .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.chip:hover { border-color: var(--muted); }
+.chip[aria-pressed="true"] { border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel); }   /* 선택 = 파란 테두리 2px */
 
-/* 공간 카드 (앱의 13x 공간 카드와 같은 모양) */
-/* min(…, 50%) — 아주 좁은 폰(320px)에서도 2열 */
-.rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, calc(50% - 4px)), 1fr)); gap: 8px; }
-.room-toggle {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  min-height: 52px; padding: 0 14px; border-radius: var(--r-card); cursor: pointer; border: 0;
-  background: var(--sunken); color: var(--ink); font-size: 15px; font-weight: 600; text-align: left;
-  -webkit-tap-highlight-color: transparent; transition: background .15s;
+/* 타일 공통 — 애플 스토어 구성 선택처럼 흰 타일, 고르면 파란 테두리 2px(자리 밀림 없게 안쪽 그림자) */
+.tile, .room-toggle {
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-tile); cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: border-color .15s, box-shadow .15s; text-align: left;
 }
-.room-toggle:hover { background: var(--selected); }
-.room-toggle .dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--muted); flex: none; display: grid; place-items: center; transition: all .15s; }
-.room-toggle[aria-pressed="true"] { background: var(--selected); }
-.room-toggle[aria-pressed="true"] .dot { border-color: var(--accent); background: var(--accent); }
-.room-toggle[aria-pressed="true"] .dot::after { content: ""; width: 6px; height: 10px; border: solid var(--bg); border-width: 0 2px 2px 0; transform: translate(0, -1px) rotate(45deg); }
-.room-toggle .cnt { font-size: 12px; font-weight: 600; color: var(--accent); margin-left: auto; margin-right: 4px; }
+.tile:hover, .room-toggle:hover { border-color: var(--muted); }
+.tile[aria-pressed="true"], .room-toggle[aria-pressed="true"] { border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel); }
+/* 시공 범위 두 타일 */
+.tiles2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tile { min-height: 56px; padding: 8px 14px; display: flex; flex-direction: column; justify-content: center; gap: 1px; }
+.tile b { font-size: 16px; font-weight: 600; }
+.tile span { font-size: 12px; color: var(--muted); }
+
+/* 공간 고르기 타일 */
+.rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, calc(50% - 4px)), 1fr)); gap: 8px; }
+.room-toggle { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; padding: 0 14px; font-size: 16px; font-weight: 600; }
+.room-toggle .dot { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); flex: none; display: grid; place-items: center; transition: all .15s; }
+.room-toggle[aria-pressed="true"] .dot { border-color: var(--sel); background: var(--sel); }
+.room-toggle[aria-pressed="true"] .dot::after { content: ""; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: translate(0, -1px) rotate(45deg); }
+.room-toggle .cnt { font-size: 13px; font-weight: 600; color: var(--sel); margin-left: auto; margin-right: 2px; }
 
 /* 공간 × 공종 체크표 — 앱 1209와 같은 방식(공종 = 행, 공간 = 열 · 가나다순 · 가격 없음).
    공간이 적으면 폭에 맞추고(열 최대 200px), 넘칠 때만 표 안에서 옆으로 민다 — 공종 열은 고정. */
 /* 칸 사이 6px — 바깥 6px은 스크롤 영역을 양옆으로 6px 넓혀 글줄과 맞춘다 */
-.mx-scroll { --cell-min: 96px; margin: 16px -6px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; padding-bottom: 4px; }
+.mx-scroll { --cell-min: 96px; margin: 20px -6px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; padding-bottom: 4px; }
 table.mx { border-collapse: separate; border-spacing: 6px; margin: -6px 0; }
 .mx th, .mx td { padding: 0; vertical-align: middle; font-weight: inherit; }
 .mx thead th { vertical-align: bottom; }
-.mx .corner, .mx .row-head { position: sticky; left: 0; background: var(--surface); width: 1%; }   /* 1% = 글자 폭만 — 남는 폭은 공간 열이 나눠 갖는다 */
+.mx .corner, .mx .row-head { position: sticky; left: 0; background: var(--bg); width: 1%; }   /* 1% = 글자 폭만 — 남는 폭은 공간 열이 나눠 갖는다 */
 .mx .corner { z-index: 2; font-size: 12px; color: var(--muted); text-align: left; padding: 0 4px 6px; white-space: nowrap; }
 .mx .row-head { z-index: 1; text-align: left; }
 .mx .col-head { text-align: center; padding: 0 2px 6px; scroll-margin-left: 100px; }
-.mx .col-name { font-size: 14px; font-weight: 700; line-height: 1.3; word-break: keep-all; overflow-wrap: anywhere; }
+.mx .col-name { font-size: 15px; font-weight: 600; line-height: 1.3; word-break: keep-all; overflow-wrap: anywhere; }
 .mx .col-sub { font-size: 12px; color: var(--muted); }
 .mx .col-head:focus { outline: none; }
-.mx .col-head.flash .col-name { color: var(--accent); }
+.mx .col-head.flash .col-name { color: var(--sel); }
 .mx .py { margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
 /* 16px 미만이면 아이폰이 칸을 누를 때 화면을 확대한다 */
-.mx .py input { width: 56px; min-height: 44px; padding: 4px 8px; border-radius: 8px; border: 1px solid transparent; background: var(--sunken); color: var(--ink); text-align: right; font-size: 16px; outline: none; }
-.mx .py input:focus { border-color: var(--accent); background: var(--surface); }
+.mx .py input { width: 56px; min-height: 44px; padding: 4px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-align: right; font-size: 16px; outline: none; }
+.mx .py input:focus { border-color: var(--sel); box-shadow: 0 0 0 3px var(--focus-ring); }
 .row-btn { display: block; width: 100%; min-height: 56px; padding: 6px 10px 6px 4px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.row-btn:hover { background: var(--sunken); }
-.row-btn b { display: block; font-size: 14.5px; font-weight: 700; white-space: nowrap; }
+.row-btn:hover { background: var(--bg-alt); }
+.row-btn b { display: block; font-size: 15px; font-weight: 600; white-space: nowrap; }
 .row-btn span { display: block; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
 .cell {
-  width: 100%; min-width: var(--cell-min); height: 56px; padding: 4px 6px; border-radius: 10px;
-  border: 1px solid var(--line); background: var(--sunken); color: var(--muted); cursor: pointer;
+  width: 100%; min-width: var(--cell-min); height: 56px; padding: 4px 6px; border-radius: var(--r-tile);
+  border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  font-size: 20px; line-height: 1; -webkit-tap-highlight-color: transparent; transition: background .15s, border-color .15s;
+  font-size: 20px; font-weight: 300; line-height: 1; -webkit-tap-highlight-color: transparent; transition: border-color .15s, box-shadow .15s, background .15s;
 }
-.cell:hover { background: var(--selected); }
-.cell.on { border: 1.5px solid var(--accent); background: var(--accent-soft); color: var(--ink); }
-.cell .c-main { font-size: 13px; font-weight: 700; line-height: 1.25; text-align: center; word-break: keep-all; overflow-wrap: anywhere;
+.cell:hover { border-color: var(--muted); }
+.cell.on { border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel); background: var(--accent-soft); color: var(--ink); }
+.cell .c-main { font-size: 13px; font-weight: 600; line-height: 1.25; text-align: center; word-break: keep-all; overflow-wrap: anywhere;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.cell .c-sub { font-size: 11px; line-height: 1.2; color: var(--accent); font-weight: 600; white-space: nowrap; }
-.cell.off { background: transparent; border-style: dashed; opacity: .45; font-size: 15px; cursor: default; }
-.cell.off:hover { background: transparent; }
+.cell .c-sub { font-size: 11px; line-height: 1.2; color: var(--sel); font-weight: 500; white-space: nowrap; }
+.cell.off { background: transparent; border-style: dashed; border-color: var(--line); opacity: .5; font-size: 15px; cursor: default; }
+.cell.off:hover { border-color: var(--line); }
 .mx-hint { font-size: 13px; color: var(--muted); margin-top: 10px; }
+.empty { padding: 24px 18px; border-radius: var(--r-tile); background: var(--bg-alt); color: var(--muted); font-size: 15px; text-align: center; margin-top: 20px; }
 
 /* 상품 · 공종 팝업 — 폰은 아래에서 올라오는 시트 */
 .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, calc(50% - 4px)), 1fr)); gap: 8px; }
-.product-chip { width: 100%; min-width: 0; min-height: 44px; padding: 8px 12px; border-radius: 12px; border: 1px solid transparent; background: var(--sunken); color: var(--ink); cursor: pointer; text-align: left; font-size: 14px; line-height: 1.25; display: flex; flex-direction: column; justify-content: center; -webkit-tap-highlight-color: transparent; }
-.product-chip:hover { background: var(--selected); }
+.product-chip { width: 100%; min-width: 0; min-height: 56px; padding: 10px 12px; border-radius: var(--r-tile); border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; font-size: 14px; font-weight: 500; line-height: 1.25; display: flex; flex-direction: column; justify-content: center; -webkit-tap-highlight-color: transparent; transition: border-color .15s, box-shadow .15s; }
+.product-chip:hover { border-color: var(--muted); }
 .product-chip > span { word-break: keep-all; overflow-wrap: anywhere; }
 /* 규격이 긴 자재(욕실 도기 · 조명)는 두 줄까지만 — 전체는 마우스를 올리면(title) 보인다 */
-.product-chip small { font-size: 11px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.product-chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
-.product-chip[aria-pressed="true"] small { color: var(--bg); opacity: .75; }
-.layer.sheet .layer-box { height: auto; max-height: min(680px, 88vh); max-width: 640px; }
-.sheet-body { padding: 16px; overflow-y: auto; flex: 1; overscroll-behavior: contain; }
-.sheet-hint { margin: 0 0 12px; font-size: 14px; color: var(--muted); }
-.sheet-foot { display: flex; gap: 8px; justify-content: flex-end; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
-.sheet .chip { background: var(--sunken); }
-.sheet .chip:hover { background: var(--selected); }
-.sheet .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
-.icon-btn { width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 20px; line-height: 1; }
-.icon-btn:hover { background: var(--selected); color: var(--ink); }
-.empty { padding: 18px; border-radius: var(--r-card); border: 1px dashed var(--line); color: var(--muted); font-size: 14px; text-align: center; margin-top: 16px; }
+.product-chip small { font-size: 11px; font-weight: 400; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.product-chip[aria-pressed="true"] { border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel); background: var(--accent-soft); }
 
 /* 사진 */
 .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
-.ph { position: relative; aspect-ratio: 1; border-radius: var(--r-input); overflow: hidden; background: var(--sunken); }
+.ph { position: relative; aspect-ratio: 1; border-radius: var(--r-tile); overflow: hidden; background: var(--bg-alt); }
 .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
 /* 빼기 × — 보이는 원은 28px, 누르는 자리는 44px */
 .ph button { position: absolute; top: 0; right: 0; width: 44px; height: 44px; border: 0; padding: 0; background: transparent; cursor: pointer; font-size: 0; -webkit-tap-highlight-color: transparent; }
-.ph button::after { content: "×"; position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%; background: rgba(15,15,15,.72); color: #fff; font-size: 16px; line-height: 28px; text-align: center; }
-.ph-add { aspect-ratio: 1; border-radius: var(--r-input); border: 1px dashed var(--muted); background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer; font-size: 13px; text-align: center; padding: 6px; }
-.ph-add:hover { background: var(--sunken); color: var(--ink); }
-.ph-add b { display: block; font-size: 26px; font-weight: 400; line-height: 1; margin-bottom: 4px; }
+.ph button::after { content: "×"; position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%; background: rgba(29,29,31,.72); color: #fff; font-size: 16px; line-height: 28px; text-align: center; }
+.ph-add { aspect-ratio: 1; border-radius: var(--r-tile); border: 1px dashed var(--line); background: var(--bg-alt); color: var(--link); display: grid; place-items: center; cursor: pointer; font-size: 13px; font-weight: 500; text-align: center; padding: 6px; }
+.ph-add:hover { border-color: var(--muted); }
+.ph-add b { display: block; font-size: 26px; font-weight: 300; line-height: 1; margin-bottom: 4px; }
 
 /* 동의 */
+.consent-card { background: var(--bg-alt); border-radius: var(--r-card); padding: 20px; }
 .consent { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
 .consent input { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
-details.policy { margin-top: 12px; background: var(--sunken); border-radius: var(--r-input); padding: 12px 14px; font-size: 14px; color: var(--muted); }
-details.policy summary { cursor: pointer; color: var(--ink); font-weight: 600; padding: 12px 0; margin: -12px 0; }
+.consent b { font-weight: 600; }
+.consent small { display: block; font-size: 14px; color: var(--muted); margin-top: 2px; }
+details.policy { margin-top: 12px; font-size: 14px; color: var(--muted); }
+details.policy summary { cursor: pointer; color: var(--link); font-weight: 400; padding: 12px 0; margin: -4px 0 -12px; list-style: none; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; }
+details.policy summary::-webkit-details-marker { display: none; }
+details.policy summary::after { content: "›"; font-size: 18px; line-height: 1; transform: rotate(90deg); transition: transform .15s; }
+details.policy[open] summary::after { transform: rotate(-90deg); }
 #privacyLinkWrap a { display: inline-flex; align-items: center; min-height: 44px; }
-details.policy table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-details.policy th, details.policy td { text-align: left; padding: 8px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+details.policy table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+details.policy th, details.policy td { text-align: left; padding: 10px 6px; border-top: 1px solid var(--line); vertical-align: top; }
 details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
 
 .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
-/* 아래 요약 바 (앱의 18x 견적 요약 — 가격 없이 수량만) */
+/* 아래 요약 바(폰 · 태블릿) — 위 바와 같은 반투명 */
 .bar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-  background: var(--surface); border-top: 1px solid var(--line);
+  background: var(--glass); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+  border-top: 1px solid var(--line-soft);
   padding: 12px var(--page-margin) calc(12px + env(safe-area-inset-bottom));
 }
-.bar-in { max-width: 1052px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .bar { background: var(--bg); } }
+.bar-in { max-width: 680px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
 .bar-sum { flex: 1; min-width: 0; font-size: 14px; color: var(--muted); line-height: 1.35; }
-.bar-sum b { color: var(--ink); font-weight: 700; }
-.bar .btn.primary { min-width: 132px; }
+.bar-sum b { color: var(--ink); font-weight: 600; }
+.bar .btn.primary { min-width: 140px; min-height: 48px; font-size: 17px; }
 
 /* 요청 요약 카드 — 넓은 화면(1024~)에서만 오른쪽에 붙어 따라온다. 좁은 화면은 아래 요약 바 */
 .side-card { display: none; }
-.side-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-.side-head h2 { margin: 0; font-size: 16px; font-weight: 700; }
+.side-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.side-head h2 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
 .side-head span { font-size: 13px; color: var(--muted); }
 /* 주소창이 보이는 태블릿에서도 보내기 버튼이 화면 안에 — svh를 모르는 브라우저는 앞의 vh 값 */
-.side-body { max-height: calc(100vh - 240px); max-height: calc(100svh - 200px); overflow-y: auto; margin: 0 -8px; padding: 0 8px; }
-.side-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.side-body { max-height: calc(100vh - 300px); max-height: calc(100svh - 260px); overflow-y: auto; margin: 0 -8px; padding: 0 8px; }
+.side-row { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); font-size: 15px; }
 .side-row .k { color: var(--muted); flex: none; }
 .side-row .v { text-align: right; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .side-rooms { border-top: 1px solid var(--line); padding: 6px 0; }
-.side-room { display: block; width: calc(100% + 16px); margin: 0 -8px; padding: 8px; border: 0; border-radius: var(--r-input); background: transparent; color: var(--ink); text-align: left; cursor: pointer; font-size: 14px; -webkit-tap-highlight-color: transparent; }
-.side-room:hover { background: var(--sunken); }
-.side-room b { display: block; font-weight: 700; }
+.side-room { display: block; width: calc(100% + 16px); margin: 0 -8px; padding: 8px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; font-size: 15px; -webkit-tap-highlight-color: transparent; }
+.side-room:hover { background: var(--fill); }
+.side-room b { display: block; font-weight: 600; }
 .side-room span { display: block; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
-.side-empty { padding: 10px 0; font-size: 14px; color: var(--muted); }
-
-/* ── 폰(~599): 여백을 한 겹으로 — 패널은 화면 끝까지, 공간 카드 안쪽 여백은 줄인다 ── */
-@media (max-width: 599px) {
-  :root { --panel-padding: 16px; }
-  .panel { margin-left: calc(-1 * var(--page-margin)); margin-right: calc(-1 * var(--page-margin)); border-radius: 0; }
-  .mx-scroll { --cell-min: 76px; }   /* 360px 폰에서도 공간 3열이 한 화면 */
-  .product-chip { padding: 8px 10px; }
-  .layer.sheet { align-items: flex-end; padding: 0; }
-  .layer.sheet .layer-box { max-width: none; border-radius: 16px 16px 0 0; }
-  .sheet-foot .btn { flex: 1; }
-}
+.side-empty { padding: 12px 0; font-size: 15px; color: var(--muted); }
 
 /* ── 태블릿 가로 · PC(1024~): 왼쪽 입력 · 오른쪽 요청 요약(보내기 버튼 포함), 아래 바 없음 ── */
 @media (min-width: 1024px) {
   body { padding-bottom: 0; }
-  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 48px; align-items: start; }
   .layout.is-done { grid-template-columns: minmax(0, 1fr); }
-  .side { position: sticky; top: 16px; margin: 16px 0; }
-  .side-card { display: block; margin: 0; padding: 20px; }
-  .bar { position: static; padding: 0; margin-top: 12px; background: transparent; border: 0; }
+  .side { position: sticky; top: 76px; margin: 56px 0; }
+  .side-card { display: block; margin: 0; padding: 24px; background: var(--bg-alt); border-radius: var(--r-card); }
+  .bar { position: static; padding: 0; margin-top: 14px; background: transparent; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .bar-in { max-width: none; }
   .bar-sum { display: none; }
-  .bar .btn.primary { width: 100%; min-height: 52px; font-size: 16px; }
+  .bar .btn.primary { width: 100%; min-height: 52px; }
+}
+
+/* ── 폰(~599) ── */
+@media (max-width: 599px) {
+  .mx-scroll { --cell-min: 76px; }   /* 360px 폰에서도 공간 3열이 한 화면 */
+  .product-chip { padding: 10px; }
+  .layer.sheet { align-items: flex-end; padding: 0; }
+  .layer.sheet .layer-box { max-width: none; border-radius: var(--r-card) var(--r-card) 0 0; }
+  .sheet-foot .btn { flex: 1; }
 }
 
 /* 완료 화면 */
-.done { text-align: center; padding: 56px var(--panel-padding); }
-.done .ok { width: 64px; height: 64px; border-radius: 50%; background: var(--accent); margin: 0 auto 20px; display: grid; place-items: center; }
-.done .ok::after { content: ""; width: 14px; height: 26px; border: solid var(--bg); border-width: 0 4px 4px 0; transform: translate(0, -3px) rotate(45deg); }
-.done h2 { margin: 0 0 8px; font-size: 22px; }
-.done p { margin: 4px 0; color: var(--muted); }
-.receipt { display: inline-block; margin: 16px 0 4px; padding: 10px 18px; border-radius: 999px; background: var(--sunken); font-weight: 700; letter-spacing: .02em; }
+.done { text-align: center; padding: 72px 0 40px; }
+.done .ok { width: 64px; height: 64px; border-radius: 50%; background: var(--accent); margin: 0 auto 24px; display: grid; place-items: center; }
+.done .ok::after { content: ""; width: 14px; height: 26px; border: solid #fff; border-width: 0 4px 4px 0; transform: translate(0, -3px) rotate(45deg); }
+.done h2 { margin: 0 0 10px; font-size: 32px; font-weight: 700; letter-spacing: -0.02em; word-break: keep-all; }
+.done p { margin: 4px 0; color: var(--muted); font-size: 17px; }
+.receipt { display: inline-block; margin: 20px 0 4px; padding: 10px 20px; border-radius: 980px; background: var(--bg-alt); font-weight: 600; letter-spacing: .01em; }
 .demo-note { margin-top: 16px; font-size: 13px; color: var(--danger); }
-.done-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
+.done-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
+.done-actions .btn { min-height: 48px; font-size: 17px; }
 
-/* 주소 검색 레이어 */
-.layer { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; padding: var(--page-margin); }
+/* 주소 검색 · 팝업 레이어 */
+.layer { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.4); display: none; align-items: center; justify-content: center; padding: var(--page-margin); }
 .layer.on { display: flex; }
-.layer-box { background: var(--surface); border-radius: var(--r-card); width: 100%; max-width: 520px; height: min(560px, 85vh); overflow: hidden; display: flex; flex-direction: column; }
-.layer-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 8px 16px; border-bottom: 1px solid var(--line); font-weight: 700; }
+.layer-box { background: var(--surface); border-radius: var(--r-card); width: 100%; max-width: 520px; height: min(560px, 85vh); overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,.18); }
+.layer-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 6px 6px 20px; border-bottom: 1px solid var(--line-soft); font-weight: 600; font-size: 17px; }
 #postcodeWrap { flex: 1; }
+.icon-btn { width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 0; position: relative; -webkit-tap-highlight-color: transparent; }
+/* 닫기 — 애플처럼 연회색 동그라미 안 × */
+.icon-btn::after { content: "×"; position: absolute; inset: 7px; border-radius: 50%; background: var(--fill); color: var(--muted); font-size: 20px; line-height: 30px; text-align: center; }
+.icon-btn:hover::after { color: var(--ink); }
+.layer.sheet .layer-box { height: auto; max-height: min(680px, 88vh); max-width: 640px; }
+.sheet-body { padding: 18px 20px; overflow-y: auto; flex: 1; overscroll-behavior: contain; }
+.sheet-hint { margin: 0 0 14px; font-size: 15px; color: var(--muted); }
+.sheet-foot { display: flex; gap: 10px; justify-content: flex-end; padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line-soft); }
+.sheet-foot .btn { min-height: 48px; font-size: 17px; }
 
-.toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(12px); background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none; transition: all .2s; z-index: 40; max-width: calc(100% - 32px); text-align: center; }
+.toast { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(12px); background: var(--ink); color: var(--bg); padding: 12px 20px; border-radius: 980px; font-size: 15px; opacity: 0; pointer-events: none; transition: all .2s; z-index: 40; max-width: calc(100% - 32px); text-align: center; }
 .toast.on { opacity: 1; transform: translateX(-50%); }
 @media (min-width: 1024px) { .toast { bottom: calc(24px + env(safe-area-inset-bottom)); } }   /* 넓은 화면은 아래 바가 없다 */
 .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-footer { text-align: center; font-size: 13px; color: var(--muted); padding: 8px 0 24px; }
-footer a { color: inherit; }
+footer { margin-top: 24px; background: var(--bg-alt); color: var(--muted); font-size: 12px; }
+footer .wrap { padding-top: 18px; padding-bottom: 20px; display: flex; gap: 8px 16px; flex-wrap: wrap; align-items: center; }
+footer a { color: inherit; display: inline-flex; align-items: center; min-height: 44px; }
+footer .sep { color: var(--line); }
 </style>
 </head>
 <body>
 
+<!-- 위 반투명 바 — 상호 · '견적 요청'(누르면 마지막 동의 · 보내기 칸으로).
+     전화 상담은 견적 요청을 받은 뒤에만 — 번호는 접수 완료 화면에서 보인다(사용자 결정 2026-10-07) -->
+<nav class="nav" aria-label="상단">
+  <div class="wrap nav-in">
+    <div class="brand"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6 1.8 11.2l1.3 1.5L5 11.1V21h5.5v-6h3v6H19v-9.9l1.9 1.6 1.3-1.5z"/></svg><span id="companyName">룰루타일</span></div>
+    <a class="nav-cta" id="navCta" href="#consentSection"><span>견적 요청</span></a>
+  </div>
+</nav>
+
 <div class="wrap">
-  <header class="top">
-    <!-- 전화 상담은 견적 요청을 받은 뒤에만 — 번호는 접수 완료 화면에서 보인다(사용자 결정 2026-10-07) -->
-    <div class="top-row">
-      <div class="brand"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6 1.8 11.2l1.3 1.5L5 11.1V21h5.5v-6h3v6H19v-9.9l1.9 1.6 1.3-1.5z"/></svg><span id="companyName">룰루타일</span></div>
-    </div>
+  <header class="hero">
     <h1>온라인 견적 요청</h1>
     <p class="lead">평형과 공사할 공간만 알려주세요. 담당자가 견적을 준비해 연락드립니다.</p>
   </header>
@@ -352,120 +395,119 @@ footer a { color: inherit; }
   <form id="form" novalidate autocomplete="on">
     <div class="panel" id="formPanel">
 
-      <!-- ① 기본 정보 (앱 111·112·113·115) -->
+      <!-- ① 기본 정보 (앱 1101~1105) -->
       <section class="section" aria-labelledby="s1">
-        <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title" id="s1">기본 정보</h2></div>
+        <div class="sec-head"><h2 class="sec-title" id="s1">기본 정보. <span>연락드릴 곳을 알려 주세요.</span></h2></div>
         <div class="grid">
-          <label class="f" data-field="name">
-            <span class="l">고객명 / 현장명<span class="req">*</span></span>
-            <input class="input" name="name" id="name" maxlength="30" autocomplete="name" placeholder="홍길동">
+          <label class="fl" data-field="name">
+            <input class="input" name="name" id="name" maxlength="30" autocomplete="name" placeholder=" ">
+            <span class="fl-label">고객명 / 현장명<span class="req">*</span></span>
             <div class="err">성함을 입력해 주세요.</div>
           </label>
-          <label class="f" data-field="phone">
-            <span class="l">연락처<span class="req">*</span></span>
-            <input class="input" name="phone" id="phone" inputmode="tel" autocomplete="tel" maxlength="13" placeholder="010-0000-0000">
+          <label class="fl" data-field="phone">
+            <input class="input" name="phone" id="phone" inputmode="tel" autocomplete="tel" maxlength="13" placeholder=" ">
+            <span class="fl-label">연락처<span class="req">*</span></span>
             <div class="err">연락 가능한 번호를 입력해 주세요.</div>
           </label>
           <div class="f full" data-field="address">
-            <span class="l">현장 주소<span class="req">*</span></span>
             <div class="row">
-              <input class="input" id="address" readonly placeholder="눌러서 주소 검색" aria-label="현장 주소">
+              <label class="fl"><input class="input" id="address" readonly placeholder=" " aria-label="현장 주소"><span class="fl-label">현장 주소<span class="req">*</span></span></label>
               <button type="button" class="btn" id="addrBtn">주소 검색</button>
             </div>
             <div class="err">현장 주소를 입력해 주세요.</div>
           </div>
           <!-- 상세 주소는 주소를 고른 뒤에, 우편번호는 검색이 자동으로 채운다(검색을 못 불러올 때만 보임) -->
-          <label class="f full" id="detailWrap" hidden>
-            <span class="l">상세 주소</span>
-            <input class="input" id="addressDetail" maxlength="80" placeholder="동·호수 (선택)">
+          <label class="fl full" id="detailWrap" hidden>
+            <input class="input" id="addressDetail" maxlength="80" placeholder=" ">
+            <span class="fl-label">상세 주소 (동·호수)</span>
           </label>
-          <label class="f" data-field="zip" id="zipWrap" hidden>
-            <span class="l">현장 우편번호</span>
-            <input class="input" id="zip" inputmode="numeric" maxlength="5" placeholder="주소 검색 시 자동 입력">
+          <label class="fl" data-field="zip" id="zipWrap" hidden>
+            <input class="input" id="zip" inputmode="numeric" maxlength="5" placeholder=" ">
+            <span class="fl-label">현장 우편번호</span>
             <div class="err">우편번호는 숫자 5자리입니다.</div>
           </label>
         </div>
       </section>
 
-      <!-- ② 평형·일정 (앱 114·117·118) -->
+      <!-- ② 평형 · 범위 · 기간 (앱 1104 · 1107 · 1108) -->
       <section class="section" aria-labelledby="s2">
-        <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title" id="s2">평형·일정</h2></div>
+        <div class="sec-head"><h2 class="sec-title" id="s2">평형과 일정. <span>대략이어도 괜찮습니다.</span></h2></div>
         <div class="grid">
-          <label class="f" data-field="pyeong">
-            <span class="l">전체 평형<span class="req">*</span></span>
-            <div class="with-suffix">
-              <input class="input" id="pyeong" inputmode="decimal" maxlength="5" placeholder="예: 32">
-              <span class="sfx">평</span>
-            </div>
+          <label class="fl with-sfx" data-field="pyeong">
+            <input class="input" id="pyeong" inputmode="decimal" maxlength="5" placeholder=" ">
+            <span class="fl-label">전체 평형<span class="req">*</span></span>
+            <span class="sfx">평</span>
             <div class="hint" id="pyeongHint">공급면적 기준으로 적어 주세요.</div>
             <div class="err">1~500 사이의 숫자로 입력해 주세요.</div>
           </label>
           <div class="f">
-            <span class="l">시공 범위</span>
-            <div class="seg" role="group" aria-label="시공 범위">
-              <button type="button" class="chip" data-scope="전체" aria-pressed="true">전체 시공</button>
-              <button type="button" class="chip" data-scope="부분" aria-pressed="false">부분 시공</button>
+            <div class="tiles2" role="group" aria-label="시공 범위">
+              <button type="button" class="tile" data-scope="전체" aria-pressed="true"><b>전체 시공</b><span>집 전체를 공사</span></button>
+              <button type="button" class="tile" data-scope="부분" aria-pressed="false"><b>부분 시공</b><span>일부 공간만 공사</span></button>
             </div>
             <div class="hint" id="scopeHint">집 전체를 공사합니다.</div>
           </div>
           <!-- 공사 희망 기간 — 시작일 ~ 완공일 한 줄(전송 칸 이름 startDate · endDate 그대로) -->
           <div class="f full" data-field="endDate">
-            <span class="l" id="periodLabel">공사 희망 기간 <span class="opt">(선택)</span></span>
+            <span class="group-label" id="periodLabel">공사 희망 기간 <span class="opt">(선택)</span></span>
             <div class="period" role="group" aria-labelledby="periodLabel">
-              <label class="period-item"><span class="pl">시작일</span><input class="input" type="date" id="startDate" aria-label="공사 희망 시작일"></label>
+              <label class="fl always"><input class="input" type="date" id="startDate" aria-label="공사 희망 시작일"><span class="fl-label">시작일</span></label>
               <span class="tilde" aria-hidden="true">~</span>
-              <label class="period-item"><span class="pl">완공일</span><input class="input" type="date" id="endDate" aria-label="완공 희망일"></label>
+              <label class="fl always"><input class="input" type="date" id="endDate" aria-label="완공 희망일"><span class="fl-label">완공일</span></label>
             </div>
             <div class="err">완공일은 시작일 이후로 골라 주세요.</div>
           </div>
         </div>
       </section>
 
-      <!-- ③ 공간별 필요 공사 (앱 12x·13x — 가격 없음) -->
+      <!-- ③ 공간별 필요 공사 (앱 1209 체크표와 같은 방식 — 가격 없음) -->
       <section class="section" aria-labelledby="s3" data-field="rooms">
-        <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title" id="s3">공간별 필요 공사</h2></div>
+        <div class="sec-head"><h2 class="sec-title" id="s3">공간별 공사. <span>필요한 칸만 체크하세요.</span></h2></div>
         <p class="sec-desc" id="roomsDesc">공사할 공간을 고르면 아래 표에 열로 생깁니다. 필요한 칸을 눌러 체크해 주세요. 잘 모르시면 공간만 골라도 됩니다.</p>
         <div class="rooms" id="roomToggles" role="group" aria-label="공간 선택"></div>
         <div id="matrixWrap"></div>
         <div class="err" style="margin-top:12px">공사할 공간을 하나 이상 골라 주세요.</div>
       </section>
 
-      <!-- ④ 사진·요청사항 (앱 116) -->
+      <!-- ④ 사진 · 요청사항 (앱 1106) -->
       <section class="section" aria-labelledby="s4">
-        <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title" id="s4">사진·요청사항</h2></div>
-        <div class="f" style="margin-bottom:18px">
-          <span class="l">현장 사진 <span style="font-weight:400">(선택 · 최대 <span id="maxPhotosLabel">5</span>장)</span></span>
+        <div class="sec-head"><h2 class="sec-title" id="s4">사진과 요청사항. <span>있으면 더 정확한 견적이 가능합니다.</span></h2></div>
+        <div class="f" style="margin-bottom:20px">
+          <span class="group-label">현장 사진 <span class="opt">(선택 · 최대 <span id="maxPhotosLabel">5</span>장)</span></span>
           <div class="photos" id="photos">
             <button type="button" class="ph-add" id="phAdd"><span><b>+</b>사진 추가</span></button>
           </div>
           <input type="file" id="photoInput" accept="image/*" multiple hidden>
           <div class="hint">평면도나 현재 모습 사진이 있으면 더 정확한 견적을 드릴 수 있어요.</div>
         </div>
-        <label class="f">
-          <span class="l">요청사항</span>
-          <textarea class="input" id="note" maxlength="1000" placeholder="원하는 스타일, 거주 중 공사 여부, 꼭 바꾸고 싶은 부분 등을 자유롭게 적어 주세요."></textarea>
+        <label class="fl ta">
+          <textarea class="input" id="note" maxlength="1000" placeholder=" "></textarea>
+          <span class="fl-label">요청사항 (선택)</span>
+          <div class="hint">원하는 스타일, 거주 중 공사 여부, 꼭 바꾸고 싶은 부분 등을 자유롭게 적어 주세요.</div>
         </label>
         <label class="hp" aria-hidden="true">웹사이트<input id="website" tabindex="-1" autocomplete="off"></label>
       </section>
 
       <!-- 개인정보 동의 -->
-      <section class="section" data-field="consent">
-        <label class="consent">
-          <input type="checkbox" id="consent">
-          <span><b>개인정보 수집·이용에 동의합니다.</b><span class="req">*</span><br>
-          <span style="font-size:14px;color:var(--muted)">견적 안내와 상담 연락에만 사용합니다.</span></span>
-        </label>
-        <details class="policy">
-          <summary>수집 항목 자세히 보기</summary>
-          <table>
-            <tr><th>수집 항목</th><td>이름, 연락처, 현장 주소·우편번호, 평형, 공간별 필요 공사, 공사·완공 희망일, 현장 사진, 요청사항</td></tr>
-            <tr><th>이용 목적</th><td>인테리어 견적 산출 및 상담 연락 (Google 시트·드라이브에 보관 — 국외 이전 포함, 처리방침 참고)</td></tr>
-            <tr><th>보유 기간</th><td id="retentionText">문의일로부터 1년 (계약 시 관련 법령에 따른 기간)</td></tr>
-            <tr><th>동의 거부</th><td>동의하지 않으실 수 있으며, 이 경우 온라인 견적 요청을 할 수 없습니다.</td></tr>
-          </table>
-          <p style="margin:10px 0 0" id="privacyLinkWrap" hidden><a id="privacyLink" href="#" target="_blank" rel="noopener">개인정보처리방침 전문 보기</a></p>
-        </details>
-        <div class="err">개인정보 수집·이용에 동의해 주세요.</div>
+      <section class="section" data-field="consent" id="consentSection">
+        <div class="consent-card">
+          <label class="consent">
+            <input type="checkbox" id="consent">
+            <span><b>개인정보 수집·이용에 동의합니다.</b><span class="req">*</span>
+            <small>견적 안내와 상담 연락에만 사용합니다.</small></span>
+          </label>
+          <details class="policy">
+            <summary>수집 항목 자세히 보기</summary>
+            <table>
+              <tr><th>수집 항목</th><td>이름, 연락처, 현장 주소·우편번호, 평형, 공간별 필요 공사, 공사·완공 희망일, 현장 사진, 요청사항</td></tr>
+              <tr><th>이용 목적</th><td>인테리어 견적 산출 및 상담 연락 (Google 시트·드라이브에 보관 — 국외 이전 포함, 처리방침 참고)</td></tr>
+              <tr><th>보유 기간</th><td id="retentionText">문의일로부터 1년 (계약 시 관련 법령에 따른 기간)</td></tr>
+              <tr><th>동의 거부</th><td>동의하지 않으실 수 있으며, 이 경우 온라인 견적 요청을 할 수 없습니다.</td></tr>
+            </table>
+            <p style="margin:10px 0 0" id="privacyLinkWrap" hidden><a id="privacyLink" href="#" target="_blank" rel="noopener">개인정보처리방침 전문 보기</a></p>
+          </details>
+          <div class="err">개인정보 수집·이용에 동의해 주세요.</div>
+        </div>
       </section>
     </div>
   </form>
@@ -473,7 +515,7 @@ footer a { color: inherit; }
   <div class="panel" id="donePanel" hidden>
     <div class="done">
       <div class="ok" aria-hidden="true"></div>
-      <h2>견적 요청이 접수되었습니다</h2>
+      <h2>견적 요청이 접수되었습니다.</h2>
       <p>담당자가 확인 후 연락드리겠습니다.</p>
       <div class="receipt" id="receipt">접수번호</div>
       <p class="demo-note" id="demoNote" hidden>미리보기 모드 — 연동 주소가 비어 있어 실제로 전송되지 않았습니다.</p>
@@ -487,7 +529,7 @@ footer a { color: inherit; }
 
   <!-- 넓은 화면: 오른쪽 요청 요약 + 보내기 / 좁은 화면: 요약 카드는 숨고 .bar가 화면 아래에 붙는다 -->
   <aside class="side" id="side" aria-label="요청 요약">
-    <div class="panel side-card">
+    <div class="side-card">
       <div class="side-head"><h2>요청 요약</h2><span id="sideCount" aria-live="polite"></span></div>
       <div class="side-body" id="sideBody"></div>
     </div>
@@ -499,9 +541,11 @@ footer a { color: inherit; }
     </div>
   </aside>
   </div>
-
-  <footer><span id="footerText"></span></footer>
 </div>
+
+<footer>
+  <div class="wrap"><span id="footerText"></span><span class="sep" id="footerSep" hidden>|</span><a id="footerPrivacy" href="#" target="_blank" rel="noopener" hidden>개인정보처리방침</a></div>
+</footer>
 
 <div class="layer" id="addrLayer" role="dialog" aria-modal="true" aria-label="주소 검색">
   <div class="layer-box">
@@ -775,6 +819,12 @@ $("#companyName").textContent = CONFIG.COMPANY_NAME;
 document.title = `온라인 견적 요청 · ${CONFIG.COMPANY_NAME}`;
 // 전화번호는 접수 완료 화면에서만(머리 · 바닥글에는 상호만). 보내기 실패 안내에는 남긴다 — 요청을 보내려다 막힌 고객의 연락 길.
 $("#footerText").textContent = CONFIG.COMPANY_NAME;
+if (CONFIG.PRIVACY_URL) { $("#footerPrivacy").href = CONFIG.PRIVACY_URL; $("#footerPrivacy").hidden = false; $("#footerSep").hidden = false; }
+// 위 바 '견적 요청' — 마지막 동의 · 보내기 칸으로(보내지는 않는다)
+$("#navCta").addEventListener("click", e => {
+  e.preventDefault();
+  $("#consentSection").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+});
 $("#donePhone").href = "tel:" + CONFIG.COMPANY_PHONE.replace(/[^\d+]/g, "");
 $("#donePhoneText").textContent = `전화하기 ${CONFIG.COMPANY_PHONE}`;
 $("#donePhone").setAttribute("aria-label", `전화하기 ${CONFIG.COMPANY_PHONE}`);
@@ -1198,7 +1248,7 @@ async function openAddressSearch() {
   try { await loadPostcode(); }
   catch {
     // 검색을 못 불러오면 직접 입력으로 전환 — 우편번호 · 상세 주소 칸도 보인다
-    const a = $("#address"); a.readOnly = false; a.placeholder = "주소를 직접 입력해 주세요"; a.focus();
+    const a = $("#address"); a.readOnly = false; a.focus();
     $("#detailWrap").hidden = false; $("#zipWrap").hidden = false;
     toast("주소 검색을 불러오지 못했어요. 직접 입력해 주세요."); return;
   }
@@ -1424,7 +1474,7 @@ async function submit() {
     }
     clearDraft();
     $("#receipt").textContent = receipt ? `접수번호 ${receipt}` : "접수 완료";
-    $("#form").hidden = true; $("#bar").hidden = true; $("#side").hidden = true; $("#donePanel").hidden = false;
+    $("#form").hidden = true; $("#bar").hidden = true; $("#side").hidden = true; $("#donePanel").hidden = false; $("#navCta").hidden = true;
     $(".layout").classList.add("is-done");
     document.body.style.paddingBottom = "0";
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1438,11 +1488,11 @@ async function submit() {
 
 $("#againBtn").addEventListener("click", () => {
   $("#form").reset(); state.rooms.clear(); state.photos = []; setScope("전체"); ensureWholeRoom();
-  const a = $("#address"); a.readOnly = true; a.placeholder = "눌러서 주소 검색";
+  const a = $("#address"); a.readOnly = true;
   $("#detailWrap").hidden = true; $("#zipWrap").hidden = true;
   $("#pyeong").dispatchEvent(new Event("input")); syncDates();
   renderRoomToggles(); renderMatrix(); renderPhotos(); saveDraft();
-  $("#form").hidden = false; $("#bar").hidden = false; $("#side").hidden = false; $("#donePanel").hidden = true;
+  $("#form").hidden = false; $("#bar").hidden = false; $("#side").hidden = false; $("#donePanel").hidden = true; $("#navCta").hidden = false;
   $(".layout").classList.remove("is-done");
   document.body.style.paddingBottom = "";
   window.scrollTo({ top: 0 });
