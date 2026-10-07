@@ -248,6 +248,49 @@ table.mx { border-collapse: separate; border-spacing: 6px; margin: -6px 0; }
 .mx-hint { font-size: 13px; color: var(--muted); margin-top: 10px; }
 .empty { padding: 24px 18px; border-radius: var(--r-tile); background: var(--bg-alt); color: var(--muted); font-size: 15px; text-align: center; margin-top: 20px; }
 
+/* 완성 모습 미리보기 — 공용(전체) 열의 도배는 벽 4면, 마루는 바닥에 색(장식 · 전송과 무관).
+   브라우저 기본 3D(CSS)만 쓴다 — 외부 스크립트를 들이지 않아 보안 정책(CSP)을 그대로 둔다.
+   면은 방 안쪽을 보게 두고 뒷면을 숨겨, 보는 쪽 벽은 저절로 빠지고 안이 보인다. */
+.room3d { margin-top: 20px; padding: 16px 16px 14px; border-radius: var(--r-card); background: var(--bg-alt);
+  --r3-wall: #EFECE6; --r3-side: #E3DED5; --r3-floor: #D9CDB8; --r3-edge: rgba(0, 0, 0, .14);
+  --r3-paper: var(--sel); --r3-wood: #C2782F; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .room3d { --r3-wall: #3A3A3C; --r3-side: #2F2F31; --r3-floor: #4A4339; --r3-edge: rgba(255, 255, 255, .16); --r3-wood: #E0954A; } }
+:root[data-theme="dark"] .room3d { --r3-wall: #3A3A3C; --r3-side: #2F2F31; --r3-floor: #4A4339; --r3-edge: rgba(255, 255, 255, .16); --r3-wood: #E0954A; }
+.room3d[hidden] { display: none; }
+.room3d-head { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap; font-size: 15px; }
+.room3d-head b { font-weight: 600; }
+.room3d-head span { font-size: 13px; color: var(--muted); }
+.room3d-stage { --rw: 170px; --rd: 136px; --rh: 84px; position: relative; height: 220px; margin: 6px 0 8px; perspective: 1400px; perspective-origin: 50% 30%;
+  overflow: hidden; cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+@media (min-width: 600px) { .room3d-stage { --rw: 230px; --rd: 184px; --rh: 112px; height: 280px; } }
+.room3d-stage.drag { cursor: grabbing; }
+.room3d-box { position: absolute; left: 50%; top: 47%; width: 0; height: 0; transform-style: preserve-3d; transform: rotateX(-30deg) rotateY(var(--yaw, -30deg)); }
+.r3 { position: absolute; left: 0; top: 0; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; outline: 1px solid var(--r3-edge); outline-offset: -1px; }
+.r3-wall { width: var(--rw); height: var(--rh); margin: calc(var(--rh) / -2) 0 0 calc(var(--rw) / -2); background: var(--r3-wall); --hl: var(--r3-paper); }
+.r3-side { width: var(--rd); margin-left: calc(var(--rd) / -2); background: var(--r3-side); }
+.r3-floor { width: var(--rw); height: var(--rd); margin: calc(var(--rd) / -2) 0 0 calc(var(--rw) / -2); background: var(--r3-floor); --hl: var(--r3-wood);
+  transform: rotateX(90deg) translateZ(calc(var(--rh) / -2)); }
+.r3-back  { transform: translateZ(calc(var(--rd) / -2)); }
+.r3-front { transform: rotateY(180deg) translateZ(calc(var(--rd) / -2)); }
+.r3-left  { transform: rotateY(90deg) translateZ(calc(var(--rw) / -2)); }
+.r3-right { transform: rotateY(-90deg) translateZ(calc(var(--rw) / -2)); }
+/* 색 — 고른 부위는 옅게 덮고 테두리. 새로 고르면 한 번 덮인다(벽은 위 → 아래, 바닥은 안쪽 → 앞). */
+.r3::after { content: ""; position: absolute; inset: 0; background: var(--hl); opacity: 0; transform-origin: 50% 0; }
+.r3.on { outline: 2px solid var(--hl); outline-offset: -2px; }
+.r3.on::after { opacity: .5; }
+.r3.on.wait { outline: 1px solid var(--r3-edge); outline-offset: -1px; }
+.r3.on.wait::after { opacity: 0; }
+.r3.on.sweep::after { animation: r3-sweep 1.4s cubic-bezier(.45, 0, .25, 1) both; }
+.r3.on.sweep::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: var(--hl); z-index: 1; animation: r3-roller 1.4s cubic-bezier(.45, 0, .25, 1) both; }
+@keyframes r3-sweep { from { transform: scaleY(0); opacity: .8; } to { transform: scaleY(1); opacity: .5; } }
+@keyframes r3-roller { from { top: 0; opacity: 1; } 90% { opacity: 1; } to { top: calc(100% - 4px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .r3.on.sweep::after { animation: none; } .r3.on.sweep::before { display: none; } }
+.room3d-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; line-height: 1.4; word-break: keep-all; overflow-wrap: anywhere; }
+.room3d-legend .muted { color: var(--muted); }
+.room3d-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; background: var(--r3-paper); }
+.room3d-dot.floor { background: var(--r3-wood); }
+.room3d-note { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+
 /* 상품 · 공종 팝업 — 폰은 아래에서 올라오는 시트 */
 .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, calc(50% - 4px)), 1fr)); gap: 8px; }
 .product-chip { width: 100%; min-width: 0; min-height: 56px; padding: 10px 12px; border-radius: var(--r-tile); border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; font-size: 14px; font-weight: 500; line-height: 1.25; display: flex; flex-direction: column; justify-content: center; -webkit-tap-highlight-color: transparent; transition: border-color .15s, box-shadow .15s; }
@@ -474,6 +517,21 @@ footer .sep { color: var(--line); }
         <p class="sec-desc" id="roomsDesc">공사할 공간을 고르면 아래 표에 열로 생깁니다. 필요한 칸을 눌러 상품을 하나 이상 골라 주세요.</p>
         <div class="rooms" id="roomToggles" role="group" aria-label="공간 선택"></div>
         <div id="matrixWrap"></div>
+        <!-- 완성 모습 미리보기 — 공용(전체) 열의 도배 · 마루(장식, 전송과 무관) -->
+        <div class="room3d" id="room3d" hidden>
+          <div class="room3d-head"><b>완성 모습 미리보기</b><span>공용(전체) · 끌어서 돌려 보기</span></div>
+          <div class="room3d-stage" id="room3dStage" role="img" aria-label="완성 모습 미리보기">
+            <div class="room3d-box" id="room3dBox">
+              <div class="r3 r3-floor" data-part="floor"></div>
+              <div class="r3 r3-wall r3-back" data-part="wall"></div>
+              <div class="r3 r3-wall r3-front" data-part="wall"></div>
+              <div class="r3 r3-wall r3-side r3-left" data-part="wall"></div>
+              <div class="r3 r3-wall r3-side r3-right" data-part="wall"></div>
+            </div>
+          </div>
+          <div class="room3d-legend" id="room3dLegend"></div>
+          <p class="room3d-note">실제 시공 범위는 상담 때 확정합니다.</p>
+        </div>
         <div class="err" id="roomsErr" style="margin-top:12px">공사할 공간을 하나 이상 골라 주세요.</div>
       </section>
 
@@ -1138,6 +1196,7 @@ function closeSheet() {
   if (!sheetOpen()) return;
   $("#sheetLayer").classList.remove("on");
   document.documentElement.style.overflow = "";
+  playPreviewSweeps();
   const target = sheetReturn && sheetReturn(); sheetReturn = null;
   if (target) target.focus({ preventScroll: true });
   if (pendingWebConfig) flushWebConfig();
@@ -1414,6 +1473,71 @@ $("#address").addEventListener("keydown", e => { if ($("#address").readOnly && (
 $("#addrClose").addEventListener("click", () => $("#addrLayer").classList.remove("on"));
 $("#addrLayer").addEventListener("click", e => { if (e.target.id === "addrLayer") e.currentTarget.classList.remove("on"); });
 
+// ── 완성 모습 미리보기 ───────────────────────────────────────────────
+// 공용(전체) 열만 — 공종 → 방 부위는 이 표 한 곳(다른 공간 · 공종은 여기에 더한다). 공종 이름은 설정과 글자까지 같아야 한다.
+const PREVIEW_PARTS = [
+  { trade: "도배", part: "wall", label: "벽 4면" },
+  { trade: "마루", part: "floor", label: "바닥" },
+];
+const previewOn = new Set();   // 지금 색이 든 부위 — 새로 든 부위만 덮는 움직임을 한 번 보인다
+function updateRoomPreview() {
+  const card = $("#room3d");
+  const data = state.rooms.get(CONFIG.WHOLE_HOUSE_ROOM);
+  card.hidden = !data;
+  const on = data ? PREVIEW_PARTS.filter(p => data.trades.has(p.trade)) : [];
+  const parts = new Set(on.map(p => p.part));
+  $$(".r3", card).forEach(face => {
+    const part = face.dataset.part;
+    const active = parts.has(part);
+    face.classList.toggle("on", active);
+    if (!active) face.classList.remove("sweep", "wait");
+    // 상품 팝업이 열려 있으면 가려서 안 보이므로 닫을 때 덮는다(playPreviewSweeps).
+    else if (!previewOn.has(part)) { face.classList.remove("sweep"); if (sheetOpen()) face.classList.add("wait"); else replaySweep(face); }
+  });
+  previewOn.clear(); parts.forEach(p => previewOn.add(p));
+  if (!data) return;
+  // 공종 · 상품 이름은 설정에서 오므로 글자로만 넣는다(innerHTML 금지).
+  const legend = $("#room3dLegend");
+  legend.textContent = "";
+  if (!on.length) {
+    const e = document.createElement("span"); e.className = "muted";
+    e.textContent = "표의 공용(전체) 열에서 도배 · 마루를 고르면 방에 표시돼요.";
+    legend.appendChild(e);
+  }
+  on.forEach(p => {
+    const item = document.createElement("span");
+    const dot = document.createElement("i"); dot.className = `room3d-dot ${p.part}`;
+    const names = [...(data.items.get(p.trade) || [])];
+    const sub = document.createElement("span"); sub.className = "muted";
+    sub.textContent = names.length ? ` · ${names[0]}${names.length > 1 ? ` 외 ${names.length - 1}` : ""}` : "";
+    item.append(dot, `${p.trade} → ${p.label}`, sub);
+    legend.appendChild(item);
+  });
+  $("#room3dStage").setAttribute("aria-label", on.length
+    ? "완성 모습 미리보기 — " + on.map(p => `${p.trade}: ${p.label}`).join(", ")
+    : "완성 모습 미리보기 — 아직 고른 도배 · 마루 없음");
+}
+function replaySweep(face) { face.classList.remove("sweep", "wait"); void face.offsetWidth; face.classList.add("sweep"); }
+function playPreviewSweeps() { $$("#room3d .r3.wait").forEach(replaySweep); }
+// 끌어서 돌리기(가로만) — 세로로 밀면 페이지가 굴러간다(touch-action: pan-y).
+(() => {
+  const stage = $("#room3dStage"), box = $("#room3dBox");
+  let yaw = -30, startX = 0, startYaw = 0, pointer = null;
+  stage.addEventListener("pointerdown", e => {
+    pointer = e.pointerId; startX = e.clientX; startYaw = yaw;
+    stage.classList.add("drag");
+    try { stage.setPointerCapture(pointer); } catch (_) {}
+  });
+  stage.addEventListener("pointermove", e => {
+    if (e.pointerId !== pointer) return;
+    yaw = startYaw + (e.clientX - startX) * 0.5;
+    box.style.setProperty("--yaw", `${yaw}deg`);
+  });
+  const end = e => { if (e.pointerId === pointer) { pointer = null; stage.classList.remove("drag"); } };
+  stage.addEventListener("pointerup", end);
+  stage.addEventListener("pointercancel", end);
+})();
+
 // ── 요약 바 ─────────────────────────────────────────────────────────
 function updateBar() {
   const rooms = state.rooms.size;
@@ -1424,6 +1548,7 @@ function updateBar() {
   if (state.photos.length) parts.push(`사진 ${state.photos.length}`);
   $("#barSum").innerHTML = parts.join(" · ");
   renderSide(rooms, trades, py);
+  updateRoomPreview();
 }
 
 // 요청 요약 카드(넓은 화면) — 공간 · 공종 이름은 설정에서 오므로 글자로만 넣는다(innerHTML 금지).
