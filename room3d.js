@@ -1,4 +1,4 @@
-/* 완성 모습 미리보기 — 3D 도면 (웹 견적요청 페이지 전용, 2026-10-08 · 조명 종류 · 작은 이름표 · 실제 도면 78 · 79 · 109 2026-10-09)
+/* 완성 모습 미리보기 — 3D 도면 (웹 견적요청 페이지 전용, 2026-10-08 · 조명 종류 · 작은 이름표 · 실제 도면 4종 · 상품 고르면 가구 2026-10-09)
    · three.js r128(three.min.js, 같은 사이트 파일)이 먼저 읽혀 있어야 한다. 페이지 보안 설정(CSP)이
      외부 스크립트를 막으므로 두 파일 모두 index.html 옆에 둔다.
    · 평면 4가지 — 사장님이 주신 실제 도면 78 · 79 · 86 · 109㎡(그림 그대로, 2026-10-09). 예전 대표 평면(59 · 84 · 105)은 뺐다.
@@ -20,6 +20,9 @@
 
   /* 방: [id, 종류, x, y, 가로, 세로, 창(t·b·l·r), 문 [[변, 변 시작에서 거리]], 덧붙은 칸 [[x, y, 가로, 세로, 창, 문], …]]
      덧붙은 칸 = ㄱ자 방처럼 사각형 여러 개로 된 방(같은 방 칸 사이에는 벽이 없다). solids: 설비 칸(PS · AD) — 속이 찬 기둥.
+     furn: 방마다 가구 자리 — 고른 상품이 있을 때만 그린다(사용자 결정 2026-10-09: 기본 가구는 모두 지움).
+       wc · bas [가운데 x, y, 향한 쪽 t·b·l·r] · tub · shw [x, y, 가로, 세로] · sink [[x, y, 가로, 세로, 벽 쪽], …](순서대로 길이를 채움)
+       hood [x, y] · wardrobe · shoe [x, y, 가로, 세로, 벽 쪽]. 없으면 방 크기로 기본 자리.
      좌표는 m, 왼쪽 위가 (0, 0), 아래(y가 큰 쪽)가 전면(남향). 전면에 붙은 방은 기본형에서 발코니만큼 줄어든다.
      cuts: 벽 없이 트인 자리 [방향 h·v, 선 위치, 시작, 끝]. fx: 욕실 기구(높이만 다른 상자). */
   const PLANS = {
@@ -41,7 +44,14 @@
       ],
       cuts: [["v", 1.28, 4.62, 6.08], ["h", 6.08, 0.0, 1.28], ["h", 6.08, 1.28, 3.6]],
       solids: [[2.4, -0.14, 0.72, 1.71], [2.4, 4.08, 0.72, 0.55], [7.48, 4.33, 0.45, 1.66]],
-      fx: [["wc", 5.36, 4.42], ["bas", 6.22, 4.45], ["tub", 6.83, 4.56, 0.58, 1.27]],
+      furn: {
+        "bath1": {"wc": [5.57, 4.66, "b"], "bas": [6.42, 4.62, "b"], "tub": [6.83, 4.4, 0.62, 1.54], "shw": [6.83, 4.4, 0.62, 1.54]},
+        "kitchen": {"sink": [[2.4, 1.58, 0.72, 2.5, "l"]], "hood": [2.76, 3.42]},
+        "bed2": {"wardrobe": [0.0, 1.88, 0.51, 2.48, "l"]},
+        "bed1": {"wardrobe": [7.41, 1.8, 0.51, 1.8, "r"]},
+        "master": {"wardrobe": [7.41, 6.34, 0.51, 2.95, "r"]},
+        "entry": {"shoe": [0.05, 4.62, 1.23, 0.38, "t"]},
+      },
       bedrooms: ["bed1", "bed2"],
     },
     // 실제 도면(사장님 제공 79㎡ 타입 · 2026-10-09) — 그림 그대로(확장 · 비확장 전환 없음). 치수가 없어 실내 면적에 맞춘 비율.
@@ -67,7 +77,16 @@
       ],
       cuts: [["v", 4.2, 0.67, 1.76], ["v", 5.29, 0.76, 1.58], ["h", 3.36, 8.12, 9.83], ["h", 6.9, 3.61, 5.47], ["v", 5.47, 3.36, 4.49], ["v", 5.47, 4.49, 6.9], ["h", 4.49, 5.47, 6.12]],
       solids: [[6.56, 0.0, 0.84, 1.16], [5.74, 2.89, 0.82, 0.47], [6.12, 7.72, 0.54, 1.13], [0.71, 8.48, 1.36, 0.36]],
-      fx: [["tub", 6.63, 1.27, 1.31, 0.51], ["bas", 6.63, 1.91], ["wc", 6.65, 2.58], ["wc", 4.41, 2.49], ["bas", 5.07, 2.71]],
+      furn: {
+        "bath1": {"wc": [6.79, 2.94, "r"], "bas": [6.79, 2.13, "r"], "tub": [6.61, 1.22, 1.47, 0.54], "shw": [6.61, 1.22, 1.47, 0.54]},
+        "bath2": {"wc": [4.6, 3.11, "t"], "bas": [5.3, 3.11, "t"], "tub": [5.74, 1.82, 0.8, 1.05], "shw": [5.74, 1.82, 0.8, 1.05]},
+        "kitchen": {"sink": [[3.61, 8.3, 2.51, 0.54, "b"], [5.61, 4.49, 0.51, 3.81, "r"]], "hood": [5.89, 7.36]},
+        "master": {"wardrobe": [1.34, 0.0, 2.72, 0.54, "t"]},
+        "bed1": {"wardrobe": [8.06, 5.03, 0.54, 2.54, "r"]},
+        "bed2": {"wardrobe": [8.61, 5.58, 0.54, 2.09, "l"]},
+        "dress": {"wardrobe": [6.07, 0.05, 0.49, 1.67, "r"]},
+        "entry": {"shoe": [8.12, 1.91, 0.49, 1.42, "l"]},
+      },
       bedrooms: ["bed1", "bed2"],
     },
     // 실제 도면(사장님 제공 86㎡ 타입 · 2026-10-09) — 그림 그대로(확장 · 비확장 전환 없음). 치수가 없어 실내 면적에 맞춘 비율.
@@ -86,7 +105,14 @@
       ],
       cuts: [["v", 5.56, 0.0, 3.06], ["h", 2.76, 5.56, 7.32], ["v", 9.24, 2.76, 4.32]],
       solids: [[0.0, 6.07, 1.62, 0.71], [7.38, 4.32, 0.71, 2.47]],
-      fx: [["wc", 6.57, 4.59], ["bas", 6.7, 5.26], ["tub", 5.73, 6.07, 1.32, 0.58]],
+      furn: {
+        "bath1": {"wc": [7.03, 4.81, "l"], "bas": [7.16, 5.53, "l"], "tub": [5.6, 6.07, 1.75, 0.69], "shw": [5.6, 6.07, 1.75, 0.69]},
+        "kitchen": {"sink": [[5.56, 0.0, 2.54, 0.61, "t"], [5.56, 0.61, 0.62, 1.28, "l"], [7.38, 0.61, 0.54, 1.01, "r"]], "hood": [7.65, 1.15]},
+        "master": {"wardrobe": [1.69, 6.18, 3.78, 0.61, "b"]},
+        "bed1": {"wardrobe": [9.24, 2.2, 1.78, 0.57, "b"]},
+        "bed2": {"wardrobe": [8.29, 6.2, 2.56, 0.58, "b"]},
+        "entry": {"shoe": [9.26, 2.79, 1.73, 0.35, "t"]},
+      },
       bedrooms: ["bed1", "bed2"],
     },
     // 실제 도면(사장님 제공 109㎡ 타입 · 2026-10-09) — 그림 그대로(확장 · 비확장 전환 없음). 치수가 없어 실내 면적에 맞춘 비율.
@@ -114,7 +140,17 @@
       ],
       cuts: [["h", 4.17, 1.6, 4.17], ["h", 2.65, 6.22, 9.56], ["v", 9.56, 1.88, 4.17], ["h", 4.17, 11.83, 12.43]],
       solids: [[1.6, 1.86, 0.9, 0.9], [10.83, 0.0, 1.0, 0.8], [10.19, 1.88, 0.5, 0.86]],
-      fx: [["tub", 0.16, 2.0, 1.24, 0.54], ["bas", 0.08, 2.69], ["wc", 0.08, 3.35], ["bas", 10.25, 2.81], ["wc", 10.25, 3.49]],
+      furn: {
+        "bath1": {"wc": [0.3, 3.69, "r"], "bas": [0.34, 2.97, "r"], "tub": [0.08, 1.94, 1.44, 0.74], "shw": [0.08, 1.94, 1.44, 0.74]},
+        "bath2": {"wc": [10.49, 3.81, "r"], "bas": [10.53, 3.09, "r"], "tub": [10.75, 1.94, 1.02, 0.8], "shw": [10.75, 1.94, 1.02, 0.8]},
+        "kitchen": {"sink": [[6.22, 0.0, 3.35, 0.6, "t"], [6.22, 0.6, 0.6, 1.34, "l"]], "hood": [6.52, 1.34]},
+        "master": {"wardrobe": [13.23, 4.49, 0.6, 2.87, "r"]},
+        "bed2": {"wardrobe": [0.0, 5.69, 0.6, 2.81, "l"]},
+        "bed1": {"wardrobe": [5.07, 6.46, 0.6, 2.21, "r"]},
+        "alpha": {"wardrobe": [4.17, 1.24, 0.6, 1.9, "l"]},
+        "dress": {"wardrobe": [13.23, 2.05, 0.6, 0.92, "r"]},
+        "entry": {"shoe": [3.71, 2.85, 0.46, 1.28, "r"]},
+      },
       bedrooms: ["bed1", "bed2", "alpha"],
     },
   };
@@ -132,7 +168,8 @@
     powder: 0xE6E0D6, refuge: 0xE1E1DF,
   };
   const WALL = 0xF4F2EC, OUTSIDE = 0xE3E0D8, CAP = 0xD3CFC5, EDGE = 0x9A988F, GLASS = 0x85B7EB, DOOR = 0xE6DFD2;
-  const MIX = { wall: 0.5, floor: 0.78, window: 1, door: 0.85, light: 0.5 };
+  const MIX = { wall: 0.5, floor: 0.78, window: 1, door: 0.85, light: 0.5, fixture: 0.3, cabinet: 0.3 };
+  const FURN_FIX = new Set(["wc", "bas", "tub", "shw", "mirror"]);   // 욕실 기구(나머지는 가구 — 싱크대 · 상부장 · 후드 · 붙박이장 · 신발장)
   const GLOW = 0xFFBE3D;   // 등 아래 · 간접조명 빛 번짐(더하기 섞기)
   // 조명 종류를 알 수 없을 때(세트 · 설치비 · 등기구 교체 …) 방 종류별 기본 등
   const DEFAULT_LIGHT = {
@@ -313,6 +350,9 @@
     let lightKinds = new Map();   // id → ["round" · "square" · "rect" · "down" · "cove" · "pendant" · "auto"] (페이지가 상품 이름으로 고름)
     let lightObjs = new Map();    // id → { sig, objs } 지금 그려 둔 등
     let lightGroup = null, cutsNow = [];
+    let furnWant = new Map();     // id → { kinds: ["wc" …], len }(페이지가 상품 이름으로 고름)
+    let furnObjs = new Map();     // id → { sig, objs }
+    let furnGroup = null;
     let raf = 0, labelH = 0.05;
     const disposables = [];
 
@@ -356,7 +396,9 @@
       disposables.splice(0).forEach(d => d.dispose && d.dispose());
       labelSprites.forEach(l => { if (l.sprite) { l.sprite.material.map.dispose(); l.sprite.material.dispose(); } });
       lightObjs.forEach(o => o.objs.forEach(m => { m.geometry.dispose(); m.material.dispose(); }));
+      furnObjs.forEach(o => o.objs.forEach(m => { m.geometry.dispose(); m.material.dispose(); }));
       surfaces = new Map(); labelSprites = new Map(); lightObjs = new Map(); lightGroup = null;
+      furnObjs = new Map(); furnGroup = null;
       wallMats.clear(); floorMats.clear(); glassMats.clear();
     }
 
@@ -416,14 +458,8 @@
       })));
       // 조명 — 고른 방에만 그 종류의 등을 천장 높이에 그린다(syncLights). 천장 판은 그리지 않는다(위에서 들여다보는 도면).
       lightGroup = new THREE.Group(); root.add(lightGroup);
-      // 욕실 기구(흰 상자)
-      g.P.fx.forEach(f => {
-        const t = f[0];
-        if (t === "tub") add(new THREE.BoxGeometry(f[3], 0.55, f[4]), whiteMat, X(f[1] + f[3] / 2), 0.275, Z(f[2] + f[4] / 2), true);
-        else if (t === "shw") add(new THREE.BoxGeometry(f[3], 0.05, f[4]), whiteMat, X(f[1] + f[3] / 2), 0.085, Z(f[2] + f[4] / 2), true);
-        else if (t === "wc") add(new THREE.BoxGeometry(0.45, 0.42, 0.7), whiteMat, X(f[1] + 0.225), 0.21, Z(f[2] + 0.35), true);
-        else if (t === "bas") add(new THREE.BoxGeometry(0.5, 0.8, 0.4), whiteMat, X(f[1] + 0.25), 0.4, Z(f[2] + 0.2), true);
-      });
+      // 가구 — 고른 상품이 있는 방에만(syncFurn). 기본으로 깔린 가구는 없다.
+      furnGroup = new THREE.Group(); root.add(furnGroup);
       // 라벨 자리
       g.rooms.forEach(r => {
         const pos = new THREE.Vector3(X(r.x + r.w / 2), 0.12, Z(r.y + r.h / 2));
@@ -482,7 +518,12 @@
         if (!s.hl || a <= 0) {
           m.color.copy(base);
           if (s.part === "window") m.opacity = 0.42;
-          if (s.part === "light") { m.opacity = 0; m.visible = false; }
+          if (s.part === "light" || s.part === "fixture" || s.part === "cabinet") { m.opacity = 0; m.visible = false; }
+          return;
+        }
+        if (s.part === "fixture" || s.part === "cabinet") {
+          m.visible = true; m.opacity = m.userData.op * Math.min(1, a * 1.6);
+          if (!m.userData.keep) m.color.copy(base).lerp(s.hl, MIX[s.part] * a);
           return;
         }
         if (s.part === "light") {
@@ -589,8 +630,132 @@
       lightObjs.set(r.id, { sig, objs });
     }
 
+    // ── 가구 ─────────────────────────────────────────────────────────────
+    function furnMat(id, part, mat, op, keep) {
+      const k = id + ":" + part;
+      if (!surfaces.has(k)) surfaces.set(k, { mats: [], base: [], part, hl: null, t0: 0, wait: false });
+      const s = surfaces.get(k);
+      mat.transparent = true; mat.opacity = 0; mat.visible = false;
+      mat.userData.op = op; mat.userData.keep = !!keep;
+      s.mats.push(mat); s.base.push(mat.color.clone());
+      return mat;
+    }
+    function dropFurn(id) {
+      const o = furnObjs.get(id);
+      if (!o) return;
+      o.objs.forEach(m => { if (m.parent) m.parent.remove(m); m.geometry.dispose(); m.material.dispose(); });
+      furnObjs.delete(id); surfaces.delete(id + ":fixture"); surfaces.delete(id + ":cabinet");
+    }
+    function syncFurn() {
+      if (!furnGroup) return;
+      curRooms.forEach(r => {
+        const w = furnWant.get(r.id);
+        const kinds = w ? w.kinds.filter(k => wanted.has(r.id + ":" + (FURN_FIX.has(k) ? "fixture" : "cabinet"))).sort() : [];
+        const sig = kinds.length ? kinds.join(",") + "|" + (w.len || 0) : "";
+        const o = furnObjs.get(r.id);
+        if ((o ? o.sig : "") === sig) return;
+        dropFurn(r.id);
+        if (sig) buildFurn(r, kinds, w.len || 0, sig);
+      });
+    }
+    function buildFurn(r, kinds, len, sig) {
+      const P = PLANS[plan], A = (P.furn && P.furn[r.id]) || {};
+      const objs = [], X = x => x - W / 2, Z = y => y - D / 2, has = k => kinds.includes(k);
+      const lam = (color, part, op, keep, extra) => furnMat(r.id, part, new THREE.MeshLambertMaterial(Object.assign({ color }, extra || {})), op == null ? 1 : op, keep);
+      const line = part => furnMat(r.id, part, new THREE.LineBasicMaterial({ color: EDGE }), 0.5, true);
+      // 상자 하나(위치는 도면 좌표 m, y는 바닥에서 높이) — 테두리 선도 같이 나타난다
+      const box = (part, mat, x, z, w, h, d, y, parent, rot) => {
+        const geo = new THREE.BoxGeometry(w, h, d), mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x, y, z); if (rot) mesh.rotation.y = rot;
+        const eg = new THREE.EdgesGeometry(geo), edge = new THREE.LineSegments(eg, line(part));
+        edge.position.copy(mesh.position); edge.rotation.y = mesh.rotation.y;
+        (parent || furnGroup).add(mesh, edge); objs.push(mesh, edge);
+        return mesh;
+      };
+      const rotOf = f => f === "t" ? Math.PI : f === "r" ? Math.PI / 2 : f === "l" ? -Math.PI / 2 : 0;   // 앞이 +z(아래쪽)인 모양을 돌린다
+      const spot = (cx, cy, face) => { const g = new THREE.Group(); g.position.set(X(cx), 0, Z(cy)); g.rotation.y = rotOf(face); furnGroup.add(g); return g; };
+      const local = (g, part, mat, x, z, w, h, d, y) => box(part, mat, x, z, w, h, d, y, g);
+      const main = r.rects[0];
+      // 기본 자리(도면에 적은 자리가 없을 때)
+      const wc = A.wc || [main.x + 0.35, main.y + 0.45, "b"];
+      const bas = A.bas || [main.x + main.w - 0.35, main.y + 0.3, "b"];
+      const tubR = A.tub || [main.x + 0.06, main.y + main.h - 0.8, main.w - 0.12, 0.74];
+      const shwR = A.shw || tubR;
+      const WHITE = 0xF7F7F5;
+      if (has("wc")) {
+        const g = spot(wc[0], wc[1], wc[2]), m = lam(WHITE, "fixture");
+        local(g, "fixture", m, 0, -0.25, 0.4, 0.42, 0.18, 0.62);   // 물탱크
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.16, 0.4, 20), m);
+        body.position.set(0, 0.2, 0.05); body.scale.z = 1.3; g.add(body); objs.push(body);
+      }
+      if (has("bas")) {
+        const g = spot(bas[0], bas[1], bas[2]), m = lam(WHITE, "fixture");
+        local(g, "fixture", m, 0, -0.08, 0.16, 0.72, 0.16, 0.36);   // 다리
+        local(g, "fixture", m, 0, 0, 0.5, 0.15, 0.42, 0.8);         // 세면기
+      }
+      if (has("mirror")) {
+        const g = spot(bas[0], bas[1], bas[2]);
+        local(g, "fixture", lam(0xDDE6EC, "fixture"), 0, -0.15, 0.6, 0.75, 0.12, 1.55);
+      }
+      if (has("tub")) {
+        const [x, y, w, h] = tubR;
+        box("fixture", lam(WHITE, "fixture"), X(x + w / 2), Z(y + h / 2), w, 0.55, h, 0.275);
+        box("fixture", lam(0xCFE0EA, "fixture", 1, true), X(x + w / 2), Z(y + h / 2), Math.max(0.1, w - 0.14), 0.012, Math.max(0.1, h - 0.14), 0.557);
+      }
+      if (has("shw") && !(has("tub") && shwR === tubR)) {
+        // 샤워 칸 — 바닥 받침 + 방 쪽(벽이 아닌 쪽)에 유리 칸막이
+        const [x, y, w, h] = shwR, near = (a, b) => Math.abs(a - b) < 0.12;
+        box("fixture", lam(0xE9EEF1, "fixture"), X(x + w / 2), Z(y + h / 2), w, 0.04, h, 0.02);
+        const onWall = (o, c) => r.rects.some(rc => o === "x" ? (near(rc.x, c) || near(rc.x + rc.w, c)) : (near(rc.y, c) || near(rc.y + rc.h, c)));
+        const glass = () => lam(0xBFD9EA, "fixture", 0.38, true, { depthWrite: false });
+        if (!onWall("y", y)) box("fixture", glass(), X(x + w / 2), Z(y), w, 1.9, 0.02, 0.95);
+        if (!onWall("y", y + h)) box("fixture", glass(), X(x + w / 2), Z(y + h), w, 1.9, 0.02, 0.95);
+        if (!onWall("x", x)) box("fixture", glass(), X(x), Z(y + h / 2), 0.02, 1.9, h, 0.95);
+        if (!onWall("x", x + w)) box("fixture", glass(), X(x + w), Z(y + h / 2), 0.02, 1.9, h, 0.95);
+      }
+      // 싱크대 줄 — 상품 길이(m)가 있으면 앞 칸부터 그 길이만큼
+      let segs = (A.sink || [[main.x + 0.06, main.y + 0.06, Math.min(main.w - 0.12, 3), 0.6, "t"]]).map(s => s.slice());
+      if (len > 0) {
+        let left = len;
+        segs = segs.filter(s => {
+          if (left <= 0.05) return false;
+          const along = s[2] >= s[3] ? 2 : 3, take = Math.min(left, s[along]);
+          s[along] = take; left -= take; return true;
+        });
+      }
+      if (has("sink")) segs.forEach((s, i) => {
+        const [x, y, w, h] = s;
+        box("cabinet", lam(0xEFEAE2, "cabinet"), X(x + w / 2), Z(y + h / 2), w, 0.85, h, 0.425);
+        box("cabinet", lam(0x9A9893, "cabinet", 1, true), X(x + w / 2), Z(y + h / 2), w + 0.02, 0.04, h + 0.02, 0.87);
+        if (i === 0) {   // 싱크볼
+          const along = w >= h, bw = Math.min(0.7, (along ? w : h) * 0.35);
+          box("cabinet", lam(0x6F7478, "cabinet", 1, true), X(x + w / 2), Z(y + h / 2), along ? bw : Math.min(0.36, w - 0.1), 0.012, along ? Math.min(0.36, h - 0.1) : bw, 0.896);
+        }
+      });
+      if (has("upper")) segs.forEach(s => {
+        const [x, y, w, h, sd] = s, d = 0.35;
+        const fx = sd === "l" ? x : sd === "r" ? x + w - d : x, fy = sd === "t" ? y : sd === "b" ? y + h - d : y;
+        const fw = sd === "l" || sd === "r" ? d : w, fh = sd === "t" || sd === "b" ? d : h;
+        box("cabinet", lam(0xEFEAE2, "cabinet"), X(fx + fw / 2), Z(fy + fh / 2), fw, 0.7, fh, 1.85);
+      });
+      if (has("hood")) {
+        const hp = A.hood || (segs[0] ? [segs[0][0] + Math.min(segs[0][2], 0.6) / 2, segs[0][1] + Math.min(segs[0][3], 0.6) / 2] : [main.x + 0.5, main.y + 0.4]);
+        box("cabinet", lam(0xC9CBCC, "cabinet"), X(hp[0]), Z(hp[1]), 0.6, 0.45, 0.5, 1.75);
+      }
+      const tall = (key, color, height, fallback) => {
+        const v = A[key] || fallback;
+        box("cabinet", lam(color, "cabinet"), X(v[0] + v[2] / 2), Z(v[1] + v[3] / 2), v[2], height, v[3], height / 2);
+      };
+      if (has("wardrobe")) tall("wardrobe", 0xDCC8AA, 2.25, main.win.includes("t")
+        ? [main.x + 0.3, main.y + main.h - 0.66, Math.max(0.6, main.w - 0.6), 0.6, "b"]
+        : [main.x + 0.3, main.y + 0.06, Math.max(0.6, main.w - 0.6), 0.6, "t"]);
+      if (has("shoe")) tall("shoe", 0xE2D6C2, 2.1, [main.x + 0.06, main.y + 0.06, 0.4, Math.min(1.2, main.h - 0.12), "l"]);
+      furnObjs.set(r.id, { sig, objs });
+    }
+
     function applyWanted(animate, defer) {
       syncLights();
+      syncFurn();
       const now = performance.now() / 1000;
       surfaces.forEach((s, k) => {
         const want = wanted.get(k);
@@ -713,6 +878,12 @@
         const now = performance.now() / 1000;
         (list || []).forEach(h => { const s = surfaces.get(h.id + ":" + h.part); if (s && s.hl) { s.wait = false; s.t0 = now; } });
         invalidate();
+      },
+      /** 방 id → { kinds: [wc · bas · tub · shw · mirror · sink · upper · hood · wardrobe · shoe], len: 싱크대 길이 m }.
+          그 방 fixture(욕실 기구) · cabinet(가구)가 칠할 목록에 있을 때만 그린다. */
+      setFurniture(map) {
+        furnWant = new Map(Object.entries(map || {}).map(([id, v]) => [id, { kinds: [...new Set(v.kinds || [])], len: +v.len || 0 }]));
+        applyWanted(true, false);
       },
       /** 방 id → 등 종류 목록(round · square · rect · down · cove · pendant · auto). 그 방 조명이 칠할 목록에 있을 때만 그린다. */
       setLights(map) {

@@ -1479,7 +1479,7 @@ $("#addrLayer").addEventListener("click", e => { if (e.target.id === "addrLayer"
 // 고른 공간 · 공종을 도면(사장님이 주신 실제 도면 78 · 79 · 86 · 109㎡)의 방 벽 · 바닥 · 창 · 문 · 조명에 칠한다. 보는 것만 — 전송 · 초안과 무관.
 // 고른 내용은 페이지를 넘겨도 그대로 남고, 지금 공간은 이름표 강조 · 시점 이동, 상품을 고르면 들어가는 자리가 깜빡인다(사용자 결정 2026-10-09).
 // 3D 파일(three.min.js → room3d.js)은 도면이 처음 보일 때 한 번만 불러온다(같은 사이트 파일 — CSP 'self').
-const PREVIEW_FILES = ["three.min.js", "room3d.js?v=20261009d"];
+const PREVIEW_FILES = ["three.min.js", "room3d.js?v=20261009e"];
 // 공종 → 칠할 부위. 공종 이름은 설정과 글자까지 같아야 한다(다른 공종은 여기에 줄을 더한다).
 // whole = 공용(전체)일 때 칠할 방 종류(null = 모든 방), parts(방 종류) = 그 방에서 칠할 면.
 const PREVIEW_DRY = ["living", "kitchen", "hall", "master", "bed", "alpha", "dress", "pantry", "entry", "powder"];
@@ -1493,7 +1493,44 @@ const PREVIEW_TRADES = {
   "문·문틀": { color: "#D6457A", whole: null, parts: () => ["door"] },
   "필름": { color: "#3A3A3C", whole: null, parts: () => ["door"] },
   "전기·조명": { color: "#F2C200", whole: ["living", "kitchen", "hall", "master", "bed", "alpha", "dress", "pantry", "entry", "bath", "powder"], parts: () => ["light"] },
+  "제작가구": { color: "#9A6B3F", whole: ["kitchen", "master", "bed", "alpha", "dress", "entry"], parts: () => [] },   // 면은 칠하지 않고 가구만
 };
+// 가구 — 욕실 · 제작가구 상품 이름 → 도면에 놓을 가구(사용자 결정 2026-10-09: 도면의 기본 가구는 지우고 고른 상품만).
+const PREVIEW_FURN_NAME = { wc: "양변기", bas: "세면대", tub: "욕조", shw: "샤워 칸막이", mirror: "거울장", sink: "싱크대", upper: "상부장", hood: "후드", wardrobe: "붙박이장", shoe: "신발장" };
+const PREVIEW_FURN_FIX = new Set(["wc", "bas", "tub", "shw", "mirror"]);   // 욕실 기구(fixture) — 나머지는 가구(cabinet)
+const PREVIEW_FURN_PLACE = { bath: ["wc", "bas", "tub", "shw", "mirror"], kitchen: ["sink", "upper", "hood"], master: ["wardrobe"], bed: ["wardrobe"], alpha: ["wardrobe"], dress: ["wardrobe"], entry: ["shoe"] };
+/** 고른 상품 이름 → 가구 종류 · 싱크대 길이(m). */
+function furnKinds(trade, names) {
+  const ks = new Set();
+  let len = 0;
+  if (trade === "욕실") {
+    let noTub = false;
+    names.forEach(n => {
+      if (/추가금|수전/.test(n)) return;   // 수전 · 추가 비용은 도면에 놓을 기구가 아님
+      const pkg = /패키지|리모델링|기본\s*공사|기본\s*덧방|욕실\s*시공|거실\s*욕실|소형\s*욕실|바스|욕실\s*덧방/.test(n);   // 바스 = 이지바스 · 이누스바스 · 클린바스
+      const off = /욕조\s*철거|욕조\s*없는|샤워형/.test(n);
+      if (off) noTub = true;
+      if (pkg) { ["wc", "bas", "mirror"].forEach(k => ks.add(k)); ks.add(/욕조/.test(n) && !off ? "tub" : "shw"); }   // 욕실 한 세트
+      if (/양변기|변기/.test(n)) ks.add("wc");
+      if (/세면기|세면대/.test(n)) ks.add("bas");
+      if (/욕조/.test(n) && !off) ks.add("tub");
+      if (/샤워\s*부스|파티션/.test(n)) ks.add("shw");
+      if (/욕실장|거울|슬라이딩장/.test(n)) ks.add("mirror");
+    });
+    if (noTub) ks.delete("tub");
+  } else if (trade === "제작가구") {
+    names.forEach(n => {
+      if (/빌트인|붙박이|옷장|드레스장|수납장/.test(n)) ks.add("wardrobe");
+      if (/신발장/.test(n)) ks.add("shoe");
+      if (/상부장/.test(n)) ks.add("upper");
+      if (/후드/.test(n)) ks.add("hood");
+      if (/싱크|상판|수전|하부장|\d+\s*평형/.test(n)) { ks.add("sink"); if (!/하부장/.test(n)) ks.add("upper"); }   // 싱크대 기본 구성 = 상 · 하부장
+      const m = n.match(/(?:길이|미터\s*단위)\s*([\d.]+)/);
+      if (m) len = Math.max(len, parseFloat(m[1]) || 0);
+    });
+  }
+  return { ks, len };
+}
 // 조명 상품 이름 → 도면에 그릴 등 모양(사용자 결정 2026-10-09). 위에서부터 먼저 맞는 줄.
 // none = 스위치 · 콘센트처럼 천장 등이 아닌 것(도면에 안 그림), auto = 종류를 알 수 없음(방 종류별 기본 모양 — room3d.js).
 const PREVIEW_LIGHT_RULES = [
@@ -1510,7 +1547,7 @@ const PREVIEW_LIGHT_NAME = { down: "다운라이트", cove: "간접조명", pend
 const PREVIEW_COVE = /간접\s*(등|조명)|T5/;   // 다른 공종(예: 욕실 '천장 간접등(T5)')에 든 간접조명도 그 방에 그린다
 const PREVIEW_LIGHT_COLOR = "#F2C200";
 const lightKind = name => { const hit = PREVIEW_LIGHT_RULES.find(([re]) => re.test(name)); return hit ? hit[1] : "auto"; };
-const PREVIEW_PART_NAME = { wall: "벽", floor: "바닥", window: "창", door: "문", light: "조명" };
+const PREVIEW_PART_NAME = { wall: "벽", floor: "바닥", window: "창", door: "문", light: "조명", fixture: "욕실 기구", cabinet: "가구" };
 // 공간 이름 → 도면의 방(띄어쓰기 없이 비교). 그 밖의 침실 · 욕실은 번호대로(방1 · 화장실1 …), 발코니 이름은 발코니 · 다용도실.
 const PREVIEW_FIXED = {
   "거실": "living", "리빙룸": "living", "주방": "kitchen", "부엌": "kitchen", "키친": "kitchen", "현관": "entry",
@@ -1572,6 +1609,13 @@ function previewPaint(plan, mode) {
   const partsOf = new Map(rooms.map(r => [r.id, new Set(r.parts)]));   // 그 방에 있는 면(문이 없는 방 · 창이 없는 방)
   const { slots, names: labels } = previewSlots(plan, mode), whole = CONFIG.WHOLE_HOUSE_ROOM;
   const list = [], legend = new Map(), byRoom = new Map(), skipTrades = new Set(), skipRooms = new Set(), noSpot = new Set();
+  // 방 id → 가구(종류 · 싱크대 길이). 조명처럼 개별 공간이 공용(전체)보다 우선.
+  const furn = new Map(), ownFurn = new Set();
+  const addFurn = (id, kinds, len, fromWhole) => {
+    if (!fromWhole && !ownFurn.has(id)) { ownFurn.add(id); furn.set(id, { kinds: new Set(), len: 0 }); }
+    if (!furn.has(id)) furn.set(id, { kinds: new Set(), len: 0 });
+    const f = furn.get(id); kinds.forEach(k => f.kinds.add(k)); if (len) f.len = Math.max(f.len, len);
+  };
   // 방 id → 등 종류. 개별 공간에서 고른 조명이 공용(전체) 것보다 우선(공용(전체)를 먼저 넣고 개별 공간이 덮는다).
   const lights = new Map(), ownLight = new Set();
   const addLight = (id, kinds, fromWhole) => {
@@ -1592,6 +1636,7 @@ function previewPaint(plan, mode) {
       let kinds = null;
       if (trade === "전기·조명") kinds = names.length ? names.map(lightKind).filter(k => k !== "none") : ["auto"];
       else if (names.some(n => PREVIEW_COVE.test(n))) kinds = ["cove"];
+      const fk = trade === "욕실" || trade === "제작가구" ? furnKinds(trade, names) : null;
       if (!rule && !kinds) { skipTrades.add(trade); return; }
       if (!target || !target.length) { skipRooms.add(room); return; }
       const ids = target === "ALL" ? rooms.filter(r => !rule || !rule.whole || rule.whole.includes(r.kind)).map(r => r.id) : target;
@@ -1603,13 +1648,22 @@ function previewPaint(plan, mode) {
           const ks = [...new Set(kinds.map(k => k === "auto" ? ((Room3D.DEFAULT_LIGHT || {})[kindOf.get(id)] || "auto") : k))];
           hits.push({ id, part: "light", color: PREVIEW_LIGHT_COLOR, kinds: ks }); addLight(id, ks, target === "ALL");
         }
+        if (fk && fk.ks.size && rule) {
+          // 그 방 종류에 놓을 수 있는 가구만(싱크대는 주방, 붙박이장은 침실 · 드레스룸, 신발장은 현관, 욕실 기구는 욕실)
+          const can = PREVIEW_FURN_PLACE[kindOf.get(id)] || [];
+          const ks = [...fk.ks].filter(k => can.includes(k));
+          const fixes = ks.filter(k => PREVIEW_FURN_FIX.has(k)), cabs = ks.filter(k => !PREVIEW_FURN_FIX.has(k));
+          if (fixes.length) hits.push({ id, part: "fixture", color: rule.color, furn: fixes });
+          if (cabs.length) hits.push({ id, part: "cabinet", color: rule.color, furn: cabs });
+          if (ks.length) addFurn(id, ks, fk.len, target === "ALL");
+        }
       });
       if (!hits.length) { noSpot.add(`${room} ${trade}`); return; }   // 예: 문이 없는 거실의 문·문틀, 스위치 · 콘센트만 고른 전기·조명
       mine.set(trade, hits);
-      if (!legend.has(trade)) legend.set(trade, { color: rule ? rule.color : PREVIEW_LIGHT_COLOR, parts: new Set(), kinds: new Set(), rooms: [] });
+      if (!legend.has(trade)) legend.set(trade, { color: rule ? rule.color : PREVIEW_LIGHT_COLOR, parts: new Set(), kinds: new Set(), furn: new Set(), rooms: [] });
       const lg = legend.get(trade);
       if (!lg.rooms.includes(room)) lg.rooms.push(room);
-      hits.forEach(h => { list.push(h); lg.parts.add(h.part); (h.kinds || []).forEach(k => lg.kinds.add(k)); });
+      hits.forEach(h => { list.push(h); lg.parts.add(h.part); (h.kinds || []).forEach(k => lg.kinds.add(k)); (h.furn || []).forEach(k => lg.furn.add(k)); });
     });
   });
   // 이름표는 고른 공간에만(안 고른 방은 모양만) — 작은 도면에서 글자가 방을 가리지 않게(사용자 결정 2026-10-09).
@@ -1617,9 +1671,10 @@ function previewPaint(plan, mode) {
   state.rooms.forEach((_, name) => { const t = slots.get(name); if (Array.isArray(t)) t.forEach(id => chosen.add(id)); });
   const shown = {};
   rooms.forEach(r => { shown[r.id] = chosen.has(r.id) ? (labels[r.id] || Room3D.LABELS[r.id] || "") : ""; });
-  const lightMap = {};
+  const lightMap = {}, furnMap = {};
   lights.forEach((ks, id) => { if (ks.size) lightMap[id] = [...ks]; });
-  return { list, labels: shown, lights: lightMap, legend, byRoom, slots, skipTrades, skipRooms, noSpot };
+  furn.forEach((f, id) => { if (f.kinds.size) furnMap[id] = { kinds: [...f.kinds], len: f.len }; });
+  return { list, labels: shown, lights: lightMap, furn: furnMap, legend, byRoom, slots, skipTrades, skipRooms, noSpot };
 }
 /** 등 종류 이름(종류를 알 수 없으면 '조명'). */
 const lightText = kinds => {
@@ -1627,17 +1682,21 @@ const lightText = kinds => {
   if (!named.length) return PREVIEW_PART_NAME.light;
   return named.length > 3 ? `${named.slice(0, 3).join(" · ")} 외 ${named.length - 3}` : named.join(" · ");   // 범례가 길어져 다른 줄을 밀어내지 않게
 };
-const partsText = (parts, kinds) => ["wall", "floor", "window", "door", "light"].filter(p => parts.has(p))
-  .map(p => p === "light" && kinds && kinds.size ? lightText(kinds) : PREVIEW_PART_NAME[p]).join(" · ");
+/** 가구 이름(정해진 순서). */
+const furnText = (furn, fix) => Object.keys(PREVIEW_FURN_NAME).filter(k => furn.has(k) && PREVIEW_FURN_FIX.has(k) === fix).map(k => PREVIEW_FURN_NAME[k]).join(" · ");
+const partsText = (parts, kinds, furn) => ["wall", "floor", "window", "door", "light", "fixture", "cabinet"].filter(p => parts.has(p))
+  .map(p => p === "light" && kinds && kinds.size ? lightText(kinds)
+    : (p === "fixture" || p === "cabinet") ? furnText(furn || new Set(), p === "fixture") : PREVIEW_PART_NAME[p])
+  .filter(Boolean).join(" · ");
 /** 범례 — 공간 페이지면 그 공간 것만, 다른 화면이면 모두. 공종 · 공간 이름은 글자로만 넣는다(innerHTML 금지). */
 function renderPreviewLegend(info, room) {
   const box = $("#room3dLegend");
   box.textContent = "";
   const muted = text => { const e = document.createElement("span"); e.className = "muted"; e.textContent = text; box.appendChild(e); };
-  const item = (trade, color, parts, where, kinds) => {
+  const item = (trade, color, parts, where, kinds, furn) => {
     const it = document.createElement("span");
     const dot = document.createElement("i"); dot.className = "room3d-dot"; dot.style.backgroundColor = color;
-    it.append(dot, `${trade} → ${partsText(parts, kinds)}`);
+    it.append(dot, `${trade} → ${partsText(parts, kinds, furn)}`);
     if (where) { const s = document.createElement("span"); s.className = "muted"; s.textContent = ` · ${where}`; it.appendChild(s); }
     box.appendChild(it);
   };
@@ -1645,7 +1704,7 @@ function renderPreviewLegend(info, room) {
   if (room !== null) {
     const data = state.rooms.get(room), mine = info.byRoom.get(room) || new Map();
     mine.forEach((hits, trade) => {
-      item(trade, (PREVIEW_TRADES[trade] || { color: PREVIEW_LIGHT_COLOR }).color, new Set(hits.map(h => h.part)), "", new Set(hits.flatMap(h => h.kinds || [])));
+      item(trade, (PREVIEW_TRADES[trade] || { color: PREVIEW_LIGHT_COLOR }).color, new Set(hits.map(h => h.part)), "", new Set(hits.flatMap(h => h.kinds || [])), new Set(hits.flatMap(h => h.furn || [])));
       said.push(trade);
     });
     const others = data ? [...data.trades].filter(t => tradeAllowed(room, t) && !mine.has(t)) : [];
@@ -1657,7 +1716,7 @@ function renderPreviewLegend(info, room) {
   } else {
     if (!info.legend.size) muted(current === "info" ? "공간마다 상품을 고르면 도면에 색으로 표시돼요." : "고른 공사가 도면에 색으로 표시돼요.");
     info.legend.forEach((lg, trade) => {
-      item(trade, lg.color, lg.parts, lg.rooms.slice(0, 3).join(", ") + (lg.rooms.length > 3 ? ` 외 ${lg.rooms.length - 3}` : ""), lg.kinds);
+      item(trade, lg.color, lg.parts, lg.rooms.slice(0, 3).join(", ") + (lg.rooms.length > 3 ? ` 외 ${lg.rooms.length - 3}` : ""), lg.kinds, lg.furn);
       said.push(`${trade}: ${lg.rooms.join(", ")}`);
     });
     if (info.skipTrades.size) muted(`도면에 표시하지 않는 공사: ${[...info.skipTrades].join(" · ")}`);
@@ -1682,6 +1741,7 @@ function updateRoomPreview() {
   preview.setPlan(previewPlan, previewMode);
   preview.setLabels(info.labels);
   if (preview.setLights) preview.setLights(info.lights);   // 등 종류 먼저 — 칠할 목록이 오면 그 방에 그린다
+  if (preview.setFurniture) preview.setFurniture(info.furn);   // 가구도 같은 방식
   preview.setHighlights(info.list);
   // 지금 공간 — 이름표 강조 + 그 방 쪽으로 시점 이동(공용(전체) · 평면에 없는 공간이면 집 전체)
   const target = room !== null ? info.slots.get(room) : null;
