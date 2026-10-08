@@ -96,8 +96,9 @@
     living: 0xE4DFD4, kitchen: 0xE4DFD4, hall: 0xE4DFD4, master: 0xEBE3D3, bed: 0xEBE3D3, alpha: 0xEBE3D3, dress: 0xE2DDD4,
     bath: 0xD5DEE5, entry: 0xD9D6CF, pantry: 0xDCD9D2, utility: 0xD9D6CF, balcony: 0xE9E7E1,
   };
-  const WALL = 0xF4F2EC, OUTSIDE = 0xE3E0D8, CAP = 0xD3CFC5, EDGE = 0x9A988F, GLASS = 0x85B7EB;
-  const MIX = { wall: 0.5, floor: 0.78, window: 1 };
+  const WALL = 0xF4F2EC, OUTSIDE = 0xE3E0D8, CAP = 0xD3CFC5, EDGE = 0x9A988F, GLASS = 0x85B7EB, DOOR = 0xE6DFD2;
+  const MIX = { wall: 0.5, floor: 0.78, window: 1, door: 0.85, light: 1 };
+  const DOOR_OPEN = 70 * Math.PI / 180;   // 문짝은 방 안쪽으로 70° 열린 모양
 
   /** 평면 · 발코니 형식에 맞춘 방 목록(색칠 대상 고르기용 — WebGL 없이도 쓴다). */
   function layout(planKey, mode) {
@@ -110,6 +111,12 @@
       rooms.forEach(r => { if (Math.abs(r.y + r.h - P.D) < EPS) { r.h -= BD; r.front = true; } });
       rooms.push({ id: "balcony", kind: "balcony", x: 0, y: P.D - BD, w: P.W, h: BD, win: "", doors: [], front: false });
     }
+    // 방마다 칠할 수 있는 면 — 창은 그 방 창(비확장이면 앞 방 · 발코니는 발코니 창), 문은 그 방에 단 문짝
+    rooms.forEach(r => {
+      r.parts = ["wall", "floor", "light"];
+      if (r.win || r.front || r.kind === "balcony") r.parts.push("window");
+      if (r.doors.length) r.parts.push("door");
+    });
     return { P, ext, rooms };
   }
 
@@ -317,6 +324,26 @@
           else add(new THREE.BoxGeometry(0.02, h, L), m, X(gl2.c) + off, ym, Z(mid), false);
         });
       });
+      // 문짝 — 문을 단 방의 재질(칠할 수 있음). 경첩은 문 자리 시작, 방 안쪽으로 열림.
+      g.rooms.forEach(r => r.doors.forEach(([sd, of]) => {
+        const hz = sd === "t" || sd === "b";
+        const hx = hz ? r.x + of : (sd === "l" ? r.x : r.x + r.w);
+        const hy = hz ? (sd === "t" ? r.y : r.y + r.h) : r.y + of;
+        const c = Math.cos(DOOR_OPEN), s2 = Math.sin(DOOR_OPEN);
+        const d = sd === "t" ? [c, s2] : sd === "b" ? [c, -s2] : sd === "l" ? [s2, c] : [-s2, c];
+        const L = DW - 0.06;
+        const m = surface(r.id, "door", () => new THREE.MeshLambertMaterial({ color: DOOR }));
+        const mesh = add(new THREE.BoxGeometry(L, DH - 0.03, 0.04), m, X(hx + d[0] * L / 2), (DH - 0.03) / 2, Z(hy + d[1] * L / 2), true);
+        const rot = Math.atan2(-d[1], d[0]);
+        mesh.rotation.y = rot;
+        root.children[root.children.length - 1].rotation.y = rot;   // 테두리 선도 같이
+      }));
+      // 조명 — 천장 높이의 둥근 등(방 이름표에 가리지 않게 방 안쪽 30% 자리). 칠하기 전에는 보이지 않는다(투명).
+      g.rooms.forEach(r => {
+        const rad = Math.max(0.16, Math.min(0.32, Math.min(r.w, r.h) * 0.16));
+        const m = surface(r.id, "light", () => new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0, depthWrite: false }));
+        add(new THREE.CylinderGeometry(rad, rad, 0.05, 28), m, X(r.x + r.w / 2), H - 0.08, Z(r.y + r.h * 0.3), false);
+      });
       // 욕실 기구(흰 상자)
       g.P.fx.forEach(f => {
         const t = f[0];
@@ -365,9 +392,15 @@
     function paint(s, a) {
       s.mats.forEach((m, i) => {
         const base = s.base[i];
-        if (!s.hl || a <= 0) { m.color.copy(base); if (s.part === "window") m.opacity = 0.42; return; }
+        if (!s.hl || a <= 0) {
+          m.color.copy(base);
+          if (s.part === "window") m.opacity = 0.42;
+          if (s.part === "light") m.opacity = 0;
+          return;
+        }
         m.color.copy(base).lerp(s.hl, MIX[s.part] * a);
         if (s.part === "window") m.opacity = 0.42 + 0.46 * a;
+        if (s.part === "light") m.opacity = 0.95 * a;
       });
     }
     // 새로 칠한 면: 0.4초 동안 나타난 뒤 천천히 두 번 깜빡이고 그대로 남는다.
@@ -484,7 +517,7 @@
     PLANS: Object.keys(PLANS).reduce((o, k) => { o[k] = { label: PLANS[k].label, sub: PLANS[k].sub, bedrooms: PLANS[k].bedrooms.slice() }; return o; }, {}),
     LABELS,
     /** 방 목록 [{ id, kind }] — WebGL 없이도 쓴다(무엇을 칠할지 고르기). */
-    rooms(planKey, mode) { return layout(planKey, mode).rooms.map(r => ({ id: r.id, kind: r.kind })); },
+    rooms(planKey, mode) { return layout(planKey, mode).rooms.map(r => ({ id: r.id, kind: r.kind, parts: r.parts.slice() })); },
     create,
   };
 })();
