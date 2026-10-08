@@ -1,4 +1,4 @@
-/* 완성 모습 미리보기 — 3D 도면 (웹 견적요청 페이지 전용, 2026-10-08 · 조명 종류 · 작은 이름표 · 실제 도면 4종 · 상품 고르면 가구 2026-10-09)
+/* 완성 모습 미리보기 — 3D 도면 (웹 견적요청 페이지 전용, 2026-10-08 · 조명 종류 · 작은 이름표 · 실제 도면 4종 · 상품 고르면 가구 · 벽 절반 높이 2026-10-09)
    · three.js r128(three.min.js, 같은 사이트 파일)이 먼저 읽혀 있어야 한다. 페이지 보안 설정(CSP)이
      외부 스크립트를 막으므로 두 파일 모두 index.html 옆에 둔다.
    · 평면 4가지 — 사장님이 주신 실제 도면 78 · 79 · 86 · 109㎡(그림 그대로, 2026-10-09). 예전 대표 평면(59 · 84 · 105)은 뺐다.
@@ -11,9 +11,11 @@
   "use strict";
 
   const T = 0.12;    // 벽 두께
-  const H = 2.4;     // 벽 높이
-  const DH = 2.1;    // 문 높이
-  const WT = 2.1;    // 창 위 끝
+  // 벽 · 문 · 창은 실제의 절반 높이로 낮춰 방 안이 잘 보이게(사용자 결정 2026-10-09). 가구 높이는 실제 그대로.
+  const H = 1.2;     // 벽 높이(실제 2.4m의 절반) — 천장 조명도 이 높이
+  const DH = 1.05;   // 문짝 높이(문 자리는 벽 위까지 트임)
+  const WT = 1.05;   // 창 위 끝
+  const FIT_TOP = 1.9;   // 화면 맞춤에 넣는 높이 — 벽 위로 솟은 상부장 · 붙박이장도 화면 안에
   const DW = 0.9;    // 문 폭
   const BD = 1.4;    // 기본형 전면 발코니 깊이
   const EPS = 1e-6;
@@ -229,7 +231,7 @@
         const hz = s === "t" || s === "b", L = hz ? r.w : r.h;
         const wide = r.kind === "living" || r.kind === "utility" || r.kind === "kitchen";
         const len = wide ? L - 0.5 : Math.min(L * 0.72, L - 0.5);
-        const sill = r.kind === "living" ? 0.1 : 0.9;
+        const sill = r.kind === "living" ? 0.05 : 0.45;
         const a = (hz ? r.x : r.y) + (L - len) / 2;
         const o = hz ? "h" : "v", c = s === "t" ? r.y : s === "b" ? r.y + r.h : s === "l" ? r.x : r.x + r.w;
         const w = { o, c, a, b: a + len, sill, owners: [r.id] };
@@ -243,7 +245,7 @@
       });
     }));
     if (!ext) rooms.filter(r => r.front).forEach(r => {
-      const w = { o: "h", c: P.D, a: r.x + 0.25, b: r.x + r.w - 0.25, sill: 0.3, owners: ["balcony", r.id] };
+      const w = { o: "h", c: P.D, a: r.x + 0.25, b: r.x + r.w - 0.25, sill: 0.15, owners: ["balcony", r.id] };
       wins.push(w); at("h", P.D).wins.push(w);
     });
     P.cuts.forEach(([o, c, a, b]) => at(o, c).cuts.push([a, b]));
@@ -297,7 +299,20 @@
           });
           segs = n;
         });
-        segs.forEach(([s1, s2]) => caps.push({ o: L.o, c: L.c, a: s1 - T / 2, b: s2 + T / 2 }));
+        // 문 자리도 빼고(문 위가 트였으므로), 문 쪽 끝은 늘리지 않는다
+        segs.forEach(([s1, s2]) => {
+          let pieces = [[s1, s2, true, true]];
+          doors.forEach(([d1, d2]) => {
+            const n = [];
+            pieces.forEach(([p1, p2, e1, e2]) => {
+              if (d2 <= p1 + EPS || d1 >= p2 - EPS) { n.push([p1, p2, e1, e2]); return; }
+              if (d1 > p1 + EPS) n.push([p1, d1, e1, false]);
+              if (d2 < p2 - EPS) n.push([d2, p2, false, e2]);
+            });
+            pieces = n;
+          });
+          pieces.forEach(([p1, p2, e1, e2]) => caps.push({ o: L.o, c: L.c, a: p1 - (e1 ? T / 2 : 0), b: p2 + (e2 ? T / 2 : 0) }));
+        });
       });
     });
     // 조각 → 높이별 상자. 선 덮임의 끝(모서리)만 벽 두께 반만큼 늘려 모서리를 메운다.
@@ -307,7 +322,7 @@
       const ea = atEnd(pc.a) ? T / 2 : 0, eb = atEnd(pc.b) ? T / 2 : 0;
       const base = { o: pc.o, c: pc.c, plus: pc.plus, minus: pc.minus };
       if (pc.type === "full") boxes.push(Object.assign({ a: pc.a - ea, b: pc.b + eb, y0: 0, y1: H }, base));
-      else if (pc.type === "door") boxes.push(Object.assign({ a: pc.a, b: pc.b, y0: DH, y1: H }, base));
+      else if (pc.type === "door") { /* 문 자리는 벽 위까지 트인다(낮은 벽에 짧은 인방이 남지 않게) */ }
       else {
         boxes.push(Object.assign({ a: pc.a, b: pc.b, y0: 0, y1: pc.win.sill }, base));
         boxes.push(Object.assign({ a: pc.a, b: pc.b, y0: WT, y1: H }, base));
@@ -606,7 +621,7 @@
           }
         } else if (k === "cove") {
           // 간접조명 — 천장 가장자리 빛 줄 + 벽 위쪽이 밝아짐(트인 쪽은 줄만)
-          const e = T / 2 + 0.12, f = T / 2 + 0.012, hh = 0.75, ym = H - 0.02 - hh / 2;
+          const e = T / 2 + 0.12, f = T / 2 + 0.012, hh = 0.4, ym = H - 0.02 - hh / 2;
           put(new THREE.BoxGeometry(r.w - 2 * e, 0.03, 0.05), fixture(), cx, H - 0.04, r.y + e);
           put(new THREE.BoxGeometry(r.w - 2 * e, 0.03, 0.05), fixture(), cx, H - 0.04, r.y + r.h - e);
           put(new THREE.BoxGeometry(0.05, 0.03, r.h - 2 * e), fixture(), r.x + e, H - 0.04, cy);
@@ -621,8 +636,8 @@
           const two = r.kind === "kitchen", py = two ? r.y + r.h * 0.62 : cy;
           (two ? [-0.35, 0.35] : [0]).forEach(d => {
             const x = alongX ? cx + d : cx, z = alongX ? py : py + d;
-            put(new THREE.CylinderGeometry(0.008, 0.008, 0.55, 6), basic(0x6B6B6B, 0.9, true), x, H - 0.275, z);
-            put(new THREE.CylinderGeometry(0.07, 0.2, 0.17, 24), fixture(), x, H - 0.635, z);
+            put(new THREE.CylinderGeometry(0.008, 0.008, 0.25, 6), basic(0x6B6B6B, 0.9, true), x, H - 0.125, z);
+            put(new THREE.CylinderGeometry(0.07, 0.2, 0.17, 24), fixture(), x, H - 0.335, z);
             pool(x, z, 0.75, 0.28);
           });
         }
@@ -774,7 +789,7 @@
     // ── 시점 · 그리기 ───────────────────────────────────────────────────
     function fitDist() {
       const pts = [];
-      [-W / 2, W / 2].forEach(x => [-D / 2, D / 2].forEach(z => [0, H].forEach(y => pts.push(new THREE.Vector3(x, y, z)))));
+      [-W / 2, W / 2].forEach(x => [-D / 2, D / 2].forEach(z => [0, FIT_TOP].forEach(y => pts.push(new THREE.Vector3(x, y, z)))));
       const keep = [fx, fz, fk]; fx = 0; fz = 0; fk = 1;
       let lo = 2, hi = 150;
       for (let i = 0; i < 24; i++) {
