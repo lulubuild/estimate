@@ -1,7 +1,8 @@
-/* 완성 모습 미리보기 — 3D 도면 (웹 견적요청 페이지 전용, 2026-10-08 · 조명 종류 · 작은 이름표 2026-10-09)
+/* 완성 모습 미리보기 — 3D 도면 (웹 견적요청 페이지 전용, 2026-10-08 · 조명 종류 · 작은 이름표 · 실제 도면 78 · 79 · 109 2026-10-09)
    · three.js r128(three.min.js, 같은 사이트 파일)이 먼저 읽혀 있어야 한다. 페이지 보안 설정(CSP)이
      외부 스크립트를 막으므로 두 파일 모두 index.html 옆에 둔다.
-   · 대표 평면 3가지(4베이 판상형) — 59 · 84 · 105㎡. 발코니 확장형("e") / 기본형("b").
+   · 평면 4가지 — 사장님이 주신 실제 도면 78 · 79 · 86 · 109㎡(그림 그대로, 2026-10-09). 예전 대표 평면(59 · 84 · 105)은 뺐다.
+     발코니 확장형("e") / 기본형("b") 전환 코드는 fixed가 아닌 평면용으로 남겨 둔다.
    · 방마다 벽 · 바닥 · 창 재질이 따로라서 '어느 방의 어느 면'만 색을 바꿀 수 있다.
      페이지(index.html)가 체크표를 읽어 [{ id, part, color }] 목록을 넘기면 여기서 칠한다.
    · 화면은 바뀔 때만 다시 그린다(멈춰 있으면 그리지 않음 — 휴대폰 배터리).
@@ -17,72 +18,104 @@
   const BD = 1.4;    // 기본형 전면 발코니 깊이
   const EPS = 1e-6;
 
-  /* 방: [id, 종류, x, y, 가로, 세로, 창(t·b·l·r), 문 [[변, 변 시작에서 거리]]]
+  /* 방: [id, 종류, x, y, 가로, 세로, 창(t·b·l·r), 문 [[변, 변 시작에서 거리]], 덧붙은 칸 [[x, y, 가로, 세로, 창, 문], …]]
+     덧붙은 칸 = ㄱ자 방처럼 사각형 여러 개로 된 방(같은 방 칸 사이에는 벽이 없다). solids: 설비 칸(PS · AD) — 속이 찬 기둥.
      좌표는 m, 왼쪽 위가 (0, 0), 아래(y가 큰 쪽)가 전면(남향). 전면에 붙은 방은 기본형에서 발코니만큼 줄어든다.
      cuts: 벽 없이 트인 자리 [방향 h·v, 선 위치, 시작, 끝]. fx: 욕실 기구(높이만 다른 상자). */
   const PLANS = {
-    "59": {
-      label: "59㎡", sub: "25평형", W: 11.0, D: 8.2,
+    // 실제 도면(사장님 제공 78㎡ 타입 · 2026-10-09) — 그림 그대로(확장 · 비확장 전환 없음). 치수가 없어 실내 면적에 맞춘 비율.
+    "78": {
+      label: "78㎡", sub: "24평형", W: 7.93, D: 10.65, fixed: true,
       rooms: [
-        ["bath1", "bath", 0, 0, 1.7, 2.3, "", [["b", 0.2]]],
-        ["entry", "entry", 1.7, 0, 1.6, 2.3, "", [["t", 0.35], ["b", 0.35]]],
-        ["pantry", "pantry", 3.3, 0, 1.5, 2.3, "", [["r", 1.3]]],
-        ["hall", "hall", 0, 2.3, 4.8, 1.7],
-        ["utility", "utility", 4.8, 0, 3.4, 1.2, "t", [["b", 0.3]]],
-        ["kitchen", "kitchen", 4.8, 1.2, 3.4, 2.8],
-        ["living", "living", 4.8, 4.0, 3.4, 4.2, "b"],
-        ["bath2", "bath", 8.2, 0, 2.8, 1.9, "", [["b", 1.7]]],
-        ["dress", "dress", 8.2, 1.9, 2.8, 2.1, "", [["b", 0.3]]],
-        ["bed2", "bed", 0, 4.0, 2.4, 4.2, "b", [["t", 1.4]]],
-        ["bed1", "bed", 2.4, 4.0, 2.4, 4.2, "b", [["t", 0.3]]],
-        ["master", "master", 8.2, 4.0, 2.8, 4.2, "b", [["l", 0.3]]],
+        ["balcony2", "balcony", 0.0, 0.0, 2.4, 1.58, "t", []],
+        ["balcony3", "balcony", 3.12, 0.0, 4.81, 1.58, "t", []],
+        ["bed2", "bed", 0.0, 1.58, 2.4, 3.05, "t", [["b", 1.45]]],
+        ["kitchen", "kitchen", 3.12, 1.58, 2.02, 3.05, "t", [], [[2.4, 1.58, 0.72, 2.5, "", []], [1.28, 4.62, 3.85, 1.46, "", []]]],
+        ["bed1", "bed", 5.14, 1.58, 2.79, 2.76, "t", [["l", 1.81]]],
+        ["bath1", "bath", 5.14, 4.33, 2.35, 1.66, "", [["l", 0.71]]],
+        ["entry", "entry", 0.0, 4.62, 1.28, 1.46, "", [["l", 0.51]]],
+        ["living", "living", 0.0, 6.08, 3.6, 3.03, "b", []],
+        ["master", "master", 3.6, 6.04, 4.33, 3.41, "b", [["t", 0.21]]],
+        ["balcony", "balcony", 0.0, 9.45, 7.19, 1.2, "b", [], [[0.0, 9.11, 3.6, 0.34, "", []]]],
+        ["outdoor", "utility", 7.19, 9.45, 0.74, 1.2, "b", [["l", 0.17]]],
       ],
-      cuts: [["v", 4.8, 2.3, 4.0], ["h", 4.0, 4.8, 8.2]],
-      fx: [["tub", 0, 0, 1.5, 0.7], ["wc", 1.2, 1.6], ["shw", 10.1, 0, 0.9, 0.9], ["wc", 8.4, 0], ["bas", 9.1, 0]],
+      cuts: [["v", 1.28, 4.62, 6.08], ["h", 6.08, 0.0, 1.28], ["h", 6.08, 1.28, 3.6]],
+      solids: [[2.4, -0.14, 0.72, 1.71], [2.4, 4.08, 0.72, 0.55], [7.48, 4.33, 0.45, 1.66]],
+      fx: [["wc", 5.36, 4.42], ["bas", 6.22, 4.45], ["tub", 6.83, 4.56, 0.58, 1.27]],
       bedrooms: ["bed1", "bed2"],
     },
-    "84": {
-      label: "84㎡", sub: "34평형", W: 13.2, D: 9.0,
+    // 실제 도면(사장님 제공 79㎡ 타입 · 2026-10-09) — 그림 그대로(확장 · 비확장 전환 없음). 치수가 없어 실내 면적에 맞춘 비율.
+    "79": {
+      label: "79㎡", sub: "24평형", W: 11.1, D: 8.85, fixed: true,
       rooms: [
-        ["bath1", "bath", 0, 0, 2.0, 2.8, "", [["b", 0.2]]],
-        ["entry", "entry", 2.0, 0, 1.7, 2.8, "", [["t", 0.4], ["b", 0.4]]],
-        ["alpha", "alpha", 3.7, 0, 2.1, 2.8, "t", [["b", 0.6]]],
-        ["hall", "hall", 0, 2.8, 5.8, 1.6],
-        ["utility", "utility", 5.8, 0, 2.4, 1.4, "t", [["b", 0.3]]],
-        ["pantry", "pantry", 8.2, 0, 1.6, 1.4, "", [["b", 0.35]]],
-        ["kitchen", "kitchen", 5.8, 1.4, 4.0, 3.0],
-        ["living", "living", 5.8, 4.4, 4.0, 4.6, "b"],
-        ["bath2", "bath", 9.8, 0, 3.4, 2.0, "", [["b", 2.4]]],
-        ["dress", "dress", 9.8, 2.0, 3.4, 2.4, "", [["b", 0.3]]],
-        ["bed2", "bed", 0, 4.4, 3.0, 4.6, "b", [["t", 2.05]]],
-        ["bed1", "bed", 3.0, 4.4, 2.8, 4.6, "b", [["t", 0.3]]],
-        ["master", "master", 9.8, 4.4, 3.4, 4.6, "b", [["l", 0.3]]],
+        ["refuge", "refuge", 0.0, 0.0, 1.16, 1.71, "l", []],
+        ["balcony", "balcony", 0.0, 1.71, 1.16, 1.65, "l", [["t", 0.21]]],
+        ["master", "master", 1.16, 0.0, 3.03, 3.36, "l", [["b", 2.08]]],
+        ["powder", "powder", 4.2, 0.0, 1.09, 1.76, "", []],
+        ["dress", "dress", 5.29, 0.0, 1.27, 1.76, "", []],
+        ["bath2", "bath", 4.2, 1.76, 2.36, 1.13, "", [["t", 0.22]], [[4.2, 2.89, 1.54, 0.47, "", []]]],
+        ["bath1", "bath", 6.56, 1.16, 1.56, 2.2, "", [["b", 0.61]]],
+        ["entry", "entry", 8.12, 1.85, 1.71, 1.51, "", [["t", 0.67]]],
+        ["pantry", "pantry", 9.83, 3.36, 1.27, 1.13, "", [["l", 0.18]]],
+        ["living", "living", 0.0, 3.36, 5.47, 3.54, "l", []],
+        ["hall", "hall", 5.47, 3.36, 4.36, 1.13, "", []],
+        ["kitchen", "kitchen", 3.61, 6.9, 2.51, 1.94, "b", [], [[5.47, 4.49, 0.65, 2.42, "", []]]],
+        ["bed1", "bed", 6.12, 4.49, 2.49, 3.23, "b", [["t", 0.22]]],
+        ["bed2", "bed", 8.61, 4.49, 2.49, 3.23, "br", [["t", 0.15]]],
+        ["outdoor", "utility", 0.71, 6.9, 1.36, 1.58, "l", [["t", 0.41]]],
+        ["balcony2", "balcony", 2.07, 6.9, 1.54, 1.94, "b", [["t", 0.54]]],
       ],
-      cuts: [["v", 5.8, 2.8, 4.4], ["h", 4.4, 5.8, 9.8]],
-      fx: [["tub", 0, 0, 1.5, 0.7], ["wc", 1.4, 2.1], ["shw", 12.3, 0, 0.9, 0.9], ["wc", 10.0, 0], ["bas", 10.7, 0]],
-      bedrooms: ["bed1", "bed2", "alpha"],
+      cuts: [["v", 4.2, 0.67, 1.76], ["v", 5.29, 0.76, 1.58], ["h", 3.36, 8.12, 9.83], ["h", 6.9, 3.61, 5.47], ["v", 5.47, 3.36, 4.49], ["v", 5.47, 4.49, 6.9], ["h", 4.49, 5.47, 6.12]],
+      solids: [[6.56, 0.0, 0.84, 1.16], [5.74, 2.89, 0.82, 0.47], [6.12, 7.72, 0.54, 1.13], [0.71, 8.48, 1.36, 0.36]],
+      fx: [["tub", 6.63, 1.27, 1.31, 0.51], ["bas", 6.63, 1.91], ["wc", 6.65, 2.58], ["wc", 4.41, 2.49], ["bas", 5.07, 2.71]],
+      bedrooms: ["bed1", "bed2"],
     },
-    "105": {
-      label: "105㎡", sub: "40평대", W: 14.8, D: 10.2,
+    // 실제 도면(사장님 제공 86㎡ 타입 · 2026-10-09) — 그림 그대로(확장 · 비확장 전환 없음). 치수가 없어 실내 면적에 맞춘 비율.
+    "86": {
+      label: "86㎡", sub: "26평형", W: 11.02, D: 6.78, fixed: true,
       rooms: [
-        ["bed3", "bed", 0, 0, 3.3, 3.6, "t", [["b", 2.2]]],
-        ["storage", "pantry", 3.3, 0, 1.7, 1.2, "", [["r", 0.15]]],
-        ["bath1", "bath", 3.3, 1.2, 1.7, 2.4, "", [["b", 0.4]]],
-        ["entry", "entry", 5.0, 0, 1.6, 3.6, "", [["t", 0.35], ["b", 0.35]]],
-        ["hall", "hall", 0, 3.6, 6.6, 1.8],
-        ["utility", "utility", 6.6, 0, 3.0, 1.4, "t", [["b", 0.3]]],
-        ["pantry", "pantry", 9.6, 0, 1.6, 1.4, "", [["b", 0.35]]],
-        ["kitchen", "kitchen", 6.6, 1.4, 4.6, 4.0],
-        ["living", "living", 6.6, 5.4, 4.6, 4.8, "b"],
-        ["bath2", "bath", 11.2, 0, 3.6, 2.4, "", [["b", 1.6]]],
-        ["dress", "dress", 11.2, 2.4, 3.6, 3.0, "", [["b", 0.3]]],
-        ["bed2", "bed", 0, 5.4, 3.3, 4.8, "b", [["t", 2.2]]],
-        ["bed1", "bed", 3.3, 5.4, 3.3, 4.8, "b", [["t", 0.3]]],
-        ["master", "master", 11.2, 5.4, 3.6, 4.8, "b", [["l", 0.3]]],
+        ["balcony", "balcony", 0.0, 0.0, 1.62, 6.07, "l", []],
+        ["living", "living", 1.62, 0.0, 3.94, 3.06, "l", []],
+        ["kitchen", "kitchen", 5.56, 0.0, 2.54, 2.76, "", []],
+        ["bed1", "bed", 8.09, 0.0, 2.93, 2.76, "r", [["b", 0.09]]],
+        ["master", "master", 1.62, 3.06, 3.94, 3.72, "l", [["r", 0.13]]],
+        ["hall", "hall", 5.56, 2.76, 3.68, 1.55, "", []],
+        ["entry", "entry", 9.24, 2.76, 1.78, 1.55, "", [["r", 0.6]]],
+        ["bath1", "bath", 5.56, 4.32, 1.82, 2.47, "", [["t", 0.07]]],
+        ["bed2", "bed", 8.09, 4.32, 2.93, 2.47, "r", [["t", 0.09]]],
       ],
-      cuts: [["v", 6.6, 3.6, 5.4], ["h", 5.4, 6.6, 11.2]],
-      fx: [["tub", 3.3, 1.2, 0.7, 1.5], ["wc", 4.5, 1.2], ["tub", 11.2, 0, 1.5, 0.75], ["wc", 13.0, 0], ["shw", 13.9, 0, 0.9, 0.9]],
-      bedrooms: ["bed1", "bed2", "bed3"],
+      cuts: [["v", 5.56, 0.0, 3.06], ["h", 2.76, 5.56, 7.32], ["v", 9.24, 2.76, 4.32]],
+      solids: [[0.0, 6.07, 1.62, 0.71], [7.38, 4.32, 0.71, 2.47]],
+      fx: [["wc", 6.57, 4.59], ["bas", 6.7, 5.26], ["tub", 5.73, 6.07, 1.32, 0.58]],
+      bedrooms: ["bed1", "bed2"],
+    },
+    // 실제 도면(사장님 제공 109㎡ 타입 · 2026-10-09) — 그림 그대로(확장 · 비확장 전환 없음). 치수가 없어 실내 면적에 맞춘 비율.
+    "109": {
+      label: "109㎡", sub: "33평형", W: 13.83, D: 8.82, fixed: true,
+      rooms: [
+        ["bath1", "bath", 0.0, 1.86, 1.6, 2.31, "", [["b", 0.65]]],
+        ["entry", "entry", 2.51, 1.86, 1.66, 2.31, "", [["t", 0.4]], [[1.6, 2.77, 0.9, 1.4, "", []]]],
+        ["alpha", "alpha", 4.17, 0.94, 2.05, 3.23, "t", [["b", 0.24]]],
+        ["kitchen", "kitchen", 6.22, 0.0, 3.35, 2.65, "t", [["r", 1.24]]],
+        ["pantry", "pantry", 9.56, 1.88, 0.62, 2.29, "", []],
+        ["balcony2", "balcony", 9.56, 0.8, 2.27, 1.08, "", [], [[9.56, 0.0, 1.26, 0.8, "t", []]]],
+        ["outdoor", "utility", 11.83, 0.0, 2.0, 1.32, "t", []],
+        ["dress", "dress", 11.83, 1.32, 2.0, 1.68, "", [["t", 0.6]]],
+        ["powder", "powder", 11.83, 3.01, 2.0, 1.16, "", [["t", 0.5]]],
+        ["bath2", "bath", 10.69, 1.88, 1.14, 2.29, "", [["r", 1.34]], [[10.19, 2.75, 0.5, 1.42, "", []]]],
+        ["master", "master", 10.19, 4.17, 3.65, 3.51, "b", [["l", 0.18]]],
+        ["balcony", "balcony", 10.19, 7.68, 1.8, 1.14, "b", [["r", 0.19]]],
+        ["refuge", "refuge", 11.99, 7.68, 1.84, 1.14, "b", []],
+        ["bed2", "bed", 0.0, 5.39, 2.97, 3.43, "b", [["t", 1.9]]],
+        ["bed1", "bed", 2.97, 5.39, 2.71, 3.43, "b", [["t", 1.6]]],
+        ["closet", "pantry", 0.0, 4.17, 0.5, 1.22, "", []],
+        ["hall", "hall", 0.5, 4.17, 5.17, 1.22, "", []],
+        ["living", "living", 5.67, 4.17, 4.51, 4.65, "b", [], [[6.22, 2.65, 3.35, 1.52, "", []]]],
+      ],
+      cuts: [["h", 4.17, 1.6, 4.17], ["h", 2.65, 6.22, 9.56], ["v", 9.56, 1.88, 4.17], ["h", 4.17, 11.83, 12.43]],
+      solids: [[1.6, 1.86, 0.9, 0.9], [10.83, 0.0, 1.0, 0.8], [10.19, 1.88, 0.5, 0.86]],
+      fx: [["tub", 0.16, 2.0, 1.24, 0.54], ["bas", 0.08, 2.69], ["wc", 0.08, 3.35], ["bas", 10.25, 2.81], ["wc", 10.25, 3.49]],
+      bedrooms: ["bed1", "bed2", "alpha"],
     },
   };
 
@@ -90,11 +123,13 @@
     living: "거실", kitchen: "주방", master: "안방", bed1: "방1", bed2: "방2", bed3: "방3", alpha: "알파룸",
     bath1: "화장실1", bath2: "화장실2", entry: "현관", dress: "드레스룸", pantry: "팬트리", storage: "창고",
     utility: "다용도실", balcony: "발코니", hall: "",
+    balcony2: "발코니", balcony3: "발코니", powder: "파우더룸", refuge: "대피공간", outdoor: "실외기실", closet: "",
   };
 
   const FLOOR = {
     living: 0xE4DFD4, kitchen: 0xE4DFD4, hall: 0xE4DFD4, master: 0xEBE3D3, bed: 0xEBE3D3, alpha: 0xEBE3D3, dress: 0xE2DDD4,
     bath: 0xD5DEE5, entry: 0xD9D6CF, pantry: 0xDCD9D2, utility: 0xD9D6CF, balcony: 0xE9E7E1,
+    powder: 0xE6E0D6, refuge: 0xE1E1DF,
   };
   const WALL = 0xF4F2EC, OUTSIDE = 0xE3E0D8, CAP = 0xD3CFC5, EDGE = 0x9A988F, GLASS = 0x85B7EB, DOOR = 0xE6DFD2;
   const MIX = { wall: 0.5, floor: 0.78, window: 1, door: 0.85, light: 0.5 };
@@ -103,25 +138,29 @@
   const DEFAULT_LIGHT = {
     living: "rect", kitchen: "rect", master: "square", bed: "square", alpha: "square",
     dress: "round", pantry: "round", entry: "round", bath: "round", utility: "round", balcony: "round", hall: "round",
+    powder: "round", refuge: "round",
   };
   const DOOR_OPEN = 70 * Math.PI / 180;   // 문짝은 방 안쪽으로 70° 열린 모양
 
   /** 평면 · 발코니 형식에 맞춘 방 목록(색칠 대상 고르기용 — WebGL 없이도 쓴다). */
   function layout(planKey, mode) {
-    const P = PLANS[planKey] || PLANS["84"];
-    const ext = mode !== "b";
+    const P = PLANS[planKey] || PLANS["86"];
+    const ext = P.fixed || mode !== "b";
     const rooms = P.rooms.map(r => ({
       id: r[0], kind: r[1], x: r[2], y: r[3], w: r[4], h: r[5], win: r[6] || "", doors: r[7] || [], front: false,
+      more: (r[8] || []).map(e => ({ x: e[0], y: e[1], w: e[2], h: e[3], win: e[4] || "", doors: e[5] || [] })),
     }));
     if (!ext) {
       rooms.forEach(r => { if (Math.abs(r.y + r.h - P.D) < EPS) { r.h -= BD; r.front = true; } });
-      rooms.push({ id: "balcony", kind: "balcony", x: 0, y: P.D - BD, w: P.W, h: BD, win: "", doors: [], front: false });
+      rooms.push({ id: "balcony", kind: "balcony", x: 0, y: P.D - BD, w: P.W, h: BD, win: "", doors: [], front: false, more: [] });
     }
+    // 칸 목록: 첫 칸이 방의 대표(이름표 · 조명 자리), 나머지는 덧붙은 칸
+    rooms.forEach(r => { r.rects = [{ x: r.x, y: r.y, w: r.w, h: r.h, win: r.win, doors: r.doors }].concat(r.more); });
     // 방마다 칠할 수 있는 면 — 창은 그 방 창(비확장이면 앞 방 · 발코니는 발코니 창), 문은 그 방에 단 문짝
     rooms.forEach(r => {
       r.parts = ["wall", "floor", "light"];
-      if (r.win || r.front || r.kind === "balcony") r.parts.push("window");
-      if (r.doors.length) r.parts.push("door");
+      if (r.rects.some(c => c.win) || r.front || r.kind === "balcony") r.parts.push("window");
+      if (r.rects.some(c => c.doors.length)) r.parts.push("door");
     });
     return { P, ext, rooms };
   }
@@ -140,14 +179,15 @@
     const { P, ext, rooms } = layout(planKey, mode);
     const lines = new Map();
     const at = (o, c) => { const k = lineKey(o, c); if (!lines.has(k)) lines.set(k, { o, c, edges: [], cuts: [], doors: [], wins: [] }); return lines.get(k); };
-    rooms.forEach(r => {
-      at("h", r.y).edges.push({ a: r.x, b: r.x + r.w, side: 1, room: r });
-      at("h", r.y + r.h).edges.push({ a: r.x, b: r.x + r.w, side: -1, room: r });
-      at("v", r.x).edges.push({ a: r.y, b: r.y + r.h, side: 1, room: r });
-      at("v", r.x + r.w).edges.push({ a: r.y, b: r.y + r.h, side: -1, room: r });
-    });
+    rooms.forEach(r => r.rects.forEach(c => {
+      at("h", c.y).edges.push({ a: c.x, b: c.x + c.w, side: 1, room: r });
+      at("h", c.y + c.h).edges.push({ a: c.x, b: c.x + c.w, side: -1, room: r });
+      at("v", c.x).edges.push({ a: c.y, b: c.y + c.h, side: 1, room: r });
+      at("v", c.x + c.w).edges.push({ a: c.y, b: c.y + c.h, side: -1, room: r });
+    }));
     const wins = [];
-    rooms.forEach(r => {
+    rooms.forEach(room => room.rects.forEach(c => {
+      const r = Object.assign({}, c, { id: room.id, kind: room.kind });
       for (const s of r.win) {
         const hz = s === "t" || s === "b", L = hz ? r.w : r.h;
         const wide = r.kind === "living" || r.kind === "utility" || r.kind === "kitchen";
@@ -164,12 +204,22 @@
         const a = (hz ? r.x : r.y) + of;
         at(o, c).doors.push([a, a + DW]);
       });
-    });
+    }));
     if (!ext) rooms.filter(r => r.front).forEach(r => {
       const w = { o: "h", c: P.D, a: r.x + 0.25, b: r.x + r.w - 0.25, sill: 0.3, owners: ["balcony", r.id] };
       wins.push(w); at("h", P.D).wins.push(w);
     });
     P.cuts.forEach(([o, c, a, b]) => at(o, c).cuts.push([a, b]));
+    // 같은 방 칸끼리 맞닿은 자리는 벽 없이 트인다
+    const cutsAll = P.cuts.slice();
+    lines.forEach(L => L.edges.forEach(e1 => {
+      if (e1.side !== 1) return;
+      L.edges.forEach(e2 => {
+        if (e2.side !== -1 || e2.room !== e1.room) return;
+        const a = Math.max(e1.a, e2.a), b = Math.min(e1.b, e2.b);
+        if (b - a > EPS) { L.cuts.push([a, b]); cutsAll.push([L.o, L.c, a, b]); }
+      });
+    }));
 
     const pieces = [], glass = [], caps = [];
     lines.forEach(L => {
@@ -227,7 +277,7 @@
         glass.push({ o: pc.o, c: pc.c, a: pc.a, b: pc.b, y0: pc.win.sill, y1: WT, win: wins.indexOf(pc.win) });
       }
     });
-    return { P, ext, rooms, boxes, glass, caps, wins };
+    return { P, ext, rooms, boxes, glass, caps, wins, cuts: cutsAll, solids: P.solids || [] };
   }
 
   // ── three.js 장면 ────────────────────────────────────────────────────
@@ -251,7 +301,7 @@
     const root = new THREE.Group(); scene.add(root);
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
 
-    let plan = String((opts && opts.plan) || "84"), mode = (opts && opts.mode) === "b" ? "b" : "e";
+    let plan = String((opts && opts.plan) || "86"), mode = (opts && opts.mode) === "b" ? "b" : "e";
     let yaw = -0.5, tilt = 0.98, dist = 20, W = 13, D = 9;
     // 지금 공간으로 시점 옮기기 — 바라보는 점(fx, fz)과 거리 배율(fk)이 목표(goal)로 천천히 다가간다
     let fx = 0, fz = 0, fk = 1, goal = { x: 0, z: 0, k: 1 }, focusIds = null, curRooms = [];
@@ -313,14 +363,16 @@
     function build() {
       clear();
       const g = geometry(plan, mode);
-      W = g.P.W; D = g.P.D; curRooms = g.rooms; cutsNow = g.P.cuts;
+      W = g.P.W; D = g.P.D; curRooms = g.rooms; cutsNow = g.cuts;
       const X = x => x - W / 2, Z = y => y - D / 2;
       // 바닥
       g.rooms.forEach(r => {
         const m = surface(r.id, "floor", () => new THREE.MeshLambertMaterial({ color: FLOOR[r.kind] || 0xE4DFD4 }));
         floorMats.set(r.id, m);
-        add(new THREE.BoxGeometry(r.w, 0.06, r.h), m, X(r.x + r.w / 2), 0.03, Z(r.y + r.h / 2), false);
+        r.rects.forEach(c => add(new THREE.BoxGeometry(c.w, 0.06, c.h), m, X(c.x + c.w / 2), 0.03, Z(c.y + c.h / 2), false));
       });
+      // 설비 칸(PS · AD) — 속이 찬 기둥(윗면은 벽 마구리 색)
+      g.solids.forEach(([sx, sy, sw, sh]) => add(new THREE.BoxGeometry(sw, H - 0.01, sh), [outMat, outMat, capMat, capMat, outMat, outMat], X(sx + sw / 2), (H - 0.01) / 2, Z(sy + sh / 2), true));
       // 벽 — 상자 면 순서 [+x, -x, +y, -y, +z, -z]. 방 쪽 면은 그 방 재질(칠할 수 있음), 바깥은 외벽색.
       g.boxes.forEach(b => {
         const L = b.b - b.a, h = b.y1 - b.y0, mid = (b.a + b.b) / 2, ym = (b.y0 + b.y1) / 2;
@@ -349,19 +401,19 @@
         });
       });
       // 문짝 — 문을 단 방의 재질(칠할 수 있음). 경첩은 문 자리 시작, 방 안쪽으로 열림.
-      g.rooms.forEach(r => r.doors.forEach(([sd, of]) => {
+      g.rooms.forEach(room => room.rects.forEach(r => r.doors.forEach(([sd, of]) => {
         const hz = sd === "t" || sd === "b";
         const hx = hz ? r.x + of : (sd === "l" ? r.x : r.x + r.w);
         const hy = hz ? (sd === "t" ? r.y : r.y + r.h) : r.y + of;
         const c = Math.cos(DOOR_OPEN), s2 = Math.sin(DOOR_OPEN);
         const d = sd === "t" ? [c, s2] : sd === "b" ? [c, -s2] : sd === "l" ? [s2, c] : [-s2, c];
         const L = DW - 0.06;
-        const m = surface(r.id, "door", () => new THREE.MeshLambertMaterial({ color: DOOR }));
+        const m = surface(room.id, "door", () => new THREE.MeshLambertMaterial({ color: DOOR }));
         const mesh = add(new THREE.BoxGeometry(L, DH - 0.03, 0.04), m, X(hx + d[0] * L / 2), (DH - 0.03) / 2, Z(hy + d[1] * L / 2), true);
         const rot = Math.atan2(-d[1], d[0]);
         mesh.rotation.y = rot;
         root.children[root.children.length - 1].rotation.y = rot;   // 테두리 선도 같이
-      }));
+      })));
       // 조명 — 고른 방에만 그 종류의 등을 천장 높이에 그린다(syncLights). 천장 판은 그리지 않는다(위에서 들여다보는 도면).
       lightGroup = new THREE.Group(); root.add(lightGroup);
       // 욕실 기구(흰 상자)
@@ -385,8 +437,9 @@
     function focusGoal(ids) {
       const rs = ids ? curRooms.filter(r => ids.includes(r.id)) : [];
       if (!rs.length) return { x: 0, z: 0, k: 1 };
-      const x0 = Math.min(...rs.map(r => r.x)), x1 = Math.max(...rs.map(r => r.x + r.w));
-      const y0 = Math.min(...rs.map(r => r.y)), y1 = Math.max(...rs.map(r => r.y + r.h));
+      const cs = rs.flatMap(r => r.rects);
+      const x0 = Math.min(...cs.map(r => r.x)), x1 = Math.max(...cs.map(r => r.x + r.w));
+      const y0 = Math.min(...cs.map(r => r.y)), y1 = Math.max(...cs.map(r => r.y + r.h));
       const size = Math.max(x1 - x0, y1 - y0) / Math.max(W, D);
       return { x: (x0 + x1) / 2 - W / 2, z: (y0 + y1) / 2 - D / 2, k: Math.min(1, Math.max(0.62, 0.5 + size * 0.6)) };
     }
@@ -554,13 +607,25 @@
     }
 
     // ── 시점 · 그리기 ───────────────────────────────────────────────────
+    function fitDist() {
+      const pts = [];
+      [-W / 2, W / 2].forEach(x => [-D / 2, D / 2].forEach(z => [0, H].forEach(y => pts.push(new THREE.Vector3(x, y, z)))));
+      const keep = [fx, fz, fk]; fx = 0; fz = 0; fk = 1;
+      let lo = 2, hi = 150;
+      for (let i = 0; i < 24; i++) {
+        dist = (lo + hi) / 2; aim(); camera.updateMatrixWorld();
+        const ok = pts.every(p => { const q = p.clone().project(camera); return Math.abs(q.x) <= 0.94 && Math.abs(q.y) <= 0.9 && q.z < 1; });
+        if (ok) hi = dist; else lo = dist;
+      }
+      [fx, fz, fk] = keep;
+      return hi;
+    }
     function fit() {
       const w = stage.clientWidth || 1, h = stage.clientHeight || 1;
       renderer.setSize(w, h, false);
       camera.aspect = w / h; camera.updateProjectionMatrix();
       const v = camera.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(v / 2) * camera.aspect);
-      const rad = 0.5 * Math.hypot(W, D);
-      dist = rad / Math.sin(Math.min(v, hf) / 2) * (camera.aspect >= 1 ? 0.86 : 0.98) + 1.2;   // 세로로 긴 칸은 옆이 잘리지 않게
+      dist = fitDist();   // 지금 보는 방향에서 평면 모서리가 모두 화면 안에 드는 가장 가까운 거리(평면 모양 · 칸 비율에 맞춤)
       // 라벨 높이(CSS px) → 스프라이트 크기: 화면 높이의 px만큼(작은 화면은 조금 작게)
       const px = h < 330 ? 16 : 18;
       labelH = px * 2 * Math.tan(v / 2) / h;
@@ -667,7 +732,7 @@
   }
 
   window.Room3D = {
-    PLANS: Object.keys(PLANS).reduce((o, k) => { o[k] = { label: PLANS[k].label, sub: PLANS[k].sub, bedrooms: PLANS[k].bedrooms.slice() }; return o; }, {}),
+    PLANS: Object.keys(PLANS).reduce((o, k) => { o[k] = { label: PLANS[k].label, sub: PLANS[k].sub, fixed: !!PLANS[k].fixed, bedrooms: PLANS[k].bedrooms.slice() }; return o; }, {}),
     LABELS,
     DEFAULT_LIGHT: Object.assign({}, DEFAULT_LIGHT),
     /** 방 목록 [{ id, kind }] — WebGL 없이도 쓴다(무엇을 칠할지 고르기). */
