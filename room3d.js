@@ -247,6 +247,9 @@
 
     let plan = String((opts && opts.plan) || "84"), mode = (opts && opts.mode) === "b" ? "b" : "e";
     let yaw = -0.5, tilt = 0.98, dist = 20, W = 13, D = 9;
+    // 지금 공간으로 시점 옮기기 — 바라보는 점(fx, fz)과 거리 배율(fk)이 목표(goal)로 천천히 다가간다
+    let fx = 0, fz = 0, fk = 1, goal = { x: 0, z: 0, k: 1 }, focusIds = null, curRooms = [];
+    let activeIds = new Set();   // 이름표를 강조할 방(지금 공간)
     let surfaces = new Map();     // "id:part" → { mats:[], base:[Color], kind:"wall|floor|window", hl:Color|null, t0, wait }
     let labelSprites = new Map(); // id → { sprite, text, pos }
     let labelText = {};
@@ -289,7 +292,7 @@
     function build() {
       clear();
       const g = geometry(plan, mode);
-      W = g.P.W; D = g.P.D;
+      W = g.P.W; D = g.P.D; curRooms = g.rooms;
       const X = x => x - W / 2, Z = y => y - D / 2;
       // 바닥
       g.rooms.forEach(r => {
@@ -359,18 +362,27 @@
       });
       applyLabels();
       applyWanted(false, false);
+      goal = focusGoal(focusIds); fx = goal.x; fz = goal.z; fk = goal.k;   // 평면이 바뀌면 같은 공간 쪽으로 바로
       fit();
+    }
+    function focusGoal(ids) {
+      const rs = ids ? curRooms.filter(r => ids.includes(r.id)) : [];
+      if (!rs.length) return { x: 0, z: 0, k: 1 };
+      const x0 = Math.min(...rs.map(r => r.x)), x1 = Math.max(...rs.map(r => r.x + r.w));
+      const y0 = Math.min(...rs.map(r => r.y)), y1 = Math.max(...rs.map(r => r.y + r.h));
+      const size = Math.max(x1 - x0, y1 - y0) / Math.max(W, D);
+      return { x: (x0 + x1) / 2 - W / 2, z: (y0 + y1) / 2 - D / 2, k: Math.min(1, Math.max(0.62, 0.5 + size * 0.6)) };
     }
 
     // ── 라벨(방 이름) — 글자는 캔버스에 그리므로 HTML로 해석되지 않는다 ──
     function roundRect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
-    function makeLabel(text) {
+    function makeLabel(text, active) {
       const cv = document.createElement("canvas"); cv.width = 320; cv.height = 88;
       const c = cv.getContext("2d");
       c.font = "600 34px -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', sans-serif";
       const tw = Math.min(312, c.measureText(text).width + 34);
-      c.fillStyle = "rgba(255,255,255,0.92)"; roundRect(c, (320 - tw) / 2, 12, tw, 62, 31); c.fill();
-      c.fillStyle = "#1D1D1F"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(text, 160, 44);
+      c.fillStyle = active ? "#0071E3" : "rgba(255,255,255,0.92)"; roundRect(c, (320 - tw) / 2, 12, tw, 62, 31); c.fill();
+      c.fillStyle = active ? "#FFFFFF" : "#1D1D1F"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(text, 160, 44);
       const tex = new THREE.CanvasTexture(cv);
       tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;   // 2의 거듭제곱이 아닌 크기 그대로(줄여 흐려지지 않게)
       // 화면에서 늘 같은 크기(멀어져도 작아지지 않게) — 크기는 labelSize()가 화면 높이로 정한다.
@@ -381,10 +393,11 @@
     function applyLabels() {
       labelSprites.forEach((l, id) => {
         const text = Object.prototype.hasOwnProperty.call(labelText, id) ? labelText[id] : (LABELS[id] || "");
-        if (l.text === text) return;
+        const act = activeIds.has(id);
+        if (l.text === text && l.act === act) return;
         if (l.sprite) { root.remove(l.sprite); l.sprite.material.map.dispose(); l.sprite.material.dispose(); l.sprite = null; }
-        l.text = text;
-        if (text) { l.sprite = makeLabel(text); l.sprite.position.copy(l.pos); root.add(l.sprite); }
+        l.text = text; l.act = act;
+        if (text) { l.sprite = makeLabel(text, act); l.sprite.position.copy(l.pos); if (act) l.sprite.renderOrder = 11; root.add(l.sprite); }
       });
     }
 
@@ -432,23 +445,27 @@
       camera.aspect = w / h; camera.updateProjectionMatrix();
       const v = camera.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(v / 2) * camera.aspect);
       const rad = 0.5 * Math.hypot(W, D);
-      dist = rad / Math.sin(Math.min(v, hf) / 2) * 0.86 + 1.2;
+      dist = rad / Math.sin(Math.min(v, hf) / 2) * (camera.aspect >= 1 ? 0.86 : 0.98) + 1.2;   // 세로로 긴 칸은 옆이 잘리지 않게
       // 라벨 높이(CSS px) → 스프라이트 크기: 화면 높이의 px만큼(작은 화면은 조금 작게)
       const px = h < 330 ? 26 : 30;
       labelH = px * 2 * Math.tan(v / 2) / h;
       labelSprites.forEach(l => { if (l.sprite) l.sprite.scale.set(labelH * 320 / 88, labelH, 1); });
       place();
     }
-    function place() {
-      camera.position.set(dist * Math.cos(tilt) * Math.sin(yaw), 0.6 + dist * Math.sin(tilt), dist * Math.cos(tilt) * Math.cos(yaw));
-      camera.lookAt(0, 0.5, 0.25);
-      invalidate();
+    function aim() {
+      const d = dist * fk;
+      camera.position.set(fx + d * Math.cos(tilt) * Math.sin(yaw), 0.6 + d * Math.sin(tilt), fz + d * Math.cos(tilt) * Math.cos(yaw));
+      camera.lookAt(fx, 0.5, fz + 0.25 * fk);
     }
+    function place() { aim(); invalidate(); }
     function invalidate() { if (!raf) raf = requestAnimationFrame(frame); }
     function frame() {
       raf = 0;
       const now = performance.now() / 1000;
       let busy = false;
+      const dx = goal.x - fx, dz = goal.z - fz, dk = goal.k - fk;
+      if (Math.abs(dx) + Math.abs(dz) + Math.abs(dk) > 0.004) { fx += dx * 0.14; fz += dz * 0.14; fk += dk * 0.14; aim(); busy = true; }
+      else if (dx || dz || dk) { fx = goal.x; fz = goal.z; fk = goal.k; aim(); }
       surfaces.forEach(s => {
         if (!s.hl || s.wait || !s.t0) return;
         const t = now - s.t0;
@@ -499,6 +516,22 @@
       play() {
         const now = performance.now() / 1000;
         surfaces.forEach(s => { if (s.wait) { s.wait = false; s.t0 = (reduce && reduce.matches) ? 0 : now; paint(s, s.t0 ? 0 : 1); } });
+        invalidate();
+      },
+      /** 지금 공간 쪽으로 시점을 천천히 옮긴다(ids = 방 id 목록, 없으면 집 전체). 끌어서 돌린 방향은 그대로. */
+      focus(ids) {
+        focusIds = ids && ids.length ? ids.slice() : null;
+        goal = focusGoal(focusIds);
+        if (reduce && reduce.matches) { fx = goal.x; fz = goal.z; fk = goal.k; }
+        place();
+      },
+      /** 이름표를 파랗게 강조할 방(지금 공간). */
+      setActive(ids) { activeIds = new Set(ids || []); applyLabels(); invalidate(); },
+      /** 방금 고른 공사가 들어가는 자리를 다시 깜빡인다(이미 칠한 면도). list: [{ id, part }] */
+      blink(list) {
+        if (reduce && reduce.matches) return;
+        const now = performance.now() / 1000;
+        (list || []).forEach(h => { const s = surfaces.get(h.id + ":" + h.part); if (s && s.hl) { s.wait = false; s.t0 = now; } });
         invalidate();
       },
       /** id → 이름(방 라벨). 빈 글자면 라벨을 숨긴다. 없는 id는 기본 이름. */

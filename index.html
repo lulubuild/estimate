@@ -206,72 +206,80 @@ input[type="date"].input:not(.has-value) { color: var(--muted); }
 .room-toggle[aria-pressed="true"] .dot::after { content: ""; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: translate(0, -1px) rotate(45deg); }
 .room-toggle .cnt { font-size: 13px; font-weight: 600; color: var(--sel); margin-left: auto; margin-right: 2px; }
 
-/* 공간 × 공종 체크표 — 앱 1209와 같은 방식(공종 = 행, 공간 = 열 · 가나다순 · 가격 없음).
-   공간이 적으면 폭에 맞추고(열 최대 200px), 넘칠 때만 표 안에서 옆으로 민다 — 공종 열은 고정. */
-/* 칸 사이 6px — 바깥 6px은 스크롤 영역을 양옆으로 6px 넓혀 글줄과 맞춘다 */
-.mx-scroll { --cell-min: 96px; margin: 20px -6px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; padding-bottom: 4px; }
-table.mx { border-collapse: separate; border-spacing: 6px; margin: -6px 0; }
-.mx th, .mx td { padding: 0; vertical-align: middle; font-weight: inherit; }
-.mx thead th { vertical-align: bottom; }
-.mx .corner, .mx .row-head { position: sticky; left: 0; background: var(--bg); width: 1%; }   /* 1% = 글자 폭만 — 남는 폭은 공간 열이 나눠 갖는다 */
-.mx .corner { z-index: 2; font-size: 12px; color: var(--muted); text-align: left; padding: 0 4px 6px; white-space: nowrap; }
-.mx .row-head { z-index: 1; text-align: left; }
-.mx .col-head { text-align: center; padding: 0 2px 6px; scroll-margin-left: 100px; }
-.mx .col-name { font-size: 15px; font-weight: 600; line-height: 1.3; word-break: keep-all; overflow-wrap: anywhere; }
-.mx .col-sub { font-size: 12px; color: var(--muted); }
-.mx .col-head:focus { outline: none; }
-.mx .col-head.flash .col-name { color: var(--sel); }
-.mx .py { margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
-/* 16px 미만이면 아이폰이 칸을 누를 때 화면을 확대한다 */
-.mx .py input { width: 56px; min-height: 44px; padding: 4px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-align: right; font-size: 16px; outline: none; }
-.mx .py input:focus { border-color: var(--sel); box-shadow: 0 0 0 3px var(--focus-ring); }
-.row-btn { display: block; width: 100%; min-height: 56px; padding: 6px 10px 6px 4px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.row-btn:hover { background: var(--bg-alt); }
-.row-btn b { display: block; font-size: 15px; font-weight: 600; white-space: nowrap; }
-.row-btn span { display: block; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
-.cell {
-  width: 100%; min-width: var(--cell-min); height: 56px; padding: 4px 6px; border-radius: var(--r-tile);
-  border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  font-size: 20px; font-weight: 300; line-height: 1; -webkit-tap-highlight-color: transparent; transition: border-color .15s, box-shadow .15s, background .15s;
-}
-.cell:hover { border-color: var(--muted); }
-.cell.on { border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel); background: var(--accent-soft); color: var(--ink); }
-.cell .c-main { font-size: 13px; font-weight: 600; line-height: 1.25; text-align: center; word-break: keep-all; overflow-wrap: anywhere;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.cell .c-sub { font-size: 11px; line-height: 1.2; color: var(--sel); font-weight: 500; white-space: nowrap; }
-.cell.need { border-color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); background: var(--danger-soft); color: var(--danger); }   /* 담겼는데 상품 없음 — 보내기 전에 골라야 함 */
-.cell.need .c-sub { color: var(--danger); }
-[data-field="rooms"].invalid .col-head.empty .col-sub { color: var(--danger); font-weight: 600; }
-.cell.off { background: transparent; border-style: dashed; border-color: var(--line); opacity: .5; font-size: 15px; cursor: default; }
-.cell.off:hover { border-color: var(--line); }
-.mx-hint { font-size: 13px; color: var(--muted); margin-top: 10px; }
-.empty { padding: 24px 18px; border-radius: var(--r-tile); background: var(--bg-alt); color: var(--muted); font-size: 15px; text-align: center; margin-top: 20px; }
+/* ── 단계 화면(2026-10-09 사용자 결정) — 기본 정보 → 공간 고르기 → 공간마다 한 페이지 → 사진 · 요청사항 · 동의.
+   한 화면에 정보가 많지 않게 공간을 먼저 고르고, 공간마다 페이지를 넘기며 상품을 고른다. 3D 도면은 늘 아래(넓은 화면은 오른쪽). ── */
+.progress { height: 3px; }
+.progress i { display: block; height: 100%; width: 0; background: var(--sel); transition: width .3s ease; }
+@media (prefers-reduced-motion: reduce) { .progress i { transition: none; } }
+.step-title:focus { outline: none; }
 
-/* 완성 모습 미리보기 — 대표 평면(59 · 84 · 105㎡) 3D 도면에 표의 공간 · 공종을 색으로 칠한다(장식 · 전송과 무관).
-   3D 파일(three.min.js · room3d.js)은 이 사이트 안의 파일 — 보안 정책(CSP)의 'self'로 읽히므로 정책은 그대로.
-   카드가 화면에 가까워질 때만 불러와 처음 열리는 속도에 영향이 없다. */
-.room3d { margin-top: 20px; padding: 16px 16px 14px; border-radius: var(--r-card); background: var(--bg-alt); }
-.room3d-head { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap; font-size: 15px; }
-.room3d-head b { font-weight: 600; }
-.room3d-head span { font-size: 13px; color: var(--muted); }
-.room3d-opts { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
+/* 공간 페이지 — 위 공간 줄(옆으로 밀기) · 지금 공간 = 파란 테두리, 상품을 고른 공간 = 파란 점 */
+.room-chips { display: flex; gap: 8px; overflow-x: auto; margin: 0 calc(-1 * var(--page-margin)) 22px; padding: 2px var(--page-margin) 6px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.room-chips::-webkit-scrollbar { display: none; }
+.room-chips .chip { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; }
+.room-chips .chip .ok { width: 7px; height: 7px; border-radius: 50%; background: var(--sel); flex: none; }
+.room-chips .chip.edit { color: var(--link); border-style: dashed; }
+.room-py { max-width: 240px; margin: 0 0 20px; }
+
+/* 공종 목록 — 누르면 그 자리에서 상품이 펼쳐진다(팝업 대신 — 아래 3D 도면을 가리지 않게) */
+.trades { display: grid; gap: 10px; }
+.trade { border: 1px solid var(--line); border-radius: var(--r-tile); background: var(--surface); scroll-margin-top: 64px; transition: border-color .15s, box-shadow .15s; }
+.trade.on { border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel); }
+.trade.need { border-color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); }
+.trade-head { width: 100%; min-height: 60px; display: flex; align-items: center; gap: 12px; padding: 8px 14px 8px 16px; border: 0; border-radius: var(--r-tile);
+  background: transparent; color: var(--ink); cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent; }
+.trade-head .t-name { font-size: 17px; font-weight: 600; flex: none; }
+.trade-head .t-sub { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trade.on .t-sub { color: var(--sel); font-weight: 500; }
+.trade.need .t-sub { color: var(--danger); font-weight: 500; }
+.trade-head .t-arrow { flex: none; width: 20px; text-align: center; font-size: 20px; line-height: 1; color: var(--muted); transform: rotate(90deg); transition: transform .15s; }
+.trade-head[aria-expanded="true"] .t-arrow { transform: rotate(-90deg); }
+.trade-body { padding: 0 12px 14px; }
+.trade-body .t-hint { margin: 0 4px 10px; font-size: 13px; color: var(--muted); }
+.step-err { display: none; margin-top: 16px; padding: 14px 16px; border-radius: var(--r-tile); background: var(--danger-soft); color: var(--danger); font-size: 15px; word-break: keep-all; }
+.invalid > .step-err { display: block; }
+.step-err .btn { margin-top: 10px; }
+
+/* 마무리 — 요청 내용 확인(고치기 = 그 화면으로) */
+.summary { border-top: 1px solid var(--line); margin-bottom: 8px; }
+.sum-row { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.sum-row > div { min-width: 0; }
+.sum-row .k { font-weight: 600; font-size: 16px; }
+.sum-row .v { color: var(--muted); font-size: 14px; margin-top: 2px; overflow-wrap: anywhere; word-break: keep-all; }
+.sum-row .v.bad { color: var(--danger); }
+.link-btn { flex: none; min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--link); font-size: 15px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+/* 3D 도면 — 폰 · 태블릿 세로: 화면 아래 고정(이전 · 다음 바 위, 접기 가능) / 넓은 화면: 오른쪽에 붙어 따라온다.
+   3D 파일(three.min.js · room3d.js)은 이 사이트 안의 파일 — 보안 정책(CSP)의 'self'로 읽혀 정책은 그대로. 도면이 처음 보일 때 불러온다. */
+.dock { background: var(--bg-alt); }
+.dock-in { max-width: 680px; margin: 0 auto; }
+.dock-head { display: flex; align-items: center; gap: 4px; min-height: 44px; }
+.dock-title { flex: 1; min-width: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock-title b { font-weight: 600; }
+.dock-title span { color: var(--muted); font-size: 13px; margin-left: 6px; }
+.dock-btn { flex: none; min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: var(--link); font-size: 14px; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+.room3d-opts { display: none; flex-wrap: wrap; gap: 8px 16px; padding: 4px 0 8px; }
+.dock.opts-open .room3d-opts { display: flex; }
 .room3d-opts .chip { padding: 0 14px; font-size: 14px; }
 @media (max-width: 419px) { .room3d-opts .chip small { display: none; } }   /* 좁은 폰은 59㎡ · 84㎡ · 105㎡만 — 한 줄에 */
-.room3d-stage { position: relative; height: 280px; margin: 10px 0 8px; border-radius: var(--r-tile); overflow: hidden;
+.room3d-stage { position: relative; height: clamp(140px, 24vh, 230px); border-radius: var(--r-tile); overflow: hidden;
   touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
-@media (min-width: 600px) { .room3d-stage { height: 360px; } }
-@media (min-width: 1024px) { .room3d-stage { height: 400px; } }
 .room3d-stage.drag { cursor: grabbing; }
 .room3d-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .room3d-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 16px; text-align: center; font-size: 14px; color: var(--muted); }
-.room3d-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; line-height: 1.4; word-break: keep-all; overflow-wrap: anywhere; }
+/* 범례 — 폰은 한 줄(옆으로 밀기), 넓은 화면은 여러 줄 */
+.room3d-legend { display: flex; gap: 6px 16px; padding: 6px 0 2px; font-size: 13px; line-height: 1.4; word-break: keep-all;
+  flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+.room3d-legend::-webkit-scrollbar { display: none; }
 .room3d-legend .muted { color: var(--muted); }
-.room3d-legend .full { flex-basis: 100%; }
 .room3d-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
 .room3d-note { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+.dock .room3d-note { display: none; }
+.dock.collapsed .room3d-stage, .dock.collapsed .room3d-legend, .dock.collapsed .room3d-opts { display: none; }
+.empty { padding: 24px 18px; border-radius: var(--r-tile); background: var(--bg-alt); color: var(--muted); font-size: 15px; text-align: center; }
 
-/* 상품 · 공종 팝업 — 폰은 아래에서 올라오는 시트 */
+/* 상품 칩 — 공간 페이지에서 공종을 펼치면 보인다 */
 .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, calc(50% - 4px)), 1fr)); gap: 8px; }
 .product-chip { width: 100%; min-width: 0; min-height: 56px; padding: 10px 12px; border-radius: var(--r-tile); border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; font-size: 14px; font-weight: 500; line-height: 1.25; display: flex; flex-direction: column; justify-content: center; -webkit-tap-highlight-color: transparent; transition: border-color .15s, box-shadow .15s; }
 .product-chip:hover { border-color: var(--muted); }
@@ -310,57 +318,45 @@ details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
 
 .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
-/* 아래 요약 바(폰 · 태블릿) — 위 바와 같은 반투명 */
+/* 아래 고정 묶음(폰 · 태블릿 세로) — 3D 도면 + 이전 · 다음 바. 높이는 JS가 재서 --side-h로(본문이 가리지 않게). */
+.side { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; }
+.dock { border-top: 1px solid var(--line-soft); padding: 0 var(--page-margin) 4px; }
+.side.typing .dock { display: none; }   /* 폰에서 글자를 입력하는 동안(키보드) — 도면은 잠깐 숨긴다 */
 .bar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
   background: var(--glass); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
   border-top: 1px solid var(--line-soft);
-  padding: 12px var(--page-margin) calc(12px + env(safe-area-inset-bottom));
+  padding: 10px var(--page-margin) calc(10px + env(safe-area-inset-bottom));
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .bar { background: var(--bg); } }
-.bar-in { max-width: 680px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
-.bar-sum { flex: 1; min-width: 0; font-size: 14px; color: var(--muted); line-height: 1.35; }
-.bar-sum b { color: var(--ink); font-weight: 600; }
-.bar .btn.primary { min-width: 140px; min-height: 48px; font-size: 17px; }
+.bar-in { max-width: 680px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+.bar .btn { min-height: 48px; font-size: 17px; }
+#prevBtn { flex: none; min-width: 92px; }
+#nextBtn, #submitBtn { flex: 1; min-width: 0; }
+#nextBtn span { overflow: hidden; text-overflow: ellipsis; }
+body { padding-bottom: calc(var(--side-h, 76px) + 16px); }
 
-/* 요청 요약 카드 — 넓은 화면(1024~)에서만 오른쪽에 붙어 따라온다. 좁은 화면은 아래 요약 바 */
-.side-card { display: none; }
-.side-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
-.side-head h2 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
-.side-head span { font-size: 13px; color: var(--muted); }
-/* 주소창이 보이는 태블릿에서도 보내기 버튼이 화면 안에 — svh를 모르는 브라우저는 앞의 vh 값 */
-.side-body { max-height: calc(100vh - 300px); max-height: calc(100svh - 260px); overflow-y: auto; margin: 0 -8px; padding: 0 8px; }
-.side-row { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); font-size: 15px; }
-.side-row .k { color: var(--muted); flex: none; }
-.side-row .v { text-align: right; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
-.side-rooms { border-top: 1px solid var(--line); padding: 6px 0; }
-.side-room { display: block; width: calc(100% + 16px); margin: 0 -8px; padding: 8px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; font-size: 15px; -webkit-tap-highlight-color: transparent; }
-.side-room:hover { background: var(--fill); }
-.side-room b { display: block; font-weight: 600; }
-.side-room span { display: block; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
-.side-empty { padding: 12px 0; font-size: 15px; color: var(--muted); }
-
-/* ── 태블릿 가로 · PC(1024~): 왼쪽 입력 · 오른쪽 요청 요약(보내기 버튼 포함), 아래 바 없음 ── */
+/* ── 태블릿 가로 · PC(1024~): 왼쪽 입력 · 오른쪽 3D 도면 + 이전 · 다음(따라온다) ── */
 @media (min-width: 1024px) {
   body { padding-bottom: 0; }
-  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 48px; align-items: start; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 48px; align-items: start; }
   .layout.is-done { grid-template-columns: minmax(0, 1fr); }
-  .side { position: sticky; top: 76px; margin: 56px 0; }
-  .side-card { display: block; margin: 0; padding: 24px; background: var(--bg-alt); border-radius: var(--r-card); }
+  .side { position: sticky; top: 76px; margin: 40px 0 0; left: auto; right: auto; bottom: auto; z-index: 1; }
+  .dock { border: 0; border-radius: var(--r-card); padding: 8px 16px 14px; }
+  .dock-in { max-width: none; }
+  #dockToggle { display: none; }
+  .dock .room3d-opts { display: flex; }
+  #dockPlanBtn { display: none; }
+  .room3d-stage { height: clamp(200px, calc(100vh - 500px), 340px); }   /* 노트북(768px 높이)에서도 맨 아래까지 내려도 제목 · 이전 · 다음이 화면 안에 */
+  .room3d-legend { flex-wrap: wrap; white-space: normal; overflow: auto; max-height: 5.8em; }
+  .dock .room3d-note { display: block; }
   .bar { position: static; padding: 0; margin-top: 14px; background: transparent; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .bar-in { max-width: none; }
-  .bar-sum { display: none; }
-  .bar .btn.primary { width: 100%; min-height: 52px; }
+  .bar .btn { min-height: 52px; }
 }
 
 /* ── 폰(~599) ── */
 @media (max-width: 599px) {
-  .mx-scroll { --cell-min: 76px; }   /* 360px 폰에서도 공간 3열이 한 화면 */
-  .row-btn { padding-right: 6px; }   /* 공종 이름이 다섯 글자(철거·청소 등)여도 360px 폰에서 3열 */
   .product-chip { padding: 10px; }
-  .layer.sheet { align-items: flex-end; padding: 0; }
-  .layer.sheet .layer-box { max-width: none; border-radius: var(--r-card) var(--r-card) 0 0; }
-  .sheet-foot .btn { flex: 1; }
 }
 
 /* 완료 화면 */
@@ -384,16 +380,10 @@ details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
 /* 닫기 — 애플처럼 연회색 동그라미 안 × */
 .icon-btn::after { content: "×"; position: absolute; inset: 7px; border-radius: 50%; background: var(--fill); color: var(--muted); font-size: 20px; line-height: 30px; text-align: center; }
 .icon-btn:hover::after { color: var(--ink); }
-.layer.sheet .layer-box { height: auto; max-height: min(680px, 88vh); max-width: 640px; }
-.sheet-body { padding: 18px 20px; overflow-y: auto; flex: 1; overscroll-behavior: contain; }
-.sheet-hint { margin: 0 0 14px; font-size: 15px; color: var(--muted); }
-.sheet-group { margin: 22px 0 10px; font-size: 13px; font-weight: 600; color: var(--muted); }
-.sheet-hint + .sheet-group { margin-top: 4px; }
 .chip small { margin-left: 6px; font-size: 12px; font-weight: 500; color: var(--muted); }
-.sheet-foot { display: flex; gap: 10px; justify-content: flex-end; padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line-soft); }
-.sheet-foot .btn { min-height: 48px; font-size: 17px; }
 
 .toast { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(12px); background: var(--ink); color: var(--bg); padding: 12px 20px; border-radius: 980px; font-size: 15px; opacity: 0; pointer-events: none; transition: all .2s; z-index: 40; max-width: calc(100% - 32px); text-align: center; }
+.toast { bottom: calc(var(--side-h, 76px) + 12px); }
 .toast.on { opacity: 1; transform: translateX(-50%); }
 @media (min-width: 1024px) { .toast { bottom: calc(24px + env(safe-area-inset-bottom)); } }   /* 넓은 화면은 아래 바가 없다 */
 .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
@@ -411,12 +401,13 @@ footer .sep { color: var(--line); }
 <nav class="nav" aria-label="상단">
   <div class="wrap nav-in">
     <div class="brand"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6 1.8 11.2l1.3 1.5L5 11.1V21h5.5v-6h3v6H19v-9.9l1.9 1.6 1.3-1.5z"/></svg><span id="companyName">룰루타일</span></div>
-    <a class="nav-cta" id="navCta" href="#consentSection"><span>견적 요청</span></a>
+    <a class="nav-cta" id="navCta" href="#consentSection" hidden><span>견적 요청</span></a>
   </div>
+  <div class="progress" aria-hidden="true"><i id="progressBar"></i></div>
 </nav>
 
 <div class="wrap">
-  <header class="hero">
+  <header class="hero" id="hero">
     <h1>온라인 견적 요청</h1>
     <p class="lead">평형과 공사할 공간만 알려주세요. 담당자가 견적을 준비해 연락드립니다.</p>
   </header>
@@ -426,9 +417,11 @@ footer .sep { color: var(--line); }
   <form id="form" novalidate autocomplete="on">
     <div class="panel" id="formPanel">
 
+      <!-- 단계 1 — 기본 정보 · 평형 · 일정 -->
+      <div class="step" data-step="info">
       <!-- ① 기본 정보 (앱 1101~1105) -->
       <section class="section" aria-labelledby="s1">
-        <div class="sec-head"><h2 class="sec-title" id="s1">기본 정보. <span>연락드릴 곳을 알려 주세요.</span></h2></div>
+        <div class="sec-head"><h2 class="sec-title step-title" id="s1" tabindex="-1">기본 정보. <span>연락드릴 곳을 알려 주세요.</span></h2></div>
         <div class="grid">
           <label class="fl" data-field="name">
             <input class="input" name="name" id="name" maxlength="30" autocomplete="name" placeholder=" ">
@@ -491,38 +484,34 @@ footer .sep { color: var(--line); }
         </div>
       </section>
 
-      <!-- ③ 공간별 필요 공사 (앱 1209 체크표와 같은 방식 — 가격 없음) -->
-      <section class="section" aria-labelledby="s3" data-field="rooms">
-        <div class="sec-head"><h2 class="sec-title" id="s3">공간별 공사. <span>필요한 칸을 눌러 상품을 고르세요.</span></h2></div>
-        <p class="sec-desc" id="roomsDesc">공사할 공간을 고르면 아래 표에 열로 생깁니다. 필요한 칸을 눌러 상품을 하나 이상 골라 주세요.</p>
+      </div>
+
+      <!-- ③ 공간 고르기 — 고른 공간마다 다음 화면에서 한 페이지씩 상품을 고른다 -->
+      <section class="step section" data-step="rooms" data-field="rooms" hidden>
+        <div class="sec-head"><h2 class="sec-title step-title" tabindex="-1">공사할 공간. <span>필요한 공간을 모두 골라 주세요.</span></h2></div>
+        <p class="sec-desc" id="roomsDesc">다음 화면부터 고른 공간마다 한 페이지씩 상품을 고릅니다.</p>
         <div class="rooms" id="roomToggles" role="group" aria-label="공간 선택"></div>
-        <div id="matrixWrap"></div>
-        <!-- 완성 모습 미리보기 — 대표 평면 3D 도면에 표의 공간 · 공종을 칠한다(장식, 전송과 무관) -->
-        <div class="room3d" id="room3d" hidden>
-          <div class="room3d-head"><b>완성 모습 미리보기</b><span>대표 평면 · 끌어서 돌려 보기</span></div>
-          <div class="room3d-opts">
-            <div class="chips" role="group" aria-label="도면 크기" id="room3dPlans">
-              <button type="button" class="chip" data-plan="59" aria-pressed="false">59㎡<small>25평형</small></button>
-              <button type="button" class="chip" data-plan="84" aria-pressed="true">84㎡<small>34평형</small></button>
-              <button type="button" class="chip" data-plan="105" aria-pressed="false">105㎡<small>40평대</small></button>
-            </div>
-            <div class="chips" role="group" aria-label="발코니" id="room3dModes">
-              <button type="button" class="chip" data-mode="e" aria-pressed="true">확장형</button>
-              <button type="button" class="chip" data-mode="b" aria-pressed="false">비확장</button>
-            </div>
-          </div>
-          <div class="room3d-stage" id="room3dStage" role="img" aria-label="완성 모습 미리보기">
-            <div class="room3d-msg" id="room3dMsg">미리보기를 준비하고 있어요.</div>
-          </div>
-          <div class="room3d-legend" id="room3dLegend"></div>
-          <p class="room3d-note">대표 평면으로 보여 드리는 그림이에요. 실제 구조와 시공 범위는 상담 때 확정합니다.</p>
-        </div>
-        <div class="err" id="roomsErr" style="margin-top:12px">공사할 공간을 하나 이상 골라 주세요.</div>
+        <div class="step-err" id="roomsErr" role="alert">공사할 공간을 하나 이상 골라 주세요.</div>
       </section>
 
+      <!-- ③-1 공간 페이지(공간마다) — 공종을 누르면 그 자리에서 상품이 펼쳐진다. 고르면 아래 3D 도면의 그 자리가 깜빡인다 -->
+      <section class="step section" data-step="room" data-field="room" id="roomStep" hidden>
+        <div class="room-chips" id="roomChips" role="group" aria-label="고른 공간"></div>
+        <div class="sec-head"><h2 class="sec-title step-title" tabindex="-1" id="roomTitle"></h2></div>
+        <label class="fl with-sfx room-py" id="roomPyWrap" hidden>
+          <input class="input" id="roomPy" inputmode="decimal" maxlength="5" placeholder=" ">
+          <span class="fl-label">이 공간 평형 (모르면 비워 두세요)</span>
+          <span class="sfx">평</span>
+        </label>
+        <div class="trades" id="tradeList"></div>
+        <div class="step-err" id="roomErr" role="alert"><span id="roomErrText"></span><div><button type="button" class="btn" id="roomRemoveBtn" hidden>이 공간 빼기</button></div></div>
+      </section>
+
+      <!-- 마지막 단계 — 사진 · 요청사항 · 요청 내용 확인 · 동의 · 보내기 -->
+      <div class="step" data-step="finish" hidden>
       <!-- ④ 사진 · 요청사항 (앱 1106) -->
       <section class="section" aria-labelledby="s4">
-        <div class="sec-head"><h2 class="sec-title" id="s4">사진과 요청사항. <span>있으면 더 정확한 견적이 가능합니다.</span></h2></div>
+        <div class="sec-head"><h2 class="sec-title step-title" id="s4" tabindex="-1">사진과 요청사항. <span>있으면 더 정확한 견적이 가능합니다.</span></h2></div>
         <div class="f" style="margin-bottom:20px">
           <span class="group-label">현장 사진 <span class="opt">(선택 · 최대 <span id="maxPhotosLabel">5</span>장)</span></span>
           <div class="photos" id="photos">
@@ -537,6 +526,11 @@ footer .sep { color: var(--line); }
           <div class="hint">원하는 스타일, 거주 중 공사 여부, 꼭 바꾸고 싶은 부분 등을 자유롭게 적어 주세요.</div>
         </label>
         <label class="hp" aria-hidden="true">웹사이트<input id="website" tabindex="-1" autocomplete="off"></label>
+      </section>
+
+      <section class="section" aria-labelledby="sSum">
+        <div class="sec-head"><h2 class="sec-title" id="sSum">요청 내용. <span>보내기 전에 확인해 주세요.</span></h2></div>
+        <div class="summary" id="summary"></div>
       </section>
 
       <!-- 입력 정보 사실 확인(2026-10-07 사용자 결정 — 허위 정보 문의 줄이기) · 개인정보 동의 -->
@@ -568,6 +562,7 @@ footer .sep { color: var(--line); }
           <div class="err">개인정보 수집·이용에 동의해 주세요.</div>
         </div>
       </section>
+      </div>
     </div>
   </form>
 
@@ -586,16 +581,38 @@ footer .sep { color: var(--line); }
   </div>
   </main>
 
-  <!-- 넓은 화면: 오른쪽 요청 요약 + 보내기 / 좁은 화면: 요약 카드는 숨고 .bar가 화면 아래에 붙는다 -->
-  <aside class="side" id="side" aria-label="요청 요약">
-    <div class="side-card">
-      <div class="side-head"><h2>요청 요약</h2><span id="sideCount" aria-live="polite"></span></div>
-      <div class="side-body" id="sideBody"></div>
+  <!-- 3D 도면(폰 · 태블릿 세로 = 화면 아래, 넓은 화면 = 오른쪽) + 이전 · 다음 -->
+  <aside class="side" id="side" aria-label="완성 모습 미리보기 · 이동">
+    <div class="dock" id="room3d" hidden>
+      <div class="dock-in">
+        <div class="dock-head">
+          <div class="dock-title"><b>완성 모습</b><span id="dockRoom"></span></div>
+          <button type="button" class="dock-btn" id="dockPlanBtn" aria-expanded="false">84㎡ · 확장형</button>
+          <button type="button" class="dock-btn" id="dockToggle" aria-expanded="true">접기</button>
+        </div>
+        <div class="room3d-opts">
+          <div class="chips" role="group" aria-label="도면 크기" id="room3dPlans">
+            <button type="button" class="chip" data-plan="59" aria-pressed="false">59㎡<small>25평형</small></button>
+            <button type="button" class="chip" data-plan="84" aria-pressed="true">84㎡<small>34평형</small></button>
+            <button type="button" class="chip" data-plan="105" aria-pressed="false">105㎡<small>40평대</small></button>
+          </div>
+          <div class="chips" role="group" aria-label="발코니" id="room3dModes">
+            <button type="button" class="chip" data-mode="e" aria-pressed="true">확장형</button>
+            <button type="button" class="chip" data-mode="b" aria-pressed="false">비확장</button>
+          </div>
+        </div>
+        <div class="room3d-stage" id="room3dStage" role="img" aria-label="완성 모습 미리보기">
+          <div class="room3d-msg" id="room3dMsg">미리보기를 준비하고 있어요.</div>
+        </div>
+        <div class="room3d-legend" id="room3dLegend"></div>
+        <p class="room3d-note">대표 평면으로 보여 드리는 그림이에요. 실제 구조와 시공 범위는 상담 때 확정합니다. 끌어서 돌려 볼 수 있어요.</p>
+      </div>
     </div>
     <div class="bar" id="bar">
       <div class="bar-in">
-        <div class="bar-sum" id="barSum" aria-live="polite"><b>공간 0</b> · 공사 0건</div>
-        <button type="button" class="btn primary" id="submitBtn">견적 요청 보내기</button>
+        <button type="button" class="btn" id="prevBtn" hidden>이전</button>
+        <button type="button" class="btn primary" id="nextBtn"><span>다음</span></button>
+        <button type="button" class="btn primary" id="submitBtn" hidden>견적 요청 보내기</button>
       </div>
     </div>
   </aside>
@@ -610,13 +627,6 @@ footer .sep { color: var(--line); }
   <div class="layer-box">
     <div class="layer-head">주소 검색 <button type="button" class="icon-btn" id="addrClose" aria-label="닫기">×</button></div>
     <div id="postcodeWrap"></div>
-  </div>
-</div>
-<div class="layer sheet" id="sheetLayer" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-  <div class="layer-box">
-    <div class="layer-head"><span id="sheetTitle"></span><button type="button" class="icon-btn" id="sheetClose" aria-label="닫기">×</button></div>
-    <div class="sheet-body" id="sheetBody"></div>
-    <div class="sheet-foot" id="sheetFoot"></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
@@ -812,14 +822,14 @@ function tradeAllowed(room, trade) {
 
 /** 3번 안내 — 공용(전체)에서만 고를 수 있는 공종이 있으면 그 이름을 알린다. */
 function renderRoomsDesc() {
-  let text = "공사할 공간을 고르면 아래 표에 열로 생깁니다. 필요한 칸을 눌러 상품을 하나 이상 골라 주세요. 공종 이름을 누르면 여러 공간에 같은 상품을 한 번에 담을 수 있습니다.";
+  let text = "다음 화면부터 고른 공간마다 한 페이지씩 상품을 고릅니다.";
   const whole = CONFIG.WHOLE_HOUSE_ROOM;
   const others = WEB.rooms.filter(r => r !== whole);
   if (WEB.rooms.includes(whole) && others.length) {
     const onlyWhole = roomTrades(whole).filter(t => others.every(r => !tradeAllowed(r, t)));
     if (onlyWhole.length) {
       const particle = hasBatchim(onlyWhole[onlyWhole.length - 1]) ? "은" : "는";
-      text += ` ${onlyWhole.join("·")}${particle} 집 전체 기준이라 '${whole}' 열에서 골라 주세요.`;
+      text += ` ${onlyWhole.join("·")}${particle} 집 전체 기준이라 '${whole}'에서 골라 주세요.`;
     }
   }
   $("#roomsDesc").textContent = text;
@@ -830,16 +840,16 @@ function hasBatchim(word) {
 }
 
 /** 새 설정으로 바꾼다 — 이제 안 보이는 공간 · 공종 · 상품은 고른 것에서 뺀다(숨긴 공종이 전송에 섞이지 않게).
-    표의 평 칸에 입력하는 중이거나 팝업이 열려 있으면 끝난 뒤에 바꾼다(다시 그리면 입력 중인 칸 · 팝업 내용이 사라진다). */
+    공간 평형 칸에 입력하는 중이면 끝난 뒤에 바꾼다(다시 그리면 입력 중인 칸이 사라진다). */
 let pendingWebConfig = null, waitingFocusOut = false;
 function applyWebConfig(next, source) {
-  const matrix = $("#matrixWrap"), active = document.activeElement;
-  const typing = !!active && active.tagName === "INPUT" && matrix.contains(active);
-  if (typing || sheetOpen()) {
-    pendingWebConfig = [next, source];   // 팝업이면 closeSheet가, 평 칸이면 칸을 떠날 때 반영
-    if (typing && !waitingFocusOut) {
+  const area = $("#roomStep"), active = document.activeElement;
+  const typing = !!active && active.tagName === "INPUT" && area.contains(active);
+  if (typing) {
+    pendingWebConfig = [next, source];   // 공간 평형 칸에 입력하는 중이면 칸을 떠날 때 반영
+    if (!waitingFocusOut) {
       waitingFocusOut = true;
-      matrix.addEventListener("focusout", () => { waitingFocusOut = false; flushWebConfig(); }, { once: true });
+      area.addEventListener("focusout", () => { waitingFocusOut = false; flushWebConfig(); }, { once: true });
     }
     return;
   }
@@ -857,7 +867,14 @@ function applyWebConfig(next, source) {
       if (!set.size) data.items.delete(t);
     });
   });
-  renderRoomsDesc(); renderRoomToggles(); renderMatrix();
+  renderRoomsDesc();
+  const focusTrade = (active && active.closest && active.closest("#tradeList .trade") || {}).dataset;
+  if (!steps().includes(current)) goTo("rooms", { push: false, focus: false });
+  else {
+    renderStep();
+    const t = focusTrade && focusTrade.trade, again = t && $$("#tradeList .trade").find(b => b.dataset.trade === t);
+    if (again) $(".trade-head", again).focus({ preventScroll: true });   // 다시 그린 공종 줄로 키보드 위치를 돌려놓기
+  }
   if (changed) { saveDraft(); toast("공사 항목 목록이 바뀌어 고르신 것 중 일부를 정리했어요."); }
 }
 
@@ -1004,26 +1021,26 @@ function setScope(scope) {
   $$("[data-scope]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.scope === scope)));
   $("#scopeHint").textContent = scope === "전체"
     ? "집 전체를 공사합니다."
-    : "표 머리의 '평' 칸에 공간마다 대략의 평형을 적어 주세요. 모르면 비워 두셔도 됩니다.";
+    : "공간마다 대략의 평형은 공간 페이지에서 적어 주세요. 모르면 비워 두셔도 됩니다.";
   if (changed) ensureWholeRoom();
-  renderRoomToggles(); renderMatrix();
+  renderRoomToggles(); updateBar();
   saveDraft();
 }
 
-// ── 공간 선택 · 공간 × 공종 체크표 (앱 1209와 같은 방식) ─────────────────
-// 공간 칩 · 표의 열 · 팝업의 공간 칩은 가나다순(방1 < 방2 < 방10). 전송 순서는 앱 공간 순서(WEB.rooms) 그대로.
+// ── 공간 고르기 ──────────────────────────────────────────────────────
+// 공간 칩은 가나다순(방1 < 방2 < 방10). 전송 순서는 앱 공간 순서(WEB.rooms) 그대로.
 const koSort = (a, b) => a.localeCompare(b, "ko", { numeric: true });
 const newRoom = () => ({ trades: new Set(), pyeong: "", items: new Map() });
 const productNames = trade => (WEB.products[trade] || []).map(([n]) => n);
 const pickedNames = (data, trade) => { const set = data.items.get(trade); return set ? productNames(trade).filter(n => set.has(n)) : []; };
 
 function renderRoomToggles() {
-  const wrap = $("#roomToggles");
+  const wrap = $("#roomToggles"), was = wrap.contains(document.activeElement) ? document.activeElement.dataset.room : null;
   wrap.innerHTML = "";
   [...WEB.rooms].sort(koSort).forEach(room => {
     const on = state.rooms.has(room);
     const b = document.createElement("button");
-    b.type = "button"; b.className = "room-toggle";
+    b.type = "button"; b.className = "room-toggle"; b.dataset.room = room;
     b.setAttribute("aria-pressed", String(on));
     const n = on ? state.rooms.get(room).trades.size : 0;
     b.innerHTML = `<span></span><span class="cnt"></span><span class="dot" aria-hidden="true"></span>`;
@@ -1031,6 +1048,7 @@ function renderRoomToggles() {
     b.children[1].textContent = n ? `${n}` : "";
     b.addEventListener("click", () => toggleRoom(room));
     wrap.appendChild(b);
+    if (room === was) b.focus({ preventScroll: true });
   });
 }
 function toggleRoom(room) {
@@ -1038,361 +1056,331 @@ function toggleRoom(room) {
   else state.rooms.set(room, newRoom());
   afterChange();
 }
+/** 고른 것이 바뀐 뒤 — 오류 표시 지우기 · 지금 화면 숫자 · 초안 · 아래 바 · 3D 도면. */
 function afterChange() {
-  clearInvalid("rooms");
-  renderRoomToggles(); renderMatrix(); saveDraft();
+  clearInvalid("rooms"); clearInvalid("room");
+  if (current === "rooms") renderRoomToggles();
+  if (stepRoom(current) !== null) renderRoomChips();
+  saveDraft(); updateBar();
 }
 
-// 표 — 공종 = 행, 공간 = 열(고른 공간만). 칸을 누르면 바로 상품 팝업.
-function renderMatrix() {
-  const wrap = $("#matrixWrap");
-  const prev = $(".mx-scroll", wrap);
-  const keepLeft = prev ? prev.scrollLeft : 0;   // 다시 그려도 가로 위치를 지킨다
-  const f = document.activeElement;
-  const refocus = f && wrap.contains(f) && (f.classList.contains("cell") || f.classList.contains("row-btn"))
-    ? { cls: f.classList.contains("cell") ? "cell" : "row-btn", room: f.dataset.room || "", trade: f.dataset.trade || "" } : null;
-  wrap.innerHTML = "";
-  const rooms = [...state.rooms.keys()].sort(koSort);
-  if (!rooms.length) {
-    wrap.innerHTML = `<div class="empty">위에서 공사할 공간을 골라 주세요. 고른 공간이 표의 열로 생깁니다.</div>`;
-    updateBar(); return;
-  }
-  const scroller = document.createElement("div"); scroller.className = "mx-scroll";
-  const table = document.createElement("table"); table.className = "mx";
-  // 공간이 적을 때 열이 지나치게 넓어지지 않게(앱과 같이 열 최대 200px 안팎)
-  table.style.width = `min(100%, ${rooms.length * 206 + 112}px)`;
-  const cap = document.createElement("caption"); cap.className = "hp"; cap.textContent = "공간별 필요 공사 표";
-  table.appendChild(cap);
-  const thead = document.createElement("thead"); const hr = document.createElement("tr");
-  const corner = document.createElement("th"); corner.className = "corner"; corner.scope = "col";
-  corner.textContent = "공종 \\ 공간"; hr.appendChild(corner);
-  rooms.forEach(room => {
-    const data = state.rooms.get(room);
-    const th = document.createElement("th"); th.className = "col-head"; th.scope = "col";
-    th.dataset.room = room; th.tabIndex = -1;   // 요청 요약에서 누르면 이 열로
-    th.style.width = `${Math.floor(96 / rooms.length)}%`;   // 공간 열은 같은 폭(상품 이름이 든 열만 넓어지지 않게)
-    const name = document.createElement("div"); name.className = "col-name"; name.textContent = room;
-    const sub = document.createElement("div"); sub.className = "col-sub";
-    sub.textContent = data.trades.size ? `공사 ${data.trades.size}건` : "공사 없음";
-    if (!roomHasWork(room)) th.classList.add("empty");
-    th.append(name, sub);
-    // 부분 시공 — 공간 평형(공용(전체)는 앱이 전체 평형을 그대로 쓰므로 칸이 없다)
-    if (state.scope === "부분" && room !== CONFIG.WHOLE_HOUSE_ROOM) {
-      const py = document.createElement("label"); py.className = "py";
-      py.innerHTML = `<input inputmode="decimal" maxlength="5" placeholder="모름"><span>평</span>`;
-      const inp = $("input", py);
-      inp.value = data.pyeong;
-      inp.setAttribute("aria-label", `${room} 평형`);
-      inp.addEventListener("input", () => {
-        let v = inp.value.replace(/[^\d.]/g, "");
-        const i = v.indexOf("."); if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, "").slice(0, 1);
-        inp.value = v; data.pyeong = v; saveDraft(); updateBar();
-      });
-      th.appendChild(py);
-    }
-    hr.appendChild(th);
-  });
-  thead.appendChild(hr); table.appendChild(thead);
+// ── 단계 화면 (사용자 결정 2026-10-09) ─────────────────────────────────
+// 단계 이름: "info"(기본 정보 · 평형 · 일정) → "rooms"(공간 고르기) → "room:<공간>"(공간마다) → "finish"(사진 · 요청사항 · 동의).
+// 고른 공간이 바뀌면 단계 목록도 바뀐다. 기기의 '뒤로'는 앞 단계로(history).
+let current = "info";
+let openTrade = null;   // 공간 페이지에서 펼친 공종(하나만)
+const wideScreen = () => matchMedia("(min-width: 1024px)").matches;
+const stepRoom = id => (id && id.startsWith("room:") ? id.slice(5) : null);
+const stepKind = id => (stepRoom(id) !== null ? "room" : id);
+/** 공간 페이지 순서 — 공용(전체)를 먼저(집 전체 기준 공사), 나머지는 가나다순. */
+function roomOrder() {
+  const whole = CONFIG.WHOLE_HOUSE_ROOM;
+  return [...state.rooms.keys()].sort((a, b) => (b === whole) - (a === whole) || koSort(a, b));
+}
+const steps = () => ["info", "rooms", ...roomOrder().map(r => "room:" + r), "finish"];
 
-  const tbody = document.createElement("tbody");
-  WEB.trades.forEach(trade => {
-    const tr = document.createElement("tr");
-    const th = document.createElement("th"); th.className = "row-head"; th.scope = "row";
-    const rb = document.createElement("button"); rb.type = "button"; rb.className = "row-btn"; rb.dataset.trade = trade;
-    const used = rooms.filter(r => state.rooms.get(r).trades.has(trade)).length;
-    const n = productNames(trade).length;
-    rb.innerHTML = "<b></b><span></span>";
-    rb.firstChild.textContent = trade;
-    rb.lastChild.textContent = used ? `${used}곳 선택` : (n ? `상품 ${n}` : "");
-    rb.setAttribute("aria-label", `${trade} — 여러 공간에 한 번에 담기`);
-    rb.addEventListener("click", () => openTradeSheet(trade));
-    th.appendChild(rb); tr.appendChild(th);
-    rooms.forEach(room => {
-      const td = document.createElement("td");
-      td.appendChild(cellButton(room, trade));
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-  table.appendChild(tbody); scroller.appendChild(table); wrap.appendChild(scroller);
-  const hint = document.createElement("div"); hint.className = "mx-hint";
-  hint.textContent = "표가 넓으면 옆으로 밀어 보세요. 공종 이름은 그대로 남아 있어요.";
-  wrap.appendChild(hint);
-  scroller.scrollLeft = keepLeft;
-  updateMatrixHint();
-  if (refocus) {
-    const sel = refocus.cls === "cell"
-      ? `.cell[data-room="${CSS.escape(refocus.room)}"][data-trade="${CSS.escape(refocus.trade)}"]`
-      : `.row-btn[data-trade="${CSS.escape(refocus.trade)}"]`;
-    const el = $(sel, wrap); if (el) el.focus({ preventScroll: true });
+let navIdx = 0, rewinding = false, stepAt = 0;
+function goTo(id, opts = {}) {
+  const list = steps();
+  if (!list.includes(id)) id = stepRoom(id) !== null ? "rooms" : "info";
+  const changed = id !== current;
+  if (changed) { current = id; openTrade = null; stepAt = performance.now(); }
+  renderStep();
+  if (opts.push === false) { try { history.replaceState({ step: id, idx: navIdx }, ""); } catch {} }   // 없어진 공간으로 돌아온 경우 기록도 바로잡기
+  else if (changed) { navIdx++; try { history.pushState({ step: id, idx: navIdx }, ""); } catch {} }
+  if (changed && pendingWebConfig) flushWebConfig();   // 입력 중이라 미뤄 둔 새 설정 — 화면을 옮겼으면 반영
+  if (changed) {
+    window.scrollTo({ top: 0 });
+    const h = $(`[data-step="${stepKind(id)}"] .step-title`);
+    if (h && opts.focus !== false) h.focus({ preventScroll: true });
   }
+}
+function renderStep() {
+  const kind = stepKind(current);
+  $$("[data-step]").forEach(s => { s.hidden = s.dataset.step !== kind; });
+  $("#hero").hidden = kind !== "info";
+  if (kind === "rooms") { renderRoomsDesc(); renderRoomToggles(); }
+  if (kind === "room") renderRoomPage();
+  if (kind === "finish") renderSummary();
   updateBar();
 }
-function updateMatrixHint() {
-  const sc = $("#matrixWrap .mx-scroll"), hint = $("#matrixWrap .mx-hint");
-  if (sc && hint) hint.hidden = sc.scrollWidth <= sc.clientWidth + 1;
+/** 이 페이지에서 쌓은 단계 기록을 첫 자리로 되감는다 — 접수 뒤 · 새로 고침 뒤 '뒤로'가 헛돌거나 거꾸로 가지 않게. */
+function rewindHistory() {
+  const n = (history.state && history.state.idx) || 0;
+  navIdx = 0;
+  if (n > 0) { rewinding = true; try { history.go(-n); } catch { rewinding = false; } }
 }
-addEventListener("resize", updateMatrixHint);
-
-/** 이 공간에서 고르지 않는 공종을 눌렀을 때의 안내. */
-function offMessage(room, trade) {
-  const whole = CONFIG.WHOLE_HOUSE_ROOM;
-  const particle = hasBatchim(trade) ? "은" : "는";
-  // 공용(전체)에서만 고르는 공종(예: 도배 · 마루를 다른 공간에서 모두 뺀 설정)일 때만 '공용(전체)' 열로 안내
-  const onlyWhole = WEB.rooms.includes(whole) && tradeAllowed(whole, trade)
-    && WEB.rooms.filter(r => r !== whole).every(r => !tradeAllowed(r, trade));
-  return onlyWhole
-    ? `${trade}${particle} 집 전체 기준이라 '${whole}' 열에서 골라 주세요.`
-    : `${room}에서는 고르지 않는 공사예요. 상담 때 함께 정해요.`;
-}
-
-function cellButton(room, trade) {
-  const data = state.rooms.get(room);
-  const b = document.createElement("button");
-  b.type = "button"; b.className = "cell";
-  b.dataset.room = room; b.dataset.trade = trade;
-  // 이 공간의 분류에서 안 쓰는 공종(앱 4107 · 사용자 결정) — 점선 칸, 누르면 안내만
-  if (!tradeAllowed(room, trade)) {
-    b.classList.add("off"); b.textContent = "—";
-    b.setAttribute("aria-label", `${room} ${trade}: ${offMessage(room, trade)}`);
-    b.addEventListener("click", () => toast(offMessage(room, trade)));
-    return b;
-  }
-  const hasProducts = productNames(trade).length > 0;
-  if (!data.trades.has(trade)) {
-    b.textContent = "+";
-    b.setAttribute("aria-label", hasProducts ? `${room} ${trade} 상품 고르기` : `${room}에 ${trade} 담기`);
-  } else {
-    // 담긴 칸: 고른 상품 이름(외 N개). 상품은 필수(사용자 결정 2026-10-07) — 상품 없이 담긴 칸(예전 초안 · 설정에서 상품이 빠짐)은 빨간 '상품 고르기'
-    const picked = pickedNames(data, trade);
-    const need = hasProducts && !picked.length;
-    b.classList.add(need ? "need" : "on");
-    const main = document.createElement("span"); main.className = "c-main";
-    const sub = document.createElement("span"); sub.className = "c-sub";
-    if (picked.length) {
-      main.textContent = picked[0];
-      sub.textContent = picked.length > 1 ? `외 ${picked.length - 1}개` : "선택";
-    } else if (need) {
-      main.textContent = "상품 고르기"; sub.textContent = "필수";
-    } else {
-      main.textContent = "✓ 선택";
-    }
-    b.append(main, sub);
-    b.setAttribute("aria-label", `${room} ${trade}: ${picked.length ? picked.join(", ") : (need ? "상품을 아직 고르지 않음" : "선택")}${hasProducts ? " — 누르면 상품 고르기" : " — 누르면 빼기"}`);
-  }
-  // 누르면 바로 상품 팝업(사용자 결정 2026-10-07 — '✓ 필요 · 상품 고르기' 단계 없음). 상품이 없는 공종만 눌러서 담기/빼기.
-  b.addEventListener("click", () => {
-    if (hasProducts) { openCellSheet(room, trade); return; }
-    if (data.trades.has(trade)) data.trades.delete(trade); else data.trades.add(trade);
-    afterChange();
-  });
-  return b;
-}
-
-// ── 팝업(시트) — 칸 · 공종 ─────────────────────────────────────────
-let sheetReturn = null;
-const sheetOpen = () => $("#sheetLayer").classList.contains("on");
-function openSheet({ title, build, actions, returnFocus }) {
-  $("#sheetTitle").textContent = title;
-  const body = $("#sheetBody"); body.innerHTML = ""; build(body);
-  const foot = $("#sheetFoot"); foot.innerHTML = "";
-  actions.forEach(a => {
-    const btn = document.createElement("button");
-    btn.type = "button"; btn.className = "btn" + (a.primary ? " primary" : ""); btn.textContent = a.label;
-    btn.addEventListener("click", a.onClick);
-    foot.appendChild(btn);
-  });
-  sheetReturn = returnFocus || null;
-  $("#sheetLayer").classList.add("on");
-  document.documentElement.style.overflow = "hidden";   // 뒤 화면이 같이 밀리지 않게
-  body.scrollTop = 0;
-  setTimeout(() => { const first = $("button", body) || $("#sheetClose"); first.focus({ preventScroll: true }); }, 30);
-}
-function closeSheet() {
-  if (!sheetOpen()) return;
-  $("#sheetLayer").classList.remove("on");
-  document.documentElement.style.overflow = "";
-  playPreviewSweeps();
-  const target = sheetReturn && sheetReturn(); sheetReturn = null;
-  if (target) target.focus({ preventScroll: true });
-  if (pendingWebConfig) flushWebConfig();
-}
-$("#sheetClose").addEventListener("click", closeSheet);
-$("#sheetLayer").addEventListener("click", e => { if (e.target.id === "sheetLayer") closeSheet(); });
-document.addEventListener("keydown", e => {
-  if (e.key !== "Escape") return;
-  if (sheetOpen()) closeSheet();
-  else $("#addrLayer").classList.remove("on");
+addEventListener("popstate", e => {
+  const s = e.state || {};
+  navIdx = s.idx || 0;
+  if (rewinding) { rewinding = false; try { history.replaceState({ step: current, idx: 0 }, ""); } catch {} return; }
+  if (s.step && !$("#form").hidden && !sending) goTo(s.step, { push: false });
 });
 
-// 칸 팝업 — 그 공간 · 공종의 상품 고르기(여러 개). 상품을 하나라도 고르면 담기고, 다 빼면 빈 칸으로.
-// 상품은 필수(사용자 결정 2026-10-07 — '상품은 상담 때' 없음). 아무것도 안 고르고 닫으면 빈 칸 그대로.
-function openCellSheet(room, trade) {
-  const data = state.rooms.get(room);
-  const cellOf = () => $(`.cell[data-room="${CSS.escape(room)}"][data-trade="${CSS.escape(trade)}"]`);
-  let setHint = () => {};
-  const renderFoot = () => {
-    const foot = $("#sheetFoot"); foot.innerHTML = "";
-    const add = (label, primary, onClick) => {
-      const btn = document.createElement("button");
-      btn.type = "button"; btn.className = "btn" + (primary ? " primary" : ""); btn.textContent = label;
-      btn.addEventListener("click", onClick); foot.appendChild(btn);
-    };
-    if (data.trades.has(trade)) {
-      add("이 공사 빼기", false, () => { data.trades.delete(trade); data.items.delete(trade); afterChange(); closeSheet(); });
-    }
-    add("완료", true, closeSheet);
-  };
-  openSheet({
-    title: `${room} · ${trade}`,
-    returnFocus: cellOf,
-    build(body) {
-      const hint = document.createElement("p"); hint.className = "sheet-hint";
-      setHint = () => {
-        const n = pickedNames(data, trade).length;
-        hint.textContent = n ? `${n}개 골랐어요. 여러 개 고를 수 있어요.`
-          : data.trades.has(trade) ? "상품을 하나 이상 골라 주세요. 고르지 않으면 견적 요청을 보낼 수 없어요."
-          : "원하시는 상품을 골라 주세요(여러 개 가능).";
-      };
-      setHint(); body.appendChild(hint);
-      const list = document.createElement("div"); list.className = "product-grid";
-      list.setAttribute("role", "group"); list.setAttribute("aria-label", `${room} ${trade} 상품`);
-      (WEB.products[trade] || []).forEach(([name, sub]) => {
-        const b = document.createElement("button");
-        b.type = "button"; b.className = "product-chip";
-        const set0 = data.items.get(trade);
-        b.setAttribute("aria-pressed", String(!!(set0 && set0.has(name))));
-        const n = document.createElement("span"); n.textContent = name;
-        b.append(n);
-        if (sub) { const s = document.createElement("small"); s.textContent = sub; b.append(s); b.title = `${name} — ${sub}`; }
-        b.addEventListener("click", () => {
-          const set = data.items.get(trade) || new Set();
-          if (set.has(name)) set.delete(name); else set.add(name);
-          // 상품이 있으면 담기, 마지막 상품을 빼면 빈 칸으로
-          if (set.size) { data.items.set(trade, set); data.trades.add(trade); }
-          else { data.items.delete(trade); data.trades.delete(trade); }
-          b.setAttribute("aria-pressed", String(set.has(name)));
-          setHint(); renderFoot(); afterChange();
-        });
-        list.appendChild(b);
-      });
-      body.appendChild(list);
-    },
-    actions: [],
-  });
-  renderFoot();
+/** 아래 바 — 이전 · 다음(다음 화면 이름) · 마지막은 보내기. 위 진행 막대. 3D 도면은 폰이면 공간 고르기부터, 넓은 화면은 처음부터. */
+function updateNav() {
+  const list = steps(), i = Math.max(0, list.indexOf(current));
+  $("#progressBar").style.width = `${Math.round((i + 1) / list.length * 100)}%`;
+  $("#prevBtn").hidden = i === 0;
+  const last = current === "finish";
+  $("#nextBtn").hidden = last; $("#submitBtn").hidden = !last;
+  const next = list[i + 1], nextRoom = stepRoom(next);
+  $("#nextBtn span").textContent = nextRoom !== null ? `다음 · ${nextRoom}` : next === "finish" ? "다음 · 마무리" : "다음";
+  const showDock = wideScreen() || current !== "info";
+  $("#room3d").hidden = !showDock;
+  if (showDock) loadPreview();
+  syncSideHeight();
+}
+const navBusy = () => sending || performance.now() - stepAt < 350;   // 두 번 눌러 한 화면을 건너뛰지 않게
+$("#nextBtn").addEventListener("click", () => {
+  if (navBusy() || !stepReady(current)) return;
+  const list = steps(); goTo(list[list.indexOf(current) + 1]);
+});
+$("#prevBtn").addEventListener("click", () => {
+  if (navBusy()) return;
+  const list = steps(), i = list.indexOf(current);
+  if (i > 0) goTo(list[i - 1]);
+});
+
+/** 다음으로 가기 전 검사 — 문제가 있으면 그 자리에 빨간 안내를 띄우고 false. */
+function stepReady(id) {
+  if (id === "info") {
+    const bad = infoBad();
+    if (bad.length) { showBad(bad); return false; }
+    ["name", "phone", "address", "zip", "pyeong", "endDate"].forEach(clearInvalid);   // 지난번 빨간 표시가 남지 않게
+  } else if (id === "rooms") {
+    if (!state.rooms.size) { showRoomsErr("공사할 공간을 하나 이상 골라 주세요."); return false; }
+  } else if (stepRoom(id) !== null) {
+    const issue = roomIssue(stepRoom(id));
+    if (issue) { showRoomIssue(issue); return false; }
+  }
+  return true;
+}
+function showRoomsErr(text) {
+  $("#roomsErr").textContent = text; setInvalid("rooms");
+  reveal($("#roomsErr"));
+}
+/** 그 칸이 위 바와 아래 도면(폰) 사이 가운데 오게 화면을 옮긴다 — scrollIntoView는 아래 고정 묶음을 모른다. */
+function reveal(el) {
+  if (!el) return;
+  const top = 64, bottom = wideScreen() ? 0 : $("#side").getBoundingClientRect().height;
+  const r = el.getBoundingClientRect(), room = innerHeight - top - bottom;
+  const y = scrollY + r.top - top - Math.max(0, (room - r.height) / 2);
+  window.scrollTo({ top: Math.max(0, y), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 }
 
-// 공종 팝업 — 여러 공간에 같은 상품을 한 번에 담는다(앱 1304와 같은 구실 · 상품 필수, 사용자 결정 2026-10-07).
-// 공간과 상품을 고르고 'N곳에 담기' → 고른 공간 모두 그 상품으로(이미 담긴 공간은 새로 고른 상품으로 바뀜). 표에 없는 공간은 새 열.
-// 상품이 없는 공종(설정에 상품 0개)은 예전처럼 공간만 눌러 담기/빼기 — openTradeSheetRooms.
-function openTradeSheet(trade) {
-  const rowOf = () => $(`.row-btn[data-trade="${CSS.escape(trade)}"]`);
-  const rooms = [...WEB.rooms].sort(koSort).filter(r => tradeAllowed(r, trade));
-  const products = WEB.products[trade] || [];
-  if (!rooms.length || !products.length) { openTradeSheetRooms(trade, rooms, rowOf); return; }
-  const selRooms = new Set(), selItems = new Set();
-  let applyBtn = null;
-  const refresh = () => {
-    if (!applyBtn) return;
-    applyBtn.disabled = !(selRooms.size && selItems.size);
-    applyBtn.textContent = selRooms.size ? `${selRooms.size}곳에 담기` : "담기";
+// ── 공간 페이지 ───────────────────────────────────────────────────────
+function renderRoomChips() {
+  const room = stepRoom(current), wrap = $("#roomChips");
+  wrap.textContent = "";
+  let mine = null;
+  roomOrder().forEach(r => {
+    const c = document.createElement("button");
+    c.type = "button"; c.className = "chip";
+    c.setAttribute("aria-pressed", String(r === room));
+    if (roomHasWork(r)) { const dot = document.createElement("i"); dot.className = "ok"; dot.setAttribute("aria-hidden", "true"); c.appendChild(dot); }
+    c.append(r);
+    c.setAttribute("aria-label", `${r}${roomHasWork(r) ? " — 상품 고름" : ""}`);
+    c.addEventListener("click", () => goTo("room:" + r));
+    if (r === room) mine = c;
+    wrap.appendChild(c);
+  });
+  const edit = document.createElement("button");
+  edit.type = "button"; edit.className = "chip edit"; edit.textContent = "공간 바꾸기";
+  edit.addEventListener("click", () => goTo("rooms"));
+  wrap.appendChild(edit);
+  if (mine) wrap.scrollLeft = Math.max(0, mine.offsetLeft - wrap.clientWidth / 2 + mine.offsetWidth / 2);
+}
+function renderRoomPage() {
+  const room = stepRoom(current), data = state.rooms.get(room);
+  if (!data) return;
+  const order = roomOrder();
+  renderRoomChips();
+  const title = $("#roomTitle"); title.textContent = `${room}. `;
+  const sub = document.createElement("span");
+  sub.textContent = `${order.indexOf(room) + 1} / ${order.length} · 필요한 공사의 상품을 골라 주세요.`;
+  title.appendChild(sub);
+  // 부분 시공 — 공간 평형(공용(전체)는 앱이 전체 평형을 그대로 쓰므로 칸이 없다)
+  const showPy = state.scope === "부분" && room !== CONFIG.WHOLE_HOUSE_ROOM;
+  $("#roomPyWrap").hidden = !showPy;
+  if (showPy) $("#roomPy").value = data.pyeong;
+  clearInvalid("room");
+  renderTradeList();
+}
+$("#roomPy").addEventListener("input", e => {
+  const data = state.rooms.get(stepRoom(current));
+  let v = e.target.value.replace(/[^\d.]/g, "");
+  const i = v.indexOf("."); if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, "").slice(0, 1);
+  e.target.value = v;
+  if (data) { data.pyeong = v; saveDraft(); }
+});
+
+let tradeSeq = 0;
+function renderTradeList() {
+  const room = stepRoom(current), wrap = $("#tradeList");
+  wrap.textContent = "";
+  const trades = roomTrades(room);
+  if (!trades.length) {
+    const e = document.createElement("div"); e.className = "empty";
+    e.textContent = "이 공간에서 고를 수 있는 공사가 없어요. 이 공간은 빼고 요청사항에 적어 주세요.";
+    wrap.appendChild(e); return;
+  }
+  trades.forEach(trade => wrap.appendChild(tradeItem(room, trade)));
+}
+/** 공종 한 줄 — 이름 · 고른 상품(첫 이름 외 N개). 누르면 상품이 펼쳐지고, 고르면 담기 · 모두 빼면 빠진다(상품 필수). */
+function tradeItem(room, trade) {
+  const data = state.rooms.get(room);
+  const hasProducts = productNames(trade).length > 0;
+  const box = document.createElement("div"); box.className = "trade"; box.dataset.trade = trade;
+  const head = document.createElement("button"); head.type = "button"; head.className = "trade-head";
+  const nm = document.createElement("span"); nm.className = "t-name"; nm.textContent = trade;
+  const sub = document.createElement("span"); sub.className = "t-sub";
+  const arrow = document.createElement("span"); arrow.className = "t-arrow"; arrow.setAttribute("aria-hidden", "true"); arrow.textContent = "›";
+  head.append(nm, sub);
+  const paint = () => {
+    const picked = pickedNames(data, trade), on = data.trades.has(trade);
+    const need = on && hasProducts && !picked.length;   // 예전 초안 · 설정 변경으로 상품 없이 담긴 공사
+    box.classList.toggle("on", on && !need); box.classList.toggle("need", need);
+    sub.textContent = picked.length ? (picked.length > 1 ? `${picked[0]} 외 ${picked.length - 1}개` : picked[0])
+      : need ? "상품을 골라 주세요" : on ? "선택함" : hasProducts ? `상품 ${productNames(trade).length}` : "필요하면 누르기";
+    head.setAttribute("aria-label", `${trade}: ${sub.textContent}`);
   };
-  openSheet({
-    title: `${trade} — 여러 공간에 한 번에`,
-    returnFocus: rowOf,
-    build(body) {
-      const p = document.createElement("p"); p.className = "sheet-hint";
-      p.textContent = "공간과 상품을 고르면 고른 공간 모두에 같은 상품이 담겨요. 이미 담긴 공간은 새로 고른 상품으로 바뀝니다.";
-      const h1 = document.createElement("div"); h1.className = "sheet-group"; h1.textContent = "공간";
-      const list = document.createElement("div"); list.className = "chips";
-      list.setAttribute("role", "group"); list.setAttribute("aria-label", `${trade} 담을 공간`);
-      rooms.forEach(room => {
-        const c = document.createElement("button");
-        c.type = "button"; c.className = "chip"; c.textContent = room;
-        const had = state.rooms.has(room) && state.rooms.get(room).trades.has(trade);
-        if (had) { const s = document.createElement("small"); s.textContent = "담김"; c.appendChild(s); }
-        c.setAttribute("aria-label", had ? `${room} (이미 담김)` : room);
-        c.setAttribute("aria-pressed", "false");
-        c.addEventListener("click", () => {
-          if (selRooms.has(room)) selRooms.delete(room); else selRooms.add(room);
-          c.setAttribute("aria-pressed", String(selRooms.has(room)));
-          refresh();
-        });
-        list.appendChild(c);
-      });
-      const h2 = document.createElement("div"); h2.className = "sheet-group"; h2.textContent = "상품 (여러 개 가능)";
-      const grid = document.createElement("div"); grid.className = "product-grid";
-      grid.setAttribute("role", "group"); grid.setAttribute("aria-label", `${trade} 상품`);
-      products.forEach(([name, sub]) => {
-        const b = document.createElement("button");
-        b.type = "button"; b.className = "product-chip"; b.setAttribute("aria-pressed", "false");
-        const n = document.createElement("span"); n.textContent = name;
-        b.append(n);
-        if (sub) { const s = document.createElement("small"); s.textContent = sub; b.append(s); b.title = `${name} — ${sub}`; }
-        b.addEventListener("click", () => {
-          if (selItems.has(name)) selItems.delete(name); else selItems.add(name);
-          b.setAttribute("aria-pressed", String(selItems.has(name)));
-          refresh();
-        });
-        grid.appendChild(b);
-      });
-      body.append(p, h1, list, h2, grid);
-    },
-    actions: [],
-  });
-  const foot = $("#sheetFoot"); foot.innerHTML = "";
-  applyBtn = document.createElement("button");
-  applyBtn.type = "button"; applyBtn.className = "btn primary";
-  applyBtn.addEventListener("click", () => {
-    if (!selRooms.size || !selItems.size) return;
-    const names = productNames(trade).filter(n => selItems.has(n));
-    const count = selRooms.size;
-    selRooms.forEach(room => {
-      if (!state.rooms.has(room)) state.rooms.set(room, newRoom());
-      const data = state.rooms.get(room);
-      data.trades.add(trade); data.items.set(trade, new Set(names));
+  paint();
+  if (!hasProducts) {
+    // 상품이 없는 공종 — 눌러서 담기 / 빼기
+    head.setAttribute("aria-pressed", String(data.trades.has(trade)));
+    head.addEventListener("click", () => {
+      if (data.trades.has(trade)) data.trades.delete(trade); else data.trades.add(trade);
+      head.setAttribute("aria-pressed", String(data.trades.has(trade)));
+      paint(); afterChange();
+      if (data.trades.has(trade)) previewBlink(room, trade);
     });
-    afterChange(); closeSheet();
-    toast(`${trade} — ${count}곳에 담았어요.`);
+    box.appendChild(head);
+    return box;
+  }
+  head.appendChild(arrow);
+  const open = openTrade === trade;
+  const bodyId = `trade-body-${++tradeSeq}`;
+  head.setAttribute("aria-expanded", String(open)); head.setAttribute("aria-controls", bodyId);
+  head.addEventListener("click", () => {
+    openTrade = openTrade === trade ? null : trade;
+    renderTradeList();
+    const again = $$("#tradeList .trade").find(b => b.dataset.trade === trade);
+    if (again) {
+      const h = $(".trade-head", again); h.focus({ preventScroll: true });
+      if (openTrade === trade) again.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    }
   });
-  foot.appendChild(applyBtn);
-  refresh();
+  box.appendChild(head);
+  if (!open) return box;
+  const body = document.createElement("div"); body.className = "trade-body"; body.id = bodyId;
+  const hint = document.createElement("p"); hint.className = "t-hint";
+  hint.textContent = "여러 개 고를 수 있어요. 고르면 아래 도면에 들어가는 자리가 깜빡여요.";
+  const grid = document.createElement("div"); grid.className = "product-grid";
+  grid.setAttribute("role", "group"); grid.setAttribute("aria-label", `${room} ${trade} 상품`);
+  (WEB.products[trade] || []).forEach(([name, subText]) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "product-chip";
+    const set0 = data.items.get(trade);
+    b.setAttribute("aria-pressed", String(!!(set0 && set0.has(name))));
+    const n = document.createElement("span"); n.textContent = name;
+    b.append(n);
+    if (subText) { const s = document.createElement("small"); s.textContent = subText; b.append(s); b.title = `${name} — ${subText}`; }
+    b.addEventListener("click", () => {
+      const set = data.items.get(trade) || new Set();
+      const adding = !set.has(name);
+      if (adding) set.add(name); else set.delete(name);
+      // 상품이 있으면 담기, 마지막 상품을 빼면 빠진다(상품 필수 — 사용자 결정 2026-10-07)
+      if (set.size) { data.items.set(trade, set); data.trades.add(trade); }
+      else { data.items.delete(trade); data.trades.delete(trade); }
+      b.setAttribute("aria-pressed", String(set.has(name)));
+      paint(); afterChange();
+      if (adding) previewBlink(room, trade);
+    });
+    grid.appendChild(b);
+  });
+  body.append(hint, grid);
+  box.appendChild(body);
+  return box;
 }
-// 상품이 없는 공종 — 이 공사가 필요한 공간만 고른다(표에 없는 공간을 누르면 열이 생긴다).
-function openTradeSheetRooms(trade, rooms, rowOf) {
-  openSheet({
-    title: `${trade} — 필요한 공간`,
-    returnFocus: rowOf,
-    build(body) {
-      const p = document.createElement("p"); p.className = "sheet-hint";
-      p.textContent = rooms.length
-        ? "이 공사가 필요한 공간을 모두 눌러 주세요. 표에 없는 공간은 새 열로 생깁니다."
-        : "이 공사는 상담 때 함께 정해요.";
-      body.appendChild(p);
-      if (!rooms.length) return;
-      const list = document.createElement("div"); list.className = "chips";
-      list.setAttribute("role", "group"); list.setAttribute("aria-label", `${trade} 필요한 공간`);
-      rooms.forEach(room => {
-        const c = document.createElement("button");
-        c.type = "button"; c.className = "chip"; c.textContent = room;
-        const on = () => state.rooms.has(room) && state.rooms.get(room).trades.has(trade);
-        c.setAttribute("aria-pressed", String(on()));
-        c.addEventListener("click", () => {
-          if (!state.rooms.has(room)) state.rooms.set(room, newRoom());
-          const data = state.rooms.get(room);
-          if (data.trades.has(trade)) { data.trades.delete(trade); data.items.delete(trade); }
-          else data.trades.add(trade);
-          c.setAttribute("aria-pressed", String(on()));
-          afterChange();
-        });
-        list.appendChild(c);
-      });
-      body.appendChild(list);
-    },
-    actions: [{ label: "완료", primary: true, onClick: closeSheet }],
+
+/** 공간 페이지 검사 — 상품 없이 담긴 공사 · 상품이 하나도 없는 공간. 문제가 없으면 null. */
+function roomIssue(room) {
+  const data = state.rooms.get(room);
+  if (!data) return null;
+  const need = roomTrades(room).filter(t => data.trades.has(t) && productNames(t).length && !pickedNames(data, t).length);
+  if (need.length) return { room, text: `${need.join(" · ")} 상품을 골라 주세요. 고르지 않으면 견적 요청을 보낼 수 없어요.`, trade: need[0] };
+  if (!roomHasWork(room)) return { room, text: `${room}에 고른 상품이 없어요. 상품을 고르거나 이 공간을 빼 주세요.`, empty: true };
+  return null;
+}
+function showRoomIssue(issue) {
+  if (issue.trade && openTrade !== issue.trade) { openTrade = issue.trade; renderTradeList(); }
+  $("#roomErrText").textContent = issue.text;
+  $("#roomRemoveBtn").hidden = !issue.empty;
+  setInvalid("room");
+  const target = issue.trade ? $$("#tradeList .trade").find(b => b.dataset.trade === issue.trade) : $("#roomErr");
+  reveal(target);
+}
+$("#roomRemoveBtn").addEventListener("click", () => {
+  const room = stepRoom(current);
+  if (room === null) return;
+  const list = steps(), i = list.indexOf(current);
+  state.rooms.delete(room);
+  afterChange();
+  toast(`${room} — 공간에서 뺐어요.`);
+  const after = steps();
+  goTo(state.rooms.size ? after[Math.min(i, after.length - 1)] : "rooms");   // 마지막 공간을 뺐으면 공간 고르기로
+});
+
+// ── 마무리 — 요청 내용 확인(고치기 = 그 화면으로) ───────────────────────
+// 공간 · 공종 · 상품 이름은 설정에서 오므로 글자로만 넣는다(innerHTML 금지).
+function renderSummary() {
+  const box = $("#summary");
+  box.textContent = "";
+  const row = (title, lines, step, bad) => {
+    const d = document.createElement("div"); d.className = "sum-row";
+    const left = document.createElement("div");
+    const k = document.createElement("div"); k.className = "k"; k.textContent = title;
+    left.appendChild(k);
+    lines.forEach(t => { const v = document.createElement("div"); v.className = "v" + (bad ? " bad" : ""); v.textContent = t; left.appendChild(v); });
+    const b = document.createElement("button"); b.type = "button"; b.className = "link-btn"; b.textContent = "고치기";
+    b.setAttribute("aria-label", `${title} 고치기`);
+    b.addEventListener("click", () => goTo(step));
+    d.append(left, b); box.appendChild(d);
+  };
+  const py = parseFloat($("#pyeong").value);
+  const s = $("#startDate").value, e = $("#endDate").value;
+  const basics = [`${py > 0 ? py + "평" : "평형 미입력"} · ${state.scope === "부분" ? "부분 시공" : "전체 시공"}`];
+  if (s || e) basics.push(`희망 기간 ${s || "?"} ~ ${e || "?"}`);
+  row("평형 · 일정", basics, "info");
+  const order = roomOrder();
+  if (!order.length) { row("공사할 공간", ["아직 고른 공간이 없어요."], "rooms", true); return; }
+  order.forEach(room => {
+    const data = state.rooms.get(room);
+    const lines = roomTrades(room).filter(t => data.trades.has(t)).map(t => {
+      const picked = pickedNames(data, t);
+      return picked.length ? `${t}: ${picked.join(", ")}` : `${t}: 상품을 골라 주세요`;
+    });
+    const issue = roomIssue(room);
+    const py2 = state.scope === "부분" && room !== CONFIG.WHOLE_HOUSE_ROOM && parseFloat(data.pyeong) > 0 ? ` · ${data.pyeong}평` : "";
+    row(room + py2, lines.length ? lines : ["아직 고른 상품이 없어요."], "room:" + room, !!issue);
   });
 }
+
+// 폰에서 입력칸을 누르면(키보드) 아래 도면을 잠깐 숨긴다 — 칸이 가리지 않게.
+$("#form").addEventListener("focusin", e => {
+  if (!wideScreen() && e.target.matches("input:not([type=checkbox]):not([type=file]), textarea")) $("#side").classList.add("typing");
+});
+$("#form").addEventListener("focusout", () => {
+  setTimeout(() => { if (!$("#form").contains(document.activeElement) || !document.activeElement.matches("input, textarea")) { $("#side").classList.remove("typing"); syncSideHeight(); } }, 60);
+});
+/** 아래 고정 묶음의 높이 → 본문 아래 여백(--side-h). 넓은 화면은 오른쪽이라 0. */
+function syncSideHeight() {
+  const h = wideScreen() ? 0 : Math.ceil($("#side").getBoundingClientRect().height);
+  document.documentElement.style.setProperty("--side-h", `${h}px`);
+}
+if (window.ResizeObserver) new ResizeObserver(syncSideHeight).observe($("#side"));
+addEventListener("resize", () => { updateNav(); });
 
 // ── 사진 (브라우저에서 줄여서 보낸다: 긴 변 1600px, JPEG) ────────────────
 $("#phAdd").addEventListener("click", () => $("#photoInput").click());
@@ -1487,14 +1475,16 @@ $("#addrBtn").addEventListener("click", openAddressSearch);
 $("#address").addEventListener("click", () => { if ($("#address").readOnly) openAddressSearch(); });
 $("#address").addEventListener("keydown", e => { if ($("#address").readOnly && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openAddressSearch(); } });
 $("#addrClose").addEventListener("click", () => $("#addrLayer").classList.remove("on"));
+document.addEventListener("keydown", e => { if (e.key === "Escape") $("#addrLayer").classList.remove("on"); });
 $("#addrLayer").addEventListener("click", e => { if (e.target.id === "addrLayer") e.currentTarget.classList.remove("on"); });
 
 // ── 완성 모습 미리보기 (3D 도면) ─────────────────────────────────────
-// 표의 공간 · 공종을 대표 평면(59 · 84 · 105㎡, 4베이 판상형)의 방 벽 · 바닥 · 창에 칠한다. 보는 것만 — 전송 · 초안과 무관.
-// 3D 파일(three.min.js → room3d.js)은 카드가 화면에 가까워질 때 한 번만 불러온다(같은 사이트 파일 — CSP 'self').
-const PREVIEW_FILES = ["three.min.js", "room3d.js?v=20261009"];
+// 고른 공간 · 공종을 대표 평면(59 · 84 · 105㎡, 4베이 판상형)의 방 벽 · 바닥 · 창 · 문 · 조명에 칠한다. 보는 것만 — 전송 · 초안과 무관.
+// 고른 내용은 페이지를 넘겨도 그대로 남고, 지금 공간은 이름표 강조 · 시점 이동, 상품을 고르면 들어가는 자리가 깜빡인다(사용자 결정 2026-10-09).
+// 3D 파일(three.min.js → room3d.js)은 도면이 처음 보일 때 한 번만 불러온다(같은 사이트 파일 — CSP 'self').
+const PREVIEW_FILES = ["three.min.js", "room3d.js?v=20261009b"];
 // 공종 → 칠할 부위. 공종 이름은 설정과 글자까지 같아야 한다(다른 공종은 여기에 줄을 더한다).
-// whole = 공용(전체) 열일 때 칠할 방 종류(null = 모든 방), parts(방 종류) = 그 방에서 칠할 면.
+// whole = 공용(전체)일 때 칠할 방 종류(null = 모든 방), parts(방 종류) = 그 방에서 칠할 면.
 const PREVIEW_DRY = ["living", "kitchen", "hall", "master", "bed", "alpha", "dress", "pantry", "entry"];
 const PREVIEW_TRADES = {
   "도배": { color: "#0071E3", whole: PREVIEW_DRY, parts: () => ["wall"] },
@@ -1517,6 +1507,7 @@ const PREVIEW_FIXED = {
 };
 let preview = null;          // Room3D 화면(불러온 뒤)
 let previewLoad = null;      // 불러오는 중 · 끝(Promise)
+let previewInfo = null;      // 마지막으로 칠한 내용(깜빡일 자리 찾기)
 let previewPlan = "84", previewMode = "e", previewPlanManual = false;
 
 /** 평형 → 대표 평면(고객이 칩을 누르면 그 뒤로는 고른 것). */
@@ -1524,7 +1515,7 @@ function previewAutoPlan() {
   const py = parseFloat($("#pyeong").value);
   return py > 0 ? (py < 28 ? "59" : py < 39 ? "84" : "105") : "84";
 }
-/** 공간 이름 → 방 id 목록(공용(전체)는 "ALL"). 설정의 공간과 표의 공간 모두 같은 규칙이라 표를 바꿔도 자리가 그대로다.
+/** 공간 이름 → 방 id 목록(공용(전체)는 "ALL"). 설정의 공간과 고른 공간 모두 같은 규칙이라 고른 것을 바꿔도 자리가 그대로다.
     names: 방 id → 라벨로 쓸 공간 이름(한 방에 딱 맞는 이름만 — 발코니 이름은 다용도실 라벨을 바꾸지 않는다). */
 function previewSlots(plan, mode) {
   const ids = new Set(Room3D.rooms(plan, mode).map(r => r.id));
@@ -1554,18 +1545,20 @@ function previewSlots(plan, mode) {
   });
   return { slots, names };
 }
-/** 표 → 칠할 면 목록 · 방 이름 · 범례 거리. 공용(전체)를 먼저 칠하고 개별 공간이 그 위에(같은 면이면 개별 공간 색). */
+/** 고른 것 → 칠할 면 목록 · 방 이름 · 범례 거리. 공용(전체)를 먼저 칠하고 개별 공간이 그 위에(같은 면이면 개별 공간 색).
+    byRoom: 공간 → 공종 → 칠한 면들(깜빡이기 · 지금 공간 범례). */
 function previewPaint(plan, mode) {
   const rooms = Room3D.rooms(plan, mode), kindOf = new Map(rooms.map(r => [r.id, r.kind]));
   const partsOf = new Map(rooms.map(r => [r.id, new Set(r.parts)]));   // 그 방에 있는 면(문이 없는 방 · 창이 없는 방)
   const { slots, names: labels } = previewSlots(plan, mode), whole = CONFIG.WHOLE_HOUSE_ROOM;
-  const list = [], legend = new Map(), skipTrades = new Set(), skipRooms = new Set(), noSpot = new Set();
+  const list = [], legend = new Map(), byRoom = new Map(), skipTrades = new Set(), skipRooms = new Set(), noSpot = new Set();
+  const order = Object.keys(PREVIEW_TRADES), rank = t => order.indexOf(t);
   const entries = [...state.rooms].sort((a, b) => (b[0] === whole) - (a[0] === whole));
   entries.forEach(([room, data]) => {
-    const target = slots.get(room);
-    // 같은 방 같은 면이면 표의 순서 뒤쪽 공종이 이긴다(예: 화장실은 타일보다 욕실 색).
-    const order = Object.keys(PREVIEW_TRADES), rank = t => order.indexOf(t);
-    [...data.trades].sort((a, b) => rank(a) - rank(b)).forEach(trade => {
+    const target = slots.get(room), mine = new Map();
+    byRoom.set(room, mine);
+    // 같은 방 같은 면이면 순서 뒤쪽 공종이 이긴다(예: 화장실은 타일보다 욕실 색).
+    [...data.trades].filter(t => tradeAllowed(room, t)).sort((a, b) => rank(a) - rank(b)).forEach(trade => {
       const rule = PREVIEW_TRADES[trade];
       if (!rule) { skipTrades.add(trade); return; }
       if (!target || !target.length) { skipRooms.add(room); return; }
@@ -1573,59 +1566,78 @@ function previewPaint(plan, mode) {
       const hits = [];
       ids.forEach(id => rule.parts(kindOf.get(id)).forEach(part => { if (partsOf.get(id).has(part)) hits.push({ id, part, color: rule.color }); }));
       if (!hits.length) { noSpot.add(`${room} ${trade}`); return; }   // 예: 문이 없는 거실의 문·문틀
+      mine.set(trade, hits);
       if (!legend.has(trade)) legend.set(trade, { color: rule.color, parts: new Set(), rooms: [] });
       const lg = legend.get(trade);
       if (!lg.rooms.includes(room)) lg.rooms.push(room);
       hits.forEach(h => { list.push(h); lg.parts.add(h.part); });
     });
   });
-  // 작은 방(드레스룸 · 팬트리 · 다용도실 · 발코니 …) 이름은 칠했거나 표의 공간일 때만 — 폰에서 글자가 겹치지 않게.
+  // 작은 방(드레스룸 · 팬트리 · 다용도실 · 발코니 …) 이름은 칠했거나 고른 공간일 때만 — 폰에서 글자가 겹치지 않게.
   const lit = new Set(list.map(h => h.id));
   ["dress", "pantry", "storage", "utility", "balcony", "hall"].forEach(id => { if (!(id in labels) && !lit.has(id)) labels[id] = ""; });
-  return { list, labels, legend, skipTrades, skipRooms, noSpot };
+  return { list, labels, legend, byRoom, slots, skipTrades, skipRooms, noSpot };
 }
-function renderPreviewLegend(info) {
-  // 공종 · 공간 이름은 설정에서 오므로 글자로만 넣는다(innerHTML 금지).
+const partsText = parts => ["wall", "floor", "window", "door", "light"].filter(p => parts.has(p)).map(p => PREVIEW_PART_NAME[p]).join(" · ");
+/** 범례 — 공간 페이지면 그 공간 것만, 다른 화면이면 모두. 공종 · 공간 이름은 글자로만 넣는다(innerHTML 금지). */
+function renderPreviewLegend(info, room) {
   const box = $("#room3dLegend");
   box.textContent = "";
-  const muted = (text, full) => { const e = document.createElement("span"); e.className = "muted" + (full ? " full" : ""); e.textContent = text; box.appendChild(e); };
-  if (!info.legend.size) {
-    muted("표에서 칸을 고르면 그 공사가 방에 색으로 표시돼요.", true);
+  const muted = text => { const e = document.createElement("span"); e.className = "muted"; e.textContent = text; box.appendChild(e); };
+  const item = (trade, color, parts, where) => {
+    const it = document.createElement("span");
+    const dot = document.createElement("i"); dot.className = "room3d-dot"; dot.style.backgroundColor = color;
+    it.append(dot, `${trade} → ${partsText(parts)}`);
+    if (where) { const s = document.createElement("span"); s.className = "muted"; s.textContent = ` · ${where}`; it.appendChild(s); }
+    box.appendChild(it);
+  };
+  const said = [];
+  if (room !== null) {
+    const data = state.rooms.get(room), mine = info.byRoom.get(room) || new Map();
+    mine.forEach((hits, trade) => { item(trade, PREVIEW_TRADES[trade].color, new Set(hits.map(h => h.part))); said.push(trade); });
+    const others = data ? [...data.trades].filter(t => tradeAllowed(room, t) && !mine.has(t)) : [];
+    if (info.skipRooms.has(room)) muted("대표 평면에 없는 공간이에요. 고른 공사는 그대로 접수돼요.");
+    else if (others.length) muted(`도면에 표시하지 않는 공사: ${others.join(" · ")}`);
+    if (!mine.size && !others.length) muted("상품을 고르면 들어가는 자리가 도면에서 깜빡여요.");
+  } else {
+    if (!info.legend.size) muted(current === "info" ? "공간마다 상품을 고르면 도면에 색으로 표시돼요." : "고른 공사가 도면에 색으로 표시돼요.");
+    info.legend.forEach((lg, trade) => {
+      item(trade, lg.color, lg.parts, lg.rooms.slice(0, 3).join(", ") + (lg.rooms.length > 3 ? ` 외 ${lg.rooms.length - 3}` : ""));
+      said.push(`${trade}: ${lg.rooms.join(", ")}`);
+    });
+    if (info.skipTrades.size) muted(`도면에 표시하지 않는 공사: ${[...info.skipTrades].join(" · ")}`);
+    if (info.skipRooms.size) muted(`대표 평면에 없는 공간: ${[...info.skipRooms].join(" · ")}`);
   }
-  info.legend.forEach((lg, trade) => {
-    const item = document.createElement("span");
-    const dot = document.createElement("i"); dot.className = "room3d-dot"; dot.style.backgroundColor = lg.color;
-    const parts = ["wall", "floor", "window", "door", "light"].filter(p => lg.parts.has(p)).map(p => PREVIEW_PART_NAME[p]).join(" · ");
-    const where = lg.rooms.slice(0, 3).join(", ") + (lg.rooms.length > 3 ? ` 외 ${lg.rooms.length - 3}` : "");
-    const sub = document.createElement("span"); sub.className = "muted"; sub.textContent = ` · ${where}`;
-    item.append(dot, `${trade} → ${parts}`, sub);
-    box.appendChild(item);
-  });
-  if (info.skipTrades.size) muted(`도면에 표시하지 않는 공사: ${[...info.skipTrades].join(" · ")}`, true);
-  if (info.skipRooms.size) muted(`대표 평면에 없는 공간: ${[...info.skipRooms].join(" · ")}`, true);
-  if (info.noSpot.size) muted(`대표 평면에 표시할 자리가 없는 칸: ${[...info.noSpot].join(" · ")}`, true);
-  const said = [...info.legend].map(([t, lg]) => `${t}: ${lg.rooms.join(", ")}`);
-  $("#room3dStage").setAttribute("aria-label", said.length
-    ? `완성 모습 미리보기 — ${Room3D.PLANS[previewPlan].label} 대표 평면, ${said.join(" / ")}`
-    : `완성 모습 미리보기 — ${Room3D.PLANS[previewPlan].label} 대표 평면, 아직 칠한 공사 없음`);
+  $("#room3dStage").setAttribute("aria-label", `완성 모습 미리보기 — ${Room3D.PLANS[previewPlan].label} 대표 평면` +
+    (room !== null ? `, ${room}` : "") + (said.length ? `, ${said.join(" / ")}` : ", 아직 칠한 공사 없음"));
 }
 function updateRoomPreview() {
-  const card = $("#room3d");
-  card.hidden = state.rooms.size === 0;
   if (!previewPlanManual) previewPlan = previewAutoPlan();
   $$("#room3dPlans [data-plan]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.plan === previewPlan)));
   $$("#room3dModes [data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === previewMode)));
-  if (card.hidden) return;
-  if (!window.Room3D) { if (!window.IntersectionObserver) loadPreview(); return; }
-  const info = previewPaint(previewPlan, previewMode);
-  renderPreviewLegend(info);
+  const room = stepRoom(current);
+  $("#dockRoom").textContent = room !== null ? room : current === "rooms" ? (state.rooms.size ? `고른 공간 ${state.rooms.size}곳` : "공간을 골라 주세요") : current === "finish" ? "고른 공사 모두" : "";
+  if (!window.Room3D) return;
+  $("#dockPlanBtn").textContent = `${Room3D.PLANS[previewPlan].label} · ${previewMode === "e" ? "확장형" : "비확장"}`;
+  const info = previewInfo = previewPaint(previewPlan, previewMode);
+  renderPreviewLegend(info, room);
   if (!preview) return;
   preview.setPlan(previewPlan, previewMode);
   preview.setLabels(info.labels);
-  // 상품 팝업이 열려 있으면 가려서 안 보이므로 닫을 때 보인다(playPreviewSweeps).
-  preview.setHighlights(info.list, { defer: sheetOpen() });
+  preview.setHighlights(info.list);
+  // 지금 공간 — 이름표 강조 + 그 방 쪽으로 시점 이동(공용(전체) · 평면에 없는 공간이면 집 전체)
+  const target = room !== null ? info.slots.get(room) : null;
+  const ids = Array.isArray(target) && target.length ? target : null;
+  preview.setActive(ids || []);
+  preview.focus(ids);
 }
-function playPreviewSweeps() { if (preview) preview.play(); }
+/** 방금 고른 공사가 들어가는 자리를 깜빡인다. */
+function previewBlink(room, trade) {
+  if (!preview || !previewInfo) return;
+  const mine = previewInfo.byRoom.get(room);
+  const hits = mine && mine.get(trade);
+  if (hits) preview.blink(hits);
+}
 function loadPreview() {
   if (previewLoad) return previewLoad;
   const msg = $("#room3dMsg");
@@ -1644,71 +1656,28 @@ function loadPreview() {
 // 칩 — 도면 크기 · 발코니(보는 것만 바뀐다)
 $$("#room3dPlans [data-plan]").forEach(b => b.addEventListener("click", () => { previewPlanManual = true; previewPlan = b.dataset.plan; updateRoomPreview(); }));
 $$("#room3dModes [data-mode]").forEach(b => b.addEventListener("click", () => { previewMode = b.dataset.mode; updateRoomPreview(); }));
-// 카드가 화면에 가까워지면 불러온다(숨은 동안은 보이지 않으므로 불리지 않는다).
-if (window.IntersectionObserver) {
-  new IntersectionObserver((list, io) => {
-    if (list.some(e => e.isIntersecting)) { io.disconnect(); loadPreview(); }
-  }, { rootMargin: "400px 0px" }).observe($("#room3d"));
+// 폰: 도면 크기 칩은 '84㎡ · 확장형'을 눌러 펼친다 · 도면 접기(이 브라우저에 기억)
+$("#dockPlanBtn").addEventListener("click", () => {
+  const open = $("#room3d").classList.toggle("opts-open");
+  $("#dockPlanBtn").setAttribute("aria-expanded", String(open));
+  if (open) setDockCollapsed(false);
+});
+const DOCK_KEY = "estimate-dock-collapsed";
+function setDockCollapsed(on) {
+  $("#room3d").classList.toggle("collapsed", on);
+  $("#dockToggle").textContent = on ? "펼치기" : "접기";
+  $("#dockToggle").setAttribute("aria-expanded", String(!on));
+  try { localStorage.setItem(DOCK_KEY, on ? "1" : ""); } catch {}
+  syncSideHeight();
 }
+$("#dockToggle").addEventListener("click", () => setDockCollapsed(!$("#room3d").classList.contains("collapsed")));
+try { if (localStorage.getItem(DOCK_KEY) === "1") setDockCollapsed(true); } catch {}
 
-// ── 요약 바 ─────────────────────────────────────────────────────────
+// ── 아래 바 · 도면 · 마무리 요약 다시 그리기 ────────────────────────────
 function updateBar() {
-  const rooms = state.rooms.size;
-  let trades = 0; state.rooms.forEach(r => trades += r.trades.size);
-  const py = parseFloat($("#pyeong").value);
-  const parts = [`<b>공간 ${rooms}</b> · 공사 ${trades}건`];
-  if (py > 0) parts.push(`${py}평`);
-  if (state.photos.length) parts.push(`사진 ${state.photos.length}`);
-  $("#barSum").innerHTML = parts.join(" · ");
-  renderSide(rooms, trades, py);
+  updateNav();
+  if (current === "finish") renderSummary();
   updateRoomPreview();
-}
-
-// 요청 요약 카드(넓은 화면) — 공간 · 공종 이름은 설정에서 오므로 글자로만 넣는다(innerHTML 금지).
-function renderSide(rooms, trades, py) {
-  $("#sideCount").textContent = `공간 ${rooms} · 공사 ${trades}건`;
-  const body = $("#sideBody");
-  body.textContent = "";
-  const row = (k, v) => {
-    const d = document.createElement("div"); d.className = "side-row";
-    const a = document.createElement("span"); a.className = "k"; a.textContent = k;
-    const b = document.createElement("span"); b.className = "v"; b.textContent = v;
-    d.append(a, b); body.appendChild(d);
-  };
-  row("전체 평형", py > 0 ? `${py}평` : "—");
-  row("시공 범위", state.scope === "부분" ? "부분 시공" : "전체 시공");
-  const list = document.createElement("div"); list.className = "side-rooms";
-  const ordered = WEB.rooms.filter(r => state.rooms.has(r));
-  if (!ordered.length) {
-    const e = document.createElement("div"); e.className = "side-empty";
-    e.textContent = "공사할 공간을 골라 주세요.";
-    list.appendChild(e);
-  }
-  ordered.forEach(room => {
-    const v = state.rooms.get(room);
-    const b = document.createElement("button"); b.type = "button"; b.className = "side-room";
-    const t = document.createElement("b");
-    const py2 = state.scope === "부분" && room !== CONFIG.WHOLE_HOUSE_ROOM && parseFloat(v.pyeong) > 0 ? ` · ${v.pyeong}평` : "";
-    t.textContent = room + py2;
-    const s = document.createElement("span");
-    const names = WEB.trades.filter(x => v.trades.has(x));
-    let picked = 0; v.items.forEach(set => picked += set.size);
-    s.textContent = names.length ? names.join(" · ") + (picked ? ` · 상품 ${picked}개` : "") : "아직 고른 상품이 없어요";
-    b.append(t, s);
-    b.addEventListener("click", () => {
-      const th = $$(".mx .col-head").find(c => c.dataset.room === room);
-      if (!th) return;
-      const behavior = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-      $("#matrixWrap").scrollIntoView({ behavior, block: "start" });
-      const sc = $("#matrixWrap .mx-scroll"), corner = $("#matrixWrap .corner");
-      if (sc) sc.scrollTo({ left: Math.max(0, th.offsetLeft - (corner ? corner.offsetWidth : 0) - 12), behavior });
-      th.classList.add("flash"); setTimeout(() => th.classList.remove("flash"), 1400);
-      th.focus({ preventScroll: true });   // 키보드 · 화면낭독기도 그 열로
-    });
-    list.appendChild(b);
-  });
-  body.appendChild(list);
-  if (state.photos.length) row("현장 사진", `${state.photos.length}장`);
 }
 
 // ── 초안 저장 (이 브라우저에만, 사진 · 개인정보 제외) ──────────────────────────
@@ -1764,29 +1733,8 @@ function roomHasWork(room) {
   const data = state.rooms.get(room);
   return !!data && WEB.trades.some(t => data.trades.has(t) && tradeAllowed(room, t));
 }
-/** 3번 검사 — 공간 하나 이상 · 상품을 안 고른 칸 없음 · 상품이 하나도 없는 공간 없음(사용자 결정 2026-10-07 — 상품 필수).
-    문제가 없으면 null, 있으면 { text, target(): 화면을 옮길 칸 }. */
-function roomsProblem() {
-  if (!state.rooms.size) return { text: "공사할 공간을 하나 이상 골라 주세요.", target: null };
-  const rooms = [...state.rooms.keys()].sort(koSort);
-  const need = [];
-  WEB.trades.forEach(t => rooms.forEach(room => {   // 표 순서(위 → 아래, 왼 → 오른)
-    const data = state.rooms.get(room);
-    if (data.trades.has(t) && tradeAllowed(room, t) && productNames(t).length && !pickedNames(data, t).length) need.push([room, t]);
-  }));
-  if (need.length) {
-    const [room, trade] = need[0];
-    return { text: `상품을 고르지 않은 칸이 ${need.length}개 있어요. 빨간 칸을 눌러 상품을 골라 주세요.`,
-             target: () => $(`.cell[data-room="${CSS.escape(room)}"][data-trade="${CSS.escape(trade)}"]`) };
-  }
-  const empty = rooms.filter(room => !roomHasWork(room));
-  if (empty.length) {
-    return { text: `${empty.join(", ")}에 고른 상품이 없어요. 상품을 고르거나 위에서 공간을 빼 주세요.`,
-             target: () => $$(".mx .col-head").find(c => c.dataset.room === empty[0]) };
-  }
-  return null;
-}
-function validate() {
+/** 기본 정보 · 평형 · 일정 검사 — 틀린 칸 이름 목록. */
+function infoBad() {
   const bad = [];
   if (!$("#name").value.trim()) bad.push("name");
   const phoneDigits = $("#phone").value.replace(/\D/g, "");
@@ -1798,26 +1746,31 @@ function validate() {
   if (!(py >= 1 && py <= 500)) bad.push("pyeong");
   const s = $("#startDate").value, e = $("#endDate").value;
   if (s && e && e < s) bad.push("endDate");
-  const roomsIssue = roomsProblem();
-  if (roomsIssue) { bad.push("rooms"); $("#roomsErr").textContent = roomsIssue.text; }
-  if (!$("#infoConfirm").checked) bad.push("truth");
-  if (!$("#consent").checked) bad.push("consent");
+  return bad;
+}
+/** 틀린 칸을 빨갛게 · 첫 칸으로 화면을 옮기고 알림. */
+function showBad(bad) {
   bad.forEach(setInvalid);
-  if (bad.length) {
-    const first = $(`[data-field="${bad[0]}"]`);
-    const target = bad[0] === "rooms" && roomsIssue.target ? roomsIssue.target() : null;
-    if (target) {
-      // 그 칸(또는 열 머리)으로 — 표가 넓으면 옆으로도 민다
-      target.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
-      setTimeout(() => target.focus({ preventScroll: true }), 300);
-    } else {
-      first.scrollIntoView({ behavior: "smooth", block: "center" });
-      const focusable = $("input, textarea", first);
-      if (focusable && !focusable.readOnly) setTimeout(() => focusable.focus({ preventScroll: true }), 300);
-    }
-    toast(bad[0] === "rooms" ? roomsIssue.text : "빠진 항목을 확인해 주세요.");
+  const first = $(`[data-field="${bad[0]}"]`);
+  reveal(first);
+  const focusable = $("input, textarea", first);
+  if (focusable && !focusable.readOnly && focusable.type !== "checkbox") setTimeout(() => focusable.focus({ preventScroll: true }), 300);
+  toast("빠진 항목을 확인해 주세요.");
+}
+/** 보내기 전 전체 검사 — 문제가 있는 첫 화면으로 옮겨 그 자리를 알려 준다. */
+function validate() {
+  const bad = infoBad();
+  if (bad.length) { goTo("info"); showBad(bad); return false; }
+  if (!state.rooms.size) { goTo("rooms"); showRoomsErr("공사할 공간을 하나 이상 골라 주세요."); return false; }
+  for (const room of roomOrder()) {
+    const issue = roomIssue(room);
+    if (issue) { goTo("room:" + room); showRoomIssue(issue); return false; }
   }
-  return bad.length === 0;
+  const fin = [];
+  if (!$("#infoConfirm").checked) fin.push("truth");
+  if (!$("#consent").checked) fin.push("consent");
+  if (fin.length) { goTo("finish"); showBad(fin); return false; }
+  return true;
 }
 
 // ── 제출 ─────────────────────────────────────────────────────────────
@@ -1863,9 +1816,10 @@ async function submit() {
   if (sending) return;
   if (!validate()) return;   // 안내 글은 validate가 띄운다
   const btn = $("#submitBtn");
-  sending = true; btn.disabled = true; btn.innerHTML = `<span class="spinner" aria-hidden="true"></span>보내는 중`;
+  sending = true; btn.disabled = true; $("#prevBtn").disabled = true; btn.innerHTML = `<span class="spinner" aria-hidden="true"></span>보내는 중`;
   try {
     await ensureIssued();      // 발급 표 확인(없거나 오래되면 새로) — 그 뒤에 보낼 내용을 만든다
+    if (current !== "finish" || !validate()) return;   // 기다리는 사이 내용이 바뀌었으면 보내지 않는다
     const payload = buildPayload();
     let receipt;
     if (!CONFIG.SCRIPT_URL) {
@@ -1894,11 +1848,12 @@ async function submit() {
     $(".layout").classList.add("is-done");
     document.body.style.paddingBottom = "0";
     window.scrollTo({ top: 0, behavior: "smooth" });
+    rewindHistory();           // 접수 뒤 '뒤로' 한 번이면 이 페이지를 떠나게
   } catch (err) {
     const msg = err.name === "AbortError" ? "응답이 늦어요. 잠시 후 다시 시도해 주세요." : (err.message || "전송에 실패했어요.");
     toast(`${msg} 계속 안 되면 ${CONFIG.COMPANY_PHONE}로 연락 주세요.`);
   } finally {
-    sending = false; btn.disabled = false; btn.textContent = "견적 요청 보내기";
+    sending = false; btn.disabled = false; $("#prevBtn").disabled = false; btn.textContent = "견적 요청 보내기";
   }
 }
 
@@ -1907,10 +1862,14 @@ $("#againBtn").addEventListener("click", () => {
   const a = $("#address"); a.readOnly = true;
   $("#detailWrap").hidden = true; $("#zipWrap").hidden = true;
   $("#pyeong").dispatchEvent(new Event("input")); syncDates();
-  renderRoomToggles(); renderMatrix(); renderPhotos(); saveDraft();
-  $("#form").hidden = false; $("#bar").hidden = false; $("#side").hidden = false; $("#donePanel").hidden = true; $("#navCta").hidden = false;
+  renderRoomToggles(); renderPhotos(); saveDraft();
+  $("#form").hidden = false; $("#bar").hidden = false; $("#side").hidden = false; $("#donePanel").hidden = true;
   $(".layout").classList.remove("is-done");
   document.body.style.paddingBottom = "";
+  current = "info"; openTrade = null;
+  if ((history.state && history.state.idx) > 0) rewindHistory();
+  else { navIdx = 0; try { history.replaceState({ step: current, idx: 0 }, ""); } catch {} }
+  renderStep();
   window.scrollTo({ top: 0 });
 });
 
@@ -1923,8 +1882,10 @@ if (!state.rooms.size) ensureWholeRoom();   // 처음(또는 공간을 다 뺀 �
 setScope(state.scope);
 syncDates();
 renderRoomToggles();
-renderMatrix();
 renderPhotos();
+if ((history.state && history.state.idx) > 0) rewindHistory();   // 단계 중간에 새로 고침 — 처음 화면부터(이름 · 연락처는 저장하지 않으므로)
+else { try { history.replaceState({ step: current, idx: 0 }, ""); } catch {} }
+renderStep();
 fetchWebConfig();
 </script>
 </body>
