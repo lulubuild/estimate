@@ -1482,7 +1482,7 @@ $("#addrLayer").addEventListener("click", e => { if (e.target.id === "addrLayer"
 // 고른 공간 · 공종을 대표 평면(59 · 84 · 105㎡, 4베이 판상형)의 방 벽 · 바닥 · 창 · 문 · 조명에 칠한다. 보는 것만 — 전송 · 초안과 무관.
 // 고른 내용은 페이지를 넘겨도 그대로 남고, 지금 공간은 이름표 강조 · 시점 이동, 상품을 고르면 들어가는 자리가 깜빡인다(사용자 결정 2026-10-09).
 // 3D 파일(three.min.js → room3d.js)은 도면이 처음 보일 때 한 번만 불러온다(같은 사이트 파일 — CSP 'self').
-const PREVIEW_FILES = ["three.min.js", "room3d.js?v=20261009b"];
+const PREVIEW_FILES = ["three.min.js", "room3d.js?v=20261009c"];
 // 공종 → 칠할 부위. 공종 이름은 설정과 글자까지 같아야 한다(다른 공종은 여기에 줄을 더한다).
 // whole = 공용(전체)일 때 칠할 방 종류(null = 모든 방), parts(방 종류) = 그 방에서 칠할 면.
 const PREVIEW_DRY = ["living", "kitchen", "hall", "master", "bed", "alpha", "dress", "pantry", "entry"];
@@ -1495,8 +1495,24 @@ const PREVIEW_TRADES = {
   "창호": { color: "#F08A00", whole: null, parts: () => ["window"] },
   "문·문틀": { color: "#D6457A", whole: null, parts: () => ["door"] },
   "필름": { color: "#3A3A3C", whole: null, parts: () => ["door"] },
-  "전기·조명": { color: "#F2C200", whole: null, parts: () => ["light"] },
+  "전기·조명": { color: "#F2C200", whole: ["living", "kitchen", "hall", "master", "bed", "alpha", "dress", "pantry", "entry", "bath"], parts: () => ["light"] },
 };
+// 조명 상품 이름 → 도면에 그릴 등 모양(사용자 결정 2026-10-09). 위에서부터 먼저 맞는 줄.
+// none = 스위치 · 콘센트처럼 천장 등이 아닌 것(도면에 안 그림), auto = 종류를 알 수 없음(방 종류별 기본 모양 — room3d.js).
+const PREVIEW_LIGHT_RULES = [
+  [/스위치|콘센트|분전반|누전|차단기|점검|출장비/, "none"],
+  [/간접|T5|라인\s*조명|코브/, "cove"],
+  [/다운\s*라이트|매입등|매립|포인트\s*조명|스포트/, "down"],
+  [/펜던트|\bPD\b|식탁등/, "pendant"],
+  [/세트|설치비|판매\s*단가|설치\s*및\s*판매|등기구\s*교체/, "auto"],
+  [/직사각|거실등|거실\s*\d\s*등|시스템|주방등|주방\s*LED/, "rect"],
+  [/사각/, "square"],
+  [/원형|욕실등|센서|직부/, "round"],
+];
+const PREVIEW_LIGHT_NAME = { down: "다운라이트", cove: "간접조명", pendant: "펜던트", rect: "직사각 등", square: "사각 방등", round: "원형 방등" };
+const PREVIEW_COVE = /간접\s*(등|조명)|T5/;   // 다른 공종(예: 욕실 '천장 간접등(T5)')에 든 간접조명도 그 방에 그린다
+const PREVIEW_LIGHT_COLOR = "#F2C200";
+const lightKind = name => { const hit = PREVIEW_LIGHT_RULES.find(([re]) => re.test(name)); return hit ? hit[1] : "auto"; };
 const PREVIEW_PART_NAME = { wall: "벽", floor: "바닥", window: "창", door: "문", light: "조명" };
 // 공간 이름 → 도면의 방(띄어쓰기 없이 비교). 그 밖의 침실 · 욕실은 번호대로(방1 · 화장실1 …), 발코니 이름은 발코니 · 다용도실.
 const PREVIEW_FIXED = {
@@ -1552,6 +1568,13 @@ function previewPaint(plan, mode) {
   const partsOf = new Map(rooms.map(r => [r.id, new Set(r.parts)]));   // 그 방에 있는 면(문이 없는 방 · 창이 없는 방)
   const { slots, names: labels } = previewSlots(plan, mode), whole = CONFIG.WHOLE_HOUSE_ROOM;
   const list = [], legend = new Map(), byRoom = new Map(), skipTrades = new Set(), skipRooms = new Set(), noSpot = new Set();
+  // 방 id → 등 종류. 개별 공간에서 고른 조명이 공용(전체) 것보다 우선(공용(전체)를 먼저 넣고 개별 공간이 덮는다).
+  const lights = new Map(), ownLight = new Set();
+  const addLight = (id, kinds, fromWhole) => {
+    if (!fromWhole && !ownLight.has(id)) { ownLight.add(id); lights.set(id, new Set()); }
+    if (!lights.has(id)) lights.set(id, new Set());
+    kinds.forEach(k => lights.get(id).add(k));
+  };
   const order = Object.keys(PREVIEW_TRADES), rank = t => order.indexOf(t);
   const entries = [...state.rooms].sort((a, b) => (b[0] === whole) - (a[0] === whole));
   entries.forEach(([room, data]) => {
@@ -1560,49 +1583,77 @@ function previewPaint(plan, mode) {
     // 같은 방 같은 면이면 순서 뒤쪽 공종이 이긴다(예: 화장실은 타일보다 욕실 색).
     [...data.trades].filter(t => tradeAllowed(room, t)).sort((a, b) => rank(a) - rank(b)).forEach(trade => {
       const rule = PREVIEW_TRADES[trade];
-      if (!rule) { skipTrades.add(trade); return; }
+      const names = pickedNames(data, trade);
+      // 조명 종류 — 전기·조명은 고른 상품마다(상품 없이 담긴 경우 기본 모양), 다른 공종은 간접조명 상품이 있을 때만
+      let kinds = null;
+      if (trade === "전기·조명") kinds = names.length ? names.map(lightKind).filter(k => k !== "none") : ["auto"];
+      else if (names.some(n => PREVIEW_COVE.test(n))) kinds = ["cove"];
+      if (!rule && !kinds) { skipTrades.add(trade); return; }
       if (!target || !target.length) { skipRooms.add(room); return; }
-      const ids = target === "ALL" ? rooms.filter(r => !rule.whole || rule.whole.includes(r.kind)).map(r => r.id) : target;
+      const ids = target === "ALL" ? rooms.filter(r => !rule || !rule.whole || rule.whole.includes(r.kind)).map(r => r.id) : target;
       const hits = [];
-      ids.forEach(id => rule.parts(kindOf.get(id)).forEach(part => { if (partsOf.get(id).has(part)) hits.push({ id, part, color: rule.color }); }));
-      if (!hits.length) { noSpot.add(`${room} ${trade}`); return; }   // 예: 문이 없는 거실의 문·문틀
+      ids.forEach(id => {
+        if (rule) rule.parts(kindOf.get(id)).forEach(part => { if (part !== "light" && partsOf.get(id).has(part)) hits.push({ id, part, color: rule.color }); });
+        if (kinds && kinds.length) {
+          // 종류를 알 수 없는 등은 방 종류별 기본 모양으로(범례에도 그 이름)
+          const ks = [...new Set(kinds.map(k => k === "auto" ? ((Room3D.DEFAULT_LIGHT || {})[kindOf.get(id)] || "auto") : k))];
+          hits.push({ id, part: "light", color: PREVIEW_LIGHT_COLOR, kinds: ks }); addLight(id, ks, target === "ALL");
+        }
+      });
+      if (!hits.length) { noSpot.add(`${room} ${trade}`); return; }   // 예: 문이 없는 거실의 문·문틀, 스위치 · 콘센트만 고른 전기·조명
       mine.set(trade, hits);
-      if (!legend.has(trade)) legend.set(trade, { color: rule.color, parts: new Set(), rooms: [] });
+      if (!legend.has(trade)) legend.set(trade, { color: rule ? rule.color : PREVIEW_LIGHT_COLOR, parts: new Set(), kinds: new Set(), rooms: [] });
       const lg = legend.get(trade);
       if (!lg.rooms.includes(room)) lg.rooms.push(room);
-      hits.forEach(h => { list.push(h); lg.parts.add(h.part); });
+      hits.forEach(h => { list.push(h); lg.parts.add(h.part); (h.kinds || []).forEach(k => lg.kinds.add(k)); });
     });
   });
-  // 작은 방(드레스룸 · 팬트리 · 다용도실 · 발코니 …) 이름은 칠했거나 고른 공간일 때만 — 폰에서 글자가 겹치지 않게.
-  const lit = new Set(list.map(h => h.id));
-  ["dress", "pantry", "storage", "utility", "balcony", "hall"].forEach(id => { if (!(id in labels) && !lit.has(id)) labels[id] = ""; });
-  return { list, labels, legend, byRoom, slots, skipTrades, skipRooms, noSpot };
+  // 이름표는 고른 공간에만(안 고른 방은 모양만) — 작은 도면에서 글자가 방을 가리지 않게(사용자 결정 2026-10-09).
+  const chosen = new Set();
+  state.rooms.forEach((_, name) => { const t = slots.get(name); if (Array.isArray(t)) t.forEach(id => chosen.add(id)); });
+  const shown = {};
+  rooms.forEach(r => { shown[r.id] = chosen.has(r.id) ? (labels[r.id] || Room3D.LABELS[r.id] || "") : ""; });
+  const lightMap = {};
+  lights.forEach((ks, id) => { if (ks.size) lightMap[id] = [...ks]; });
+  return { list, labels: shown, lights: lightMap, legend, byRoom, slots, skipTrades, skipRooms, noSpot };
 }
-const partsText = parts => ["wall", "floor", "window", "door", "light"].filter(p => parts.has(p)).map(p => PREVIEW_PART_NAME[p]).join(" · ");
+/** 등 종류 이름(종류를 알 수 없으면 '조명'). */
+const lightText = kinds => {
+  const named = Object.keys(PREVIEW_LIGHT_NAME).filter(k => kinds.has(k)).map(k => PREVIEW_LIGHT_NAME[k]);   // 정해진 순서(눈에 띄는 것부터)
+  if (!named.length) return PREVIEW_PART_NAME.light;
+  return named.length > 3 ? `${named.slice(0, 3).join(" · ")} 외 ${named.length - 3}` : named.join(" · ");   // 범례가 길어져 다른 줄을 밀어내지 않게
+};
+const partsText = (parts, kinds) => ["wall", "floor", "window", "door", "light"].filter(p => parts.has(p))
+  .map(p => p === "light" && kinds && kinds.size ? lightText(kinds) : PREVIEW_PART_NAME[p]).join(" · ");
 /** 범례 — 공간 페이지면 그 공간 것만, 다른 화면이면 모두. 공종 · 공간 이름은 글자로만 넣는다(innerHTML 금지). */
 function renderPreviewLegend(info, room) {
   const box = $("#room3dLegend");
   box.textContent = "";
   const muted = text => { const e = document.createElement("span"); e.className = "muted"; e.textContent = text; box.appendChild(e); };
-  const item = (trade, color, parts, where) => {
+  const item = (trade, color, parts, where, kinds) => {
     const it = document.createElement("span");
     const dot = document.createElement("i"); dot.className = "room3d-dot"; dot.style.backgroundColor = color;
-    it.append(dot, `${trade} → ${partsText(parts)}`);
+    it.append(dot, `${trade} → ${partsText(parts, kinds)}`);
     if (where) { const s = document.createElement("span"); s.className = "muted"; s.textContent = ` · ${where}`; it.appendChild(s); }
     box.appendChild(it);
   };
   const said = [];
   if (room !== null) {
     const data = state.rooms.get(room), mine = info.byRoom.get(room) || new Map();
-    mine.forEach((hits, trade) => { item(trade, PREVIEW_TRADES[trade].color, new Set(hits.map(h => h.part))); said.push(trade); });
+    mine.forEach((hits, trade) => {
+      item(trade, (PREVIEW_TRADES[trade] || { color: PREVIEW_LIGHT_COLOR }).color, new Set(hits.map(h => h.part)), "", new Set(hits.flatMap(h => h.kinds || [])));
+      said.push(trade);
+    });
     const others = data ? [...data.trades].filter(t => tradeAllowed(room, t) && !mine.has(t)) : [];
+    // 스위치 · 콘센트만 고른 전기·조명은 이유를 함께
+    const switchOnly = t => t === "전기·조명" && pickedNames(data, t).length && pickedNames(data, t).every(n => lightKind(n) === "none");
     if (info.skipRooms.has(room)) muted("대표 평면에 없는 공간이에요. 고른 공사는 그대로 접수돼요.");
-    else if (others.length) muted(`도면에 표시하지 않는 공사: ${others.join(" · ")}`);
+    else if (others.length) muted(`도면에 표시하지 않는 공사: ${others.map(t => switchOnly(t) ? `${t}(스위치 · 콘센트)` : t).join(" · ")}`);
     if (!mine.size && !others.length) muted("상품을 고르면 들어가는 자리가 도면에서 깜빡여요.");
   } else {
     if (!info.legend.size) muted(current === "info" ? "공간마다 상품을 고르면 도면에 색으로 표시돼요." : "고른 공사가 도면에 색으로 표시돼요.");
     info.legend.forEach((lg, trade) => {
-      item(trade, lg.color, lg.parts, lg.rooms.slice(0, 3).join(", ") + (lg.rooms.length > 3 ? ` 외 ${lg.rooms.length - 3}` : ""));
+      item(trade, lg.color, lg.parts, lg.rooms.slice(0, 3).join(", ") + (lg.rooms.length > 3 ? ` 외 ${lg.rooms.length - 3}` : ""), lg.kinds);
       said.push(`${trade}: ${lg.rooms.join(", ")}`);
     });
     if (info.skipTrades.size) muted(`도면에 표시하지 않는 공사: ${[...info.skipTrades].join(" · ")}`);
@@ -1624,6 +1675,7 @@ function updateRoomPreview() {
   if (!preview) return;
   preview.setPlan(previewPlan, previewMode);
   preview.setLabels(info.labels);
+  if (preview.setLights) preview.setLights(info.lights);   // 등 종류 먼저 — 칠할 목록이 오면 그 방에 그린다
   preview.setHighlights(info.list);
   // 지금 공간 — 이름표 강조 + 그 방 쪽으로 시점 이동(공용(전체) · 평면에 없는 공간이면 집 전체)
   const target = room !== null ? info.slots.get(room) : null;

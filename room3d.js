@@ -1,4 +1,4 @@
-/* 완성 모습 미리보기 — 3D 도면 (웹 견적요청 페이지 전용, 2026-10-08)
+/* 완성 모습 미리보기 — 3D 도면 (웹 견적요청 페이지 전용, 2026-10-08 · 조명 종류 · 작은 이름표 2026-10-09)
    · three.js r128(three.min.js, 같은 사이트 파일)이 먼저 읽혀 있어야 한다. 페이지 보안 설정(CSP)이
      외부 스크립트를 막으므로 두 파일 모두 index.html 옆에 둔다.
    · 대표 평면 3가지(4베이 판상형) — 59 · 84 · 105㎡. 발코니 확장형("e") / 기본형("b").
@@ -97,7 +97,13 @@
     bath: 0xD5DEE5, entry: 0xD9D6CF, pantry: 0xDCD9D2, utility: 0xD9D6CF, balcony: 0xE9E7E1,
   };
   const WALL = 0xF4F2EC, OUTSIDE = 0xE3E0D8, CAP = 0xD3CFC5, EDGE = 0x9A988F, GLASS = 0x85B7EB, DOOR = 0xE6DFD2;
-  const MIX = { wall: 0.5, floor: 0.78, window: 1, door: 0.85, light: 1 };
+  const MIX = { wall: 0.5, floor: 0.78, window: 1, door: 0.85, light: 0.5 };
+  const GLOW = 0xFFBE3D;   // 등 아래 · 간접조명 빛 번짐(더하기 섞기)
+  // 조명 종류를 알 수 없을 때(세트 · 설치비 · 등기구 교체 …) 방 종류별 기본 등
+  const DEFAULT_LIGHT = {
+    living: "rect", kitchen: "rect", master: "square", bed: "square", alpha: "square",
+    dress: "round", pantry: "round", entry: "round", bath: "round", utility: "round", balcony: "round", hall: "round",
+  };
   const DOOR_OPEN = 70 * Math.PI / 180;   // 문짝은 방 안쪽으로 70° 열린 모양
 
   /** 평면 · 발코니 형식에 맞춘 방 목록(색칠 대상 고르기용 — WebGL 없이도 쓴다). */
@@ -254,9 +260,22 @@
     let labelSprites = new Map(); // id → { sprite, text, pos }
     let labelText = {};
     let wanted = new Map();       // "id:part" → color (마지막으로 받은 목록)
+    let lightKinds = new Map();   // id → ["round" · "square" · "rect" · "down" · "cove" · "pendant" · "auto"] (페이지가 상품 이름으로 고름)
+    let lightObjs = new Map();    // id → { sig, objs } 지금 그려 둔 등
+    let lightGroup = null, cutsNow = [];
     let raf = 0, labelH = 0.05;
     const disposables = [];
 
+    function gradTex(w, h, radial) {
+      const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+      const c = cv.getContext("2d");
+      const g = radial ? c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2) : c.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(radial ? 0.35 : 0.12, "rgba(255,255,255,0.55)"); g.addColorStop(1, "rgba(255,255,255,0)");
+      c.fillStyle = g; c.fillRect(0, 0, w, h);
+      const t = new THREE.CanvasTexture(cv); t.minFilter = THREE.LinearFilter; t.generateMipmaps = false;
+      return t;
+    }
+    const glowTex = gradTex(128, 128, true), washTex = gradTex(4, 64, false);
     const edgeMat = new THREE.LineBasicMaterial({ color: EDGE, transparent: true, opacity: 0.55 });
     const capMat = new THREE.MeshLambertMaterial({ color: CAP });
     const outMat = new THREE.MeshLambertMaterial({ color: OUTSIDE });
@@ -286,13 +305,15 @@
       while (root.children.length) root.remove(root.children[0]);
       disposables.splice(0).forEach(d => d.dispose && d.dispose());
       labelSprites.forEach(l => { if (l.sprite) { l.sprite.material.map.dispose(); l.sprite.material.dispose(); } });
-      surfaces = new Map(); labelSprites = new Map(); wallMats.clear(); floorMats.clear(); glassMats.clear();
+      lightObjs.forEach(o => o.objs.forEach(m => { m.geometry.dispose(); m.material.dispose(); }));
+      surfaces = new Map(); labelSprites = new Map(); lightObjs = new Map(); lightGroup = null;
+      wallMats.clear(); floorMats.clear(); glassMats.clear();
     }
 
     function build() {
       clear();
       const g = geometry(plan, mode);
-      W = g.P.W; D = g.P.D; curRooms = g.rooms;
+      W = g.P.W; D = g.P.D; curRooms = g.rooms; cutsNow = g.P.cuts;
       const X = x => x - W / 2, Z = y => y - D / 2;
       // 바닥
       g.rooms.forEach(r => {
@@ -341,12 +362,8 @@
         mesh.rotation.y = rot;
         root.children[root.children.length - 1].rotation.y = rot;   // 테두리 선도 같이
       }));
-      // 조명 — 천장 높이의 둥근 등(방 이름표에 가리지 않게 방 안쪽 30% 자리). 칠하기 전에는 보이지 않는다(투명).
-      g.rooms.forEach(r => {
-        const rad = Math.max(0.16, Math.min(0.32, Math.min(r.w, r.h) * 0.16));
-        const m = surface(r.id, "light", () => new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0, depthWrite: false }));
-        add(new THREE.CylinderGeometry(rad, rad, 0.05, 28), m, X(r.x + r.w / 2), H - 0.08, Z(r.y + r.h * 0.3), false);
-      });
+      // 조명 — 고른 방에만 그 종류의 등을 천장 높이에 그린다(syncLights). 천장 판은 그리지 않는다(위에서 들여다보는 도면).
+      lightGroup = new THREE.Group(); root.add(lightGroup);
       // 욕실 기구(흰 상자)
       g.P.fx.forEach(f => {
         const t = f[0];
@@ -357,7 +374,7 @@
       });
       // 라벨 자리
       g.rooms.forEach(r => {
-        const pos = new THREE.Vector3(X(r.x + r.w / 2), r.kind === "balcony" ? 0.6 : 1.35, Z(r.y + r.h / 2));
+        const pos = new THREE.Vector3(X(r.x + r.w / 2), 0.12, Z(r.y + r.h / 2));
         labelSprites.set(r.id, { sprite: null, text: null, pos });
       });
       applyLabels();
@@ -376,18 +393,22 @@
 
     // ── 라벨(방 이름) — 글자는 캔버스에 그리므로 HTML로 해석되지 않는다 ──
     function roundRect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+    // 글자 칸: 높이 64 중 알약 60 · 글자 38 → 화면에서 알약 약 15~17px, 글자 약 9.5~10.5px(fit에서 정함)
+    const LABEL_FONT = "600 38px -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', sans-serif";
     function makeLabel(text, active) {
-      const cv = document.createElement("canvas"); cv.width = 320; cv.height = 88;
-      const c = cv.getContext("2d");
-      c.font = "600 34px -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', sans-serif";
-      const tw = Math.min(312, c.measureText(text).width + 34);
-      c.fillStyle = active ? "#0071E3" : "rgba(255,255,255,0.92)"; roundRect(c, (320 - tw) / 2, 12, tw, 62, 31); c.fill();
-      c.fillStyle = active ? "#FFFFFF" : "#1D1D1F"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(text, 160, 44);
+      const cv = document.createElement("canvas"), ch = 64;
+      let c = cv.getContext("2d"); c.font = LABEL_FONT;
+      cv.width = Math.min(480, Math.ceil(c.measureText(text).width) + 40); cv.height = ch;
+      c = cv.getContext("2d"); c.font = LABEL_FONT;   // 크기를 바꾸면 글꼴이 초기화된다
+      c.fillStyle = active ? "rgba(0,113,227,0.96)" : "rgba(255,255,255,0.78)"; roundRect(c, 2, 2, cv.width - 4, ch - 4, (ch - 4) / 2); c.fill();
+      if (!active) { c.strokeStyle = "rgba(0,0,0,0.10)"; c.lineWidth = 2; c.stroke(); }
+      c.fillStyle = active ? "#FFFFFF" : "#1D1D1F"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(text, cv.width / 2, ch / 2 + 1);
       const tex = new THREE.CanvasTexture(cv);
       tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;   // 2의 거듭제곱이 아닌 크기 그대로(줄여 흐려지지 않게)
-      // 화면에서 늘 같은 크기(멀어져도 작아지지 않게) — 크기는 labelSize()가 화면 높이로 정한다.
+      // 화면에서 늘 같은 크기(멀어져도 작아지지 않게) — 높이는 fit()이 화면 높이로 정한다.
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, sizeAttenuation: false }));
-      sp.scale.set(labelH * 320 / 88, labelH, 1); sp.renderOrder = 10;
+      sp.userData.aspect = cv.width / ch;
+      sp.scale.set(labelH * sp.userData.aspect, labelH, 1); sp.renderOrder = 10;
       return sp;
     }
     function applyLabels() {
@@ -408,12 +429,16 @@
         if (!s.hl || a <= 0) {
           m.color.copy(base);
           if (s.part === "window") m.opacity = 0.42;
-          if (s.part === "light") m.opacity = 0;
+          if (s.part === "light") { m.opacity = 0; m.visible = false; }
+          return;
+        }
+        if (s.part === "light") {
+          m.visible = true; m.opacity = m.userData.op * a;
+          if (!m.userData.keep) m.color.copy(base).lerp(s.hl, MIX.light * a);
           return;
         }
         m.color.copy(base).lerp(s.hl, MIX[s.part] * a);
         if (s.part === "window") m.opacity = 0.42 + 0.46 * a;
-        if (s.part === "light") m.opacity = 0.95 * a;
       });
     }
     // 새로 칠한 면: 0.4초 동안 나타난 뒤 천천히 두 번 깜빡이고 그대로 남는다.
@@ -422,7 +447,97 @@
       if (t < 2.0) return 1 - 0.62 * (0.5 - 0.5 * Math.cos(2 * Math.PI * (t - 0.4) / 0.8));
       return 1;
     }
+    // ── 조명 ─────────────────────────────────────────────────────────────
+    // 칠할 목록에 그 방 조명이 있으면 고른 종류(없으면 방 종류별 기본)의 등을 만든다. 종류가 바뀐 방만 다시 만든다.
+    function lightMat(id, mat, op, keep) {
+      const k = id + ":light";
+      if (!surfaces.has(k)) surfaces.set(k, { mats: [], base: [], part: "light", hl: null, t0: 0, wait: false });
+      const s = surfaces.get(k);
+      mat.userData.op = op; mat.userData.keep = !!keep; mat.visible = false;
+      s.mats.push(mat); s.base.push(mat.color.clone());
+      return mat;
+    }
+    function dropLight(id) {
+      const o = lightObjs.get(id);
+      if (!o) return;
+      o.objs.forEach(m => { if (lightGroup) lightGroup.remove(m); m.geometry.dispose(); m.material.dispose(); });
+      lightObjs.delete(id); surfaces.delete(id + ":light");
+    }
+    function syncLights() {
+      if (!lightGroup) return;
+      curRooms.forEach(r => {
+        const sig = wanted.has(r.id + ":light") ? (lightKinds.get(r.id) || ["auto"]).join(",") : "";
+        const o = lightObjs.get(r.id);
+        if ((o ? o.sig : "") === sig) return;
+        dropLight(r.id);
+        if (sig) buildLight(r, sig);
+      });
+    }
+    // 벽이 없는 쪽(거실 · 주방처럼 트인 곳)에는 벽 빛을 그리지 않는다
+    function openSide(o, c, a, b) {
+      return cutsNow.some(([co, cc, ca, cb]) => co === o && Math.abs(cc - c) < 0.01 && Math.min(b, cb) - Math.max(a, ca) > 0.5 * (b - a));
+    }
+    function buildLight(r, sig) {
+      const objs = [], X = x => x - W / 2, Z = y => y - D / 2;
+      const cx = r.x + r.w / 2, cy = r.y + r.h / 2, short = Math.min(r.w, r.h), alongX = r.w >= r.h;
+      const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+      const basic = (color, op, keep, extra) => lightMat(r.id, new THREE.MeshBasicMaterial(Object.assign({ color, transparent: true, opacity: 0, depthWrite: false }, extra || {})), op, keep);
+      const fixture = () => basic(0xFFFFFF, 0.97, false);
+      const glow = (op, map) => basic(GLOW, op, true, { map: map || glowTex, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+      const put = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(X(x), y, Z(z)); m.renderOrder = 3; lightGroup.add(m); objs.push(m); return m; };
+      const pool = (x, z, rad, op) => { put(new THREE.PlaneGeometry(rad * 2, rad * 2), glow(op), x, 0.075, z).rotation.x = -Math.PI / 2; };
+      const kinds = new Set(sig.split(",").map(k => k === "auto" ? (DEFAULT_LIGHT[r.kind] || "round") : k));
+      kinds.forEach(k => {
+        if (k === "round") {
+          const rad = clamp(short * 0.13, 0.17, 0.3);
+          put(new THREE.CylinderGeometry(rad, rad, 0.05, 28), fixture(), cx, H - 0.06, cy);
+          pool(cx, cy, clamp(short * 0.42, 0.7, 1.6), 0.28);
+        } else if (k === "square" || k === "rect") {
+          // 사각 방등 / 직사각(거실등 · 주방등) — 긴 쪽을 방의 긴 쪽에 맞춘다
+          let a, b;
+          if (k === "square") a = b = clamp(short * 0.2, 0.42, 0.6);
+          else if (r.kind === "living") { a = 1.2; b = 0.7; } else if (r.kind === "kitchen") { a = 1.0; b = 0.4; } else { a = 0.7; b = 0.5; }
+          a = Math.min(a, Math.max(r.w, r.h) * 0.45); b = Math.min(b, short * 0.45);
+          put(alongX ? new THREE.BoxGeometry(a, 0.05, b) : new THREE.BoxGeometry(b, 0.05, a), fixture(), cx, H - 0.06, cy);
+          pool(cx, cy, clamp(short * (k === "rect" ? 0.48 : 0.42), 0.75, 2.0), 0.3);
+        } else if (k === "down") {
+          // 다운라이트 — 방 크기에 따라 격자(최대 8개), 등마다 작은 빛 번짐
+          let nx = clamp(Math.round((r.w - 0.6) / 1.1), 1, 4), nz = clamp(Math.round((r.h - 0.6) / 1.1), 1, 4);
+          while (nx * nz > 8) { if (nx >= nz) nx--; else nz--; }
+          if (nx * nz < 2) { if (alongX) nx = 2; else nz = 2; }
+          for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+            const x = r.x + r.w * (i + 0.5) / nx, z = r.y + r.h * (j + 0.5) / nz;
+            put(new THREE.CylinderGeometry(0.095, 0.095, 0.02, 16), fixture(), x, H - 0.03, z);
+            pool(x, z, 0.55, 0.2);
+          }
+        } else if (k === "cove") {
+          // 간접조명 — 천장 가장자리 빛 줄 + 벽 위쪽이 밝아짐(트인 쪽은 줄만)
+          const e = T / 2 + 0.12, f = T / 2 + 0.012, hh = 0.75, ym = H - 0.02 - hh / 2;
+          put(new THREE.BoxGeometry(r.w - 2 * e, 0.03, 0.05), fixture(), cx, H - 0.04, r.y + e);
+          put(new THREE.BoxGeometry(r.w - 2 * e, 0.03, 0.05), fixture(), cx, H - 0.04, r.y + r.h - e);
+          put(new THREE.BoxGeometry(0.05, 0.03, r.h - 2 * e), fixture(), r.x + e, H - 0.04, cy);
+          put(new THREE.BoxGeometry(0.05, 0.03, r.h - 2 * e), fixture(), r.x + r.w - e, H - 0.04, cy);
+          const wash = (len, x, z, ry) => { put(new THREE.PlaneGeometry(len, hh), glow(0.7, washTex), x, ym, z).rotation.y = ry; };
+          if (!openSide("h", r.y, r.x, r.x + r.w)) wash(r.w - 2 * f, cx, r.y + f, 0);
+          if (!openSide("h", r.y + r.h, r.x, r.x + r.w)) wash(r.w - 2 * f, cx, r.y + r.h - f, Math.PI);
+          if (!openSide("v", r.x, r.y, r.y + r.h)) wash(r.h - 2 * f, r.x + f, cy, Math.PI / 2);
+          if (!openSide("v", r.x + r.w, r.y, r.y + r.h)) wash(r.h - 2 * f, r.x + r.w - f, cy, -Math.PI / 2);
+        } else if (k === "pendant") {
+          // 펜던트 — 줄에 매달린 갓. 주방은 식탁 자리(앞쪽)에 두 개.
+          const two = r.kind === "kitchen", py = two ? r.y + r.h * 0.62 : cy;
+          (two ? [-0.35, 0.35] : [0]).forEach(d => {
+            const x = alongX ? cx + d : cx, z = alongX ? py : py + d;
+            put(new THREE.CylinderGeometry(0.008, 0.008, 0.55, 6), basic(0x6B6B6B, 0.9, true), x, H - 0.275, z);
+            put(new THREE.CylinderGeometry(0.07, 0.2, 0.17, 24), fixture(), x, H - 0.635, z);
+            pool(x, z, 0.75, 0.28);
+          });
+        }
+      });
+      lightObjs.set(r.id, { sig, objs });
+    }
+
     function applyWanted(animate, defer) {
+      syncLights();
       const now = performance.now() / 1000;
       surfaces.forEach((s, k) => {
         const want = wanted.get(k);
@@ -447,9 +562,9 @@
       const rad = 0.5 * Math.hypot(W, D);
       dist = rad / Math.sin(Math.min(v, hf) / 2) * (camera.aspect >= 1 ? 0.86 : 0.98) + 1.2;   // 세로로 긴 칸은 옆이 잘리지 않게
       // 라벨 높이(CSS px) → 스프라이트 크기: 화면 높이의 px만큼(작은 화면은 조금 작게)
-      const px = h < 330 ? 26 : 30;
+      const px = h < 330 ? 16 : 18;
       labelH = px * 2 * Math.tan(v / 2) / h;
-      labelSprites.forEach(l => { if (l.sprite) l.sprite.scale.set(labelH * 320 / 88, labelH, 1); });
+      labelSprites.forEach(l => { if (l.sprite) l.sprite.scale.set(labelH * l.sprite.userData.aspect, labelH, 1); });
       place();
     }
     function aim() {
@@ -534,13 +649,18 @@
         (list || []).forEach(h => { const s = surfaces.get(h.id + ":" + h.part); if (s && s.hl) { s.wait = false; s.t0 = now; } });
         invalidate();
       },
+      /** 방 id → 등 종류 목록(round · square · rect · down · cove · pendant · auto). 그 방 조명이 칠할 목록에 있을 때만 그린다. */
+      setLights(map) {
+        lightKinds = new Map(Object.entries(map || {}).map(([id, ks]) => [id, [...new Set(ks)].sort()]));
+        applyWanted(true, false);
+      },
       /** id → 이름(방 라벨). 빈 글자면 라벨을 숨긴다. 없는 id는 기본 이름. */
       setLabels(map) { labelText = Object.assign({}, map || {}); applyLabels(); invalidate(); },
       resetView() { yaw = -0.5; tilt = 0.98; place(); },
       dispose() {
         if (raf) cancelAnimationFrame(raf);
         if (ro) ro.disconnect(); else window.removeEventListener("resize", fit);
-        clear(); [edgeMat, capMat, outMat, whiteMat].forEach(m => m.dispose());
+        clear(); [edgeMat, capMat, outMat, whiteMat, glowTex, washTex].forEach(m => m.dispose());
         renderer.dispose(); canvas.remove();
       },
     };
@@ -549,6 +669,7 @@
   window.Room3D = {
     PLANS: Object.keys(PLANS).reduce((o, k) => { o[k] = { label: PLANS[k].label, sub: PLANS[k].sub, bedrooms: PLANS[k].bedrooms.slice() }; return o; }, {}),
     LABELS,
+    DEFAULT_LIGHT: Object.assign({}, DEFAULT_LIGHT),
     /** 방 목록 [{ id, kind }] — WebGL 없이도 쓴다(무엇을 칠할지 고르기). */
     rooms(planKey, mode) { return layout(planKey, mode).rooms.map(r => ({ id: r.id, kind: r.kind, parts: r.parts.slice() })); },
     create,
