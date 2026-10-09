@@ -2,7 +2,6 @@
    · three.js r128(three.min.js, 같은 사이트 파일)이 먼저 읽혀 있어야 한다. 페이지 보안 설정(CSP)이
      외부 스크립트를 막으므로 두 파일 모두 index.html 옆에 둔다.
    · 평면 4가지 — 사장님이 주신 실제 도면 78 · 79 · 86 · 109㎡(그림 그대로, 2026-10-09). 예전 대표 평면(59 · 84 · 105)은 뺐다.
-     발코니 확장형("e") / 기본형("b") 전환 코드는 fixed가 아닌 평면용으로 남겨 둔다.
    · 방마다 벽 · 바닥 · 창 재질이 따로라서 '어느 방의 어느 면'만 색을 바꿀 수 있다.
      페이지(index.html)가 체크표를 읽어 [{ id, part, color }] 목록을 넘기면 여기서 칠한다.
    · 화면은 바뀔 때만 다시 그린다(멈춰 있으면 그리지 않음 — 휴대폰 배터리).
@@ -20,7 +19,6 @@
   const FIT_TOP = H;     // 화면 맞춤에 넣는 높이
   const TILT_MIN = 0.12, TILT_MAX = 1.5;   // 위아래로 돌리는 범위(라디안) — 거의 옆에서(약 7°) ~ 거의 바로 위에서(약 86°)
   const DW = 0.9;    // 문 폭
-  const BD = 1.4;    // 기본형 전면 발코니 깊이
   const EPS = 1e-6;
 
   /* 방: [id, 종류, x, y, 가로, 세로, 창(t·b·l·r), 문 [[변, 변 시작에서 거리]], 덧붙은 칸 [[x, y, 가로, 세로, 창, 문], …]]
@@ -28,12 +26,12 @@
      furn: 방마다 가구 자리 — 고른 상품이 있을 때만 그린다(사용자 결정 2026-10-09: 기본 가구는 모두 지움).
        wc · bas [가운데 x, y, 향한 쪽 t·b·l·r] · tub · shw [x, y, 가로, 세로] · sink [[x, y, 가로, 세로, 벽 쪽], …](순서대로 길이를 채움)
        hood [x, y] · wardrobe · shoe [x, y, 가로, 세로, 벽 쪽]. 없으면 방 크기로 기본 자리.
-     좌표는 m, 왼쪽 위가 (0, 0), 아래(y가 큰 쪽)가 전면(남향). 전면에 붙은 방은 기본형에서 발코니만큼 줄어든다.
+     좌표는 m, 왼쪽 위가 (0, 0), 아래(y가 큰 쪽)가 전면(남향).
      cuts: 벽 없이 트인 자리 [방향 h·v, 선 위치, 시작, 끝]. fx: 욕실 기구(높이만 다른 상자). */
   const PLANS = {
     // 실제 도면(사장님 제공 78㎡ 타입 · 2026-10-09) — 그림 그대로(확장 · 비확장 전환 없음). 치수가 없어 실내 면적에 맞춘 비율.
     "78": {
-      label: "78㎡", sub: "24평형", W: 7.93, D: 10.65, fixed: true,
+      label: "78㎡", sub: "24평형", W: 7.93, D: 10.65,
       rooms: [
         ["balcony2", "balcony", 0.0, 0.0, 2.4, 1.57, "t", []],
         ["balcony3", "balcony", 3.12, 0.0, 4.81, 1.57, "t", []],
@@ -61,7 +59,7 @@
     },
     // 실제 도면(사장님 제공 79㎡ 타입 · 2026-10-09) — 그림 그대로(확장 · 비확장 전환 없음). 치수가 없어 실내 면적에 맞춘 비율.
     "79": {
-      label: "79㎡", sub: "24평형", W: 11.1, D: 8.85, fixed: true,
+      label: "79㎡", sub: "24평형", W: 11.1, D: 8.85,
       rooms: [
         ["refuge", "refuge", 0.0, 0.0, 1.16, 1.76, "l", []],
         ["balcony", "balcony", 0.0, 1.76, 1.16, 1.6, "l", [["t", 0.21]]],
@@ -96,7 +94,7 @@
     },
     // 실제 도면(사장님 제공 86㎡ 타입 · 2026-10-09) — 그림 그대로(확장 · 비확장 전환 없음). 치수가 없어 실내 면적에 맞춘 비율.
     "86": {
-      label: "86㎡", sub: "26평형", W: 11.02, D: 6.78, fixed: true,
+      label: "86㎡", sub: "26평형", W: 11.02, D: 6.78,
       rooms: [
         ["balcony", "balcony", 0.0, 0.0, 1.62, 6.07, "l", []],
         ["living", "living", 1.62, 0.0, 3.94, 3.06, "l", []],
@@ -122,7 +120,7 @@
     },
     // 실제 도면(사장님 제공 109㎡ 타입 · 2026-10-09) — 그림 그대로(확장 · 비확장 전환 없음). 치수가 없어 실내 면적에 맞춘 비율.
     "109": {
-      label: "109㎡", sub: "33평형", W: 13.84, D: 8.82, fixed: true,
+      label: "109㎡", sub: "33평형", W: 13.84, D: 8.82,
       rooms: [
         ["bath1", "bath", 0.0, 1.89, 1.6, 2.28, "", [["b", 0.65]]],
         ["entry", "entry", 2.51, 1.89, 1.66, 2.28, "", [["t", 0.4]], [[1.6, 2.75, 0.91, 1.42, "", []]]],
@@ -184,27 +182,22 @@
   };
   const DOOR_OPEN = 70 * Math.PI / 180;   // 문짝은 방 안쪽으로 70° 열린 모양
 
-  /** 평면 · 발코니 형식에 맞춘 방 목록(색칠 대상 고르기용 — WebGL 없이도 쓴다). */
-  function layout(planKey, mode) {
+  /** 평면의 방 목록(색칠 대상 고르기용 — WebGL 없이도 쓴다). */
+  function layout(planKey) {
     const P = PLANS[planKey] || PLANS["86"];
-    const ext = P.fixed || mode !== "b";
     const rooms = P.rooms.map(r => ({
-      id: r[0], kind: r[1], x: r[2], y: r[3], w: r[4], h: r[5], win: r[6] || "", doors: r[7] || [], front: false,
+      id: r[0], kind: r[1], x: r[2], y: r[3], w: r[4], h: r[5], win: r[6] || "", doors: r[7] || [],
       more: (r[8] || []).map(e => ({ x: e[0], y: e[1], w: e[2], h: e[3], win: e[4] || "", doors: e[5] || [] })),
     }));
-    if (!ext) {
-      rooms.forEach(r => { if (Math.abs(r.y + r.h - P.D) < EPS) { r.h -= BD; r.front = true; } });
-      rooms.push({ id: "balcony", kind: "balcony", x: 0, y: P.D - BD, w: P.W, h: BD, win: "", doors: [], front: false, more: [] });
-    }
     // 칸 목록: 첫 칸이 방의 대표(이름표 · 조명 자리), 나머지는 덧붙은 칸
     rooms.forEach(r => { r.rects = [{ x: r.x, y: r.y, w: r.w, h: r.h, win: r.win, doors: r.doors }].concat(r.more); });
-    // 방마다 칠할 수 있는 면 — 창은 그 방 창(비확장이면 앞 방 · 발코니는 발코니 창), 문은 그 방에 단 문짝
+    // 방마다 칠할 수 있는 면 — 창은 그 방 창(발코니는 늘), 문은 그 방에 단 문짝
     rooms.forEach(r => {
       r.parts = ["wall", "floor", "light"];
-      if (r.rects.some(c => c.win) || r.front || r.kind === "balcony") r.parts.push("window");
+      if (r.rects.some(c => c.win) || r.kind === "balcony") r.parts.push("window");
       if (r.rects.some(c => c.doors.length)) r.parts.push("door");
     });
-    return { P, ext, rooms };
+    return { P, rooms };
   }
 
   // ── 구간 계산 ────────────────────────────────────────────────────────
@@ -217,8 +210,8 @@
   const inside = (iv, m) => iv.find(v => m > v[0] + EPS && m < v[1] - EPS);
 
   /** 3D 장면 데이터 — 벽 조각 · 유리 · 바닥 · 라벨 자리 (three.js와 무관한 순수 계산). */
-  function geometry(planKey, mode) {
-    const { P, ext, rooms } = layout(planKey, mode);
+  function geometry(planKey) {
+    const { P, rooms } = layout(planKey);
     const lines = new Map();
     const at = (o, c) => { const k = lineKey(o, c); if (!lines.has(k)) lines.set(k, { o, c, edges: [], cuts: [], doors: [], wins: [] }); return lines.get(k); };
     rooms.forEach(r => r.rects.forEach(c => {
@@ -247,10 +240,6 @@
         at(o, c).doors.push([a, a + DW]);
       });
     }));
-    if (!ext) rooms.filter(r => r.front).forEach(r => {
-      const w = { o: "h", c: P.D, a: r.x + 0.25, b: r.x + r.w - 0.25, sill: 0.3, owners: ["balcony", r.id] };
-      wins.push(w); at("h", P.D).wins.push(w);
-    });
     P.cuts.forEach(([o, c, a, b]) => at(o, c).cuts.push([a, b]));
     // 같은 방 칸끼리 맞닿은 자리는 벽 없이 트인다
     const cutsAll = P.cuts.slice();
@@ -267,7 +256,6 @@
     lines.forEach(L => {
       const cover = union(L.edges.map(e => [e.a, e.b]));
       const cuts = union(L.cuts), doors = union(L.doors);
-      const opens = union((DH < H ? [] : L.doors).concat(WT > H ? L.wins.map(w => [w.a, w.b]) : []));   // 벽 윗면이 끊기는 자리(벽 위까지 트인 문 · 벽보다 키 큰 창) — 실제 높이에서는 없음
       const pts = new Set();
       L.edges.forEach(e => { pts.add(e.a); pts.add(e.b); });
       cuts.concat(doors).forEach(v => { pts.add(v[0]); pts.add(v[1]); });
@@ -303,20 +291,7 @@
           });
           segs = n;
         });
-        // 문 자리 · 벽보다 키 큰 창 자리도 빼고, 그쪽 끝은 늘리지 않는다
-        segs.forEach(([s1, s2]) => {
-          let pieces = [[s1, s2, true, true]];
-          opens.forEach(([d1, d2]) => {
-            const n = [];
-            pieces.forEach(([p1, p2, e1, e2]) => {
-              if (d2 <= p1 + EPS || d1 >= p2 - EPS) { n.push([p1, p2, e1, e2]); return; }
-              if (d1 > p1 + EPS) n.push([p1, d1, e1, false]);
-              if (d2 < p2 - EPS) n.push([d2, p2, false, e2]);
-            });
-            pieces = n;
-          });
-          pieces.forEach(([p1, p2, e1, e2]) => caps.push({ o: L.o, c: L.c, a: p1 - (e1 ? T / 2 : 0), b: p2 + (e2 ? T / 2 : 0) }));
-        });
+        segs.forEach(([s1, s2]) => caps.push({ o: L.o, c: L.c, a: s1 - T / 2, b: s2 + T / 2 }));
       });
     });
     // 조각 → 높이별 상자. 선 덮임의 끝(모서리)만 벽 두께 반만큼 늘려 모서리를 메운다.
@@ -333,7 +308,7 @@
         glass.push({ o: pc.o, c: pc.c, a: pc.a, b: pc.b, y0: pc.win.sill, y1: WT, win: wins.indexOf(pc.win) });
       }
     });
-    return { P, ext, rooms, boxes, glass, caps, wins, cuts: cutsAll, solids: P.solids || [] };
+    return { P, rooms, boxes, glass, caps, wins, cuts: cutsAll, solids: P.solids || [] };
   }
 
   // ── three.js 장면 ────────────────────────────────────────────────────
@@ -357,12 +332,12 @@
     const root = new THREE.Group(); scene.add(root);
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
 
-    let plan = String((opts && opts.plan) || "86"), mode = (opts && opts.mode) === "b" ? "b" : "e";
+    let plan = String((opts && opts.plan) || "86");
     let yaw = -0.5, tilt = 0.98, dist = 20, W = 13, D = 9;
     // 지금 공간으로 시점 옮기기 — 바라보는 점(fx, fz)과 거리 배율(fk)이 목표(goal)로 천천히 다가간다
     let fx = 0, fz = 0, fk = 1, goal = { x: 0, z: 0, k: 1 }, focusIds = null, curRooms = [];
     let activeIds = new Set();   // 이름표를 강조할 방(지금 공간)
-    let surfaces = new Map();     // "id:part" → { mats:[], base:[Color], kind:"wall|floor|window", hl:Color|null, t0, wait }
+    let surfaces = new Map();     // "id:part" → { mats:[], base:[Color], kind:"wall|floor|window", hl:Color|null, t0 }
     let labelSprites = new Map(); // id → { sprite, text, pos }
     let labelText = {};
     let wanted = new Map();       // "id:part" → color (마지막으로 받은 목록)
@@ -388,11 +363,10 @@
     const edgeMat = new THREE.LineBasicMaterial({ color: EDGE, transparent: true, opacity: 0.55 });
     const capMat = new THREE.MeshLambertMaterial({ color: CAP });
     const outMat = new THREE.MeshLambertMaterial({ color: OUTSIDE });
-    const whiteMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
 
     function surface(id, part, factory) {
       const k = id + ":" + part;
-      if (!surfaces.has(k)) surfaces.set(k, { mats: [], base: [], part, hl: null, t0: 0, wait: false });
+      if (!surfaces.has(k)) surfaces.set(k, { mats: [], base: [], part, hl: null, t0: 0 });
       const s = surfaces.get(k);
       const m = factory(); s.mats.push(m); s.base.push(m.color.clone()); disposables.push(m);
       return m;
@@ -423,7 +397,7 @@
 
     function build() {
       clear();
-      const g = geometry(plan, mode);
+      const g = geometry(plan);
       W = g.P.W; D = g.P.D; curRooms = g.rooms; cutsNow = g.cuts;
       const X = x => x - W / 2, Z = y => y - D / 2;
       // 바닥
@@ -447,7 +421,7 @@
         if (c.o === "h") add(new THREE.BoxGeometry(L, 0.004, T), capMat, X(mid), H + 0.002, Z(c.c), false);
         else add(new THREE.BoxGeometry(T, 0.004, L), capMat, X(c.c), H + 0.002, Z(mid), false);
       });
-      // 유리 — 창마다 재질 하나, 그 창을 가진 방(기본형 발코니 창은 앞 방도)에 등록
+      // 유리 — 창마다 재질 하나, 그 창을 가진 방에 등록
       g.wins.forEach((w, i) => {
         const mats = w.owners.map(id => surface(id, "window", () => new THREE.MeshLambertMaterial({ color: GLASS, transparent: true, opacity: 0.42, depthWrite: false })));
         glassMats.set(i, mats);
@@ -456,7 +430,7 @@
         const mats = glassMats.get(gl2.win); if (!mats) return;
         const L = gl2.b - gl2.a, h = gl2.y1 - gl2.y0, mid = (gl2.a + gl2.b) / 2, ym = (gl2.y0 + gl2.y1) / 2;
         mats.forEach((m, j) => {
-          const off = j * 0.012;   // 같은 자리 두 장(발코니 창 = 발코니 + 앞 방)은 조금 띄운다
+          const off = j * 0.012;   // 한 창을 두 방이 가지면 같은 자리 두 장이라 조금 띄운다
           if (gl2.o === "h") add(new THREE.BoxGeometry(L, h, 0.02), m, X(mid), ym, Z(gl2.c) + off, false);
           else add(new THREE.BoxGeometry(0.02, h, L), m, X(gl2.c) + off, ym, Z(mid), false);
         });
@@ -576,7 +550,7 @@
     // 칠할 목록에 그 방 조명이 있으면 고른 종류(없으면 방 종류별 기본)의 등을 만든다. 종류가 바뀐 방만 다시 만든다.
     function lightMat(id, mat, op, keep) {
       const k = id + ":light";
-      if (!surfaces.has(k)) surfaces.set(k, { mats: [], base: [], part: "light", hl: null, t0: 0, wait: false });
+      if (!surfaces.has(k)) surfaces.set(k, { mats: [], base: [], part: "light", hl: null, t0: 0 });
       const s = surfaces.get(k);
       mat.userData.op = op; mat.userData.keep = !!keep; mat.visible = false;
       s.mats.push(mat); s.base.push(mat.color.clone());
@@ -664,7 +638,7 @@
     // ── 가구 ─────────────────────────────────────────────────────────────
     function furnMat(id, part, mat, op, keep) {
       const k = id + ":" + part;
-      if (!surfaces.has(k)) surfaces.set(k, { mats: [], base: [], part, hl: null, t0: 0, wait: false });
+      if (!surfaces.has(k)) surfaces.set(k, { mats: [], base: [], part, hl: null, t0: 0 });
       const s = surfaces.get(k);
       mat.transparent = true; mat.opacity = 0; mat.visible = false;
       mat.userData.op = op; mat.userData.keep = !!keep;
@@ -784,20 +758,19 @@
       furnObjs.set(r.id, { sig, objs });
     }
 
-    function applyWanted(animate, defer) {
+    function applyWanted() {
       syncLights();
       syncFurn();
       const now = performance.now() / 1000;
       surfaces.forEach((s, k) => {
         const want = wanted.get(k);
-        if (!want) { s.hl = null; s.wait = false; s.t0 = 0; paint(s, 0); return; }
+        if (!want) { s.hl = null; s.t0 = 0; paint(s, 0); return; }
         const col = new THREE.Color(want);
         const isNew = !s.hl || !s.hl.equals(col);
         s.hl = col;
-        if (!isNew) { if (!s.wait && !s.t0) paint(s, 1); return; }
-        if (!animate || (reduce && reduce.matches)) { s.wait = false; s.t0 = 0; paint(s, 1); }
-        else if (defer) { s.wait = true; s.t0 = 0; paint(s, 0); }
-        else { s.wait = false; s.t0 = now; paint(s, 0); }
+        if (!isNew) { if (!s.t0) paint(s, 1); return; }
+        if (reduce && reduce.matches) { s.t0 = 0; paint(s, 1); }
+        else { s.t0 = now; paint(s, 0); }
       });
       invalidate();
     }
@@ -846,7 +819,7 @@
       if (Math.abs(dx) + Math.abs(dz) + Math.abs(dk) > 0.004) { fx += dx * 0.14; fz += dz * 0.14; fk += dk * 0.14; aim(); busy = true; }
       else if (dx || dz || dk) { fx = goal.x; fz = goal.z; fk = goal.k; aim(); }
       surfaces.forEach(s => {
-        if (!s.hl || s.wait || !s.t0) return;
+        if (!s.hl || !s.t0) return;
         const t = now - s.t0;
         if (t >= 2.0) { s.t0 = 0; paint(s, 1); } else { paint(s, level(t)); busy = true; }
       });
@@ -880,23 +853,17 @@
     build();
 
     return {
-      /** 평면(59 · 84 · 105)과 발코니 형식(e 확장 · b 기본)을 바꾼다 — 칠은 그대로 옮겨 간다(움직임 없이). */
-      setPlan(p, m) {
-        p = PLANS[p] ? String(p) : plan; m = m === "b" ? "b" : "e";
-        if (p === plan && m === mode) return;
-        plan = p; mode = m; build();
+      /** 평면(78 · 79 · 86 · 109)을 바꾼다 — 칠은 그대로 옮겨 간다(움직임 없이). */
+      setPlan(p) {
+        p = PLANS[p] ? String(p) : plan;
+        if (p === plan) return;
+        plan = p; build();
       },
-      /** list: [{ id, part:"wall|floor|window", color:"#RRGGBB" }] — 같은 면은 뒤쪽이 이긴다.
-          defer: 상품 팝업이 열려 있으면 색을 미뤘다가 play()에서 보인다. */
-      setHighlights(list, o) {
+      /** list: [{ id, part:"wall|floor|window", color:"#RRGGBB" }] — 같은 면은 뒤쪽이 이긴다. */
+      setHighlights(list) {
         wanted = new Map();
         (list || []).forEach(h => wanted.set(h.id + ":" + h.part, h.color));
-        applyWanted(!(o && o.animate === false), !!(o && o.defer));
-      },
-      play() {
-        const now = performance.now() / 1000;
-        surfaces.forEach(s => { if (s.wait) { s.wait = false; s.t0 = (reduce && reduce.matches) ? 0 : now; paint(s, s.t0 ? 0 : 1); } });
-        invalidate();
+        applyWanted();
       },
       /** 지금 공간 쪽으로 시점을 천천히 옮긴다(ids = 방 id 목록, 없으면 집 전체). 끌어서 돌린 방향은 그대로. */
       focus(ids) {
@@ -911,38 +878,31 @@
       blink(list) {
         if (reduce && reduce.matches) return;
         const now = performance.now() / 1000;
-        (list || []).forEach(h => { const s = surfaces.get(h.id + ":" + h.part); if (s && s.hl) { s.wait = false; s.t0 = now; } });
+        (list || []).forEach(h => { const s = surfaces.get(h.id + ":" + h.part); if (s && s.hl) s.t0 = now; });
         invalidate();
       },
       /** 방 id → { kinds: [wc · bas · tub · shw · mirror · sink · upper · hood · wardrobe · shoe], len: 싱크대 길이 m }.
           그 방 fixture(욕실 기구) · cabinet(가구)가 칠할 목록에 있을 때만 그린다. */
       setFurniture(map) {
         furnWant = new Map(Object.entries(map || {}).map(([id, v]) => [id, { kinds: [...new Set(v.kinds || [])], len: +v.len || 0 }]));
-        applyWanted(true, false);
+        applyWanted();
       },
       /** 방 id → 등 종류 목록(round · square · rect · down · cove · pendant · auto). 그 방 조명이 칠할 목록에 있을 때만 그린다. */
       setLights(map) {
         lightKinds = new Map(Object.entries(map || {}).map(([id, ks]) => [id, [...new Set(ks)].sort()]));
-        applyWanted(true, false);
+        applyWanted();
       },
       /** id → 이름(방 라벨). 빈 글자면 라벨을 숨긴다. 없는 id는 기본 이름. */
       setLabels(map) { labelText = Object.assign({}, map || {}); applyLabels(); invalidate(); },
-      resetView() { yaw = -0.5; tilt = 0.98; dist = fitDist(); place(); },
-      dispose() {
-        if (raf) cancelAnimationFrame(raf);
-        if (ro) ro.disconnect(); else window.removeEventListener("resize", fit);
-        clear(); [edgeMat, capMat, outMat, whiteMat, glowTex, washTex].forEach(m => m.dispose());
-        renderer.dispose(); canvas.remove();
-      },
     };
   }
 
   window.Room3D = {
-    PLANS: Object.keys(PLANS).reduce((o, k) => { o[k] = { label: PLANS[k].label, sub: PLANS[k].sub, fixed: !!PLANS[k].fixed, bedrooms: PLANS[k].bedrooms.slice() }; return o; }, {}),
+    PLANS: Object.keys(PLANS).reduce((o, k) => { o[k] = { label: PLANS[k].label, sub: PLANS[k].sub, bedrooms: PLANS[k].bedrooms.slice() }; return o; }, {}),
     LABELS,
     DEFAULT_LIGHT: Object.assign({}, DEFAULT_LIGHT),
     /** 방 목록 [{ id, kind }] — WebGL 없이도 쓴다(무엇을 칠할지 고르기). */
-    rooms(planKey, mode) { return layout(planKey, mode).rooms.map(r => ({ id: r.id, kind: r.kind, parts: r.parts.slice() })); },
+    rooms(planKey) { return layout(planKey).rooms.map(r => ({ id: r.id, kind: r.kind, parts: r.parts.slice() })); },
     create,
   };
 })();
