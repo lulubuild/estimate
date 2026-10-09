@@ -1,4 +1,4 @@
-/* 완성 모습 미리보기 — 3D 도면 (웹 견적요청 페이지 전용, 2026-10-08 · 조명 종류 · 작은 이름표 · 실제 도면 4종 · 상품 고르면 가구 · 벽 절반 높이(창은 실제 높이) 2026-10-09)
+/* 완성 모습 미리보기 — 3D 도면 (웹 견적요청 페이지 전용, 2026-10-08 · 조명 종류 · 작은 이름표 · 실제 도면 4종 · 상품 고르면 가구 · 창틀 · 상하좌우 돌려 보기 2026-10-09)
    · three.js r128(three.min.js, 같은 사이트 파일)이 먼저 읽혀 있어야 한다. 페이지 보안 설정(CSP)이
      외부 스크립트를 막으므로 두 파일 모두 index.html 옆에 둔다.
    · 평면 4가지 — 사장님이 주신 실제 도면 78 · 79 · 86 · 109㎡(그림 그대로, 2026-10-09). 예전 대표 평면(59 · 84 · 105)은 뺐다.
@@ -6,17 +6,19 @@
    · 방마다 벽 · 바닥 · 창 재질이 따로라서 '어느 방의 어느 면'만 색을 바꿀 수 있다.
      페이지(index.html)가 체크표를 읽어 [{ id, part, color }] 목록을 넘기면 여기서 칠한다.
    · 화면은 바뀔 때만 다시 그린다(멈춰 있으면 그리지 않음 — 휴대폰 배터리).
-   · 가로로 끌면 돌아가고, 세로로 밀면 페이지가 굴러간다(touch-action: pan-y). 마우스는 위아래로 기울기도 된다. */
+   · 손가락 · 마우스로 끄는 방향 그대로 돌아간다 — 좌우는 한 바퀴, 위아래는 바로 위에서 내려다보기 ~ 거의 옆에서 보기(사용자 결정 2026-10-09).
+     도면 칸 위에서는 페이지가 굴러가지 않는다(touch-action: none). 어느 각도든 평면 전체가 화면에 들도록 거리를 그때그때 맞춘다. */
 (function () {
   "use strict";
 
   const T = 0.12;    // 벽 두께
-  // 벽 · 문은 실제의 절반 높이로 낮춰 방 안이 잘 보이게(사용자 결정 2026-10-09). 창과 가구는 실제 높이 그대로(창은 벽 위로 솟는다).
-  const H = 1.2;     // 벽 높이(실제 2.4m의 절반) — 천장 조명도 이 높이
-  const DH = 1.05;   // 문짝 높이(문 자리는 벽 위까지 트임)
-  const WT = 2.1;    // 창 위 끝(실제 높이) — 낮은 벽 위로 올라온 부분은 창틀로 테를 두른다
+  // 벽 · 문 · 창 · 가구 모두 실제 높이(벽 절반 높이는 되돌림 — 사용자 결정 2026-10-09). 방 안은 위에서 내려다보도록 돌려 본다.
+  const H = 2.4;     // 벽 높이 — 천장 조명도 이 높이
+  const DH = 2.1;    // 문 높이(문 위는 인방 벽)
+  const WT = 2.1;    // 창 위 끝 — 창은 흰 창틀로 테를 두른다
   const FW = 0.05, FD = 0.07;   // 창틀 굵기 · 두께
-  const FIT_TOP = 2.1;   // 화면 맞춤에 넣는 높이 — 벽 위로 솟은 창 · 상부장 · 붙박이장도 화면 안에
+  const FIT_TOP = H;     // 화면 맞춤에 넣는 높이
+  const TILT_MIN = 0.12, TILT_MAX = 1.5;   // 위아래로 돌리는 범위(라디안) — 거의 옆에서(약 7°) ~ 거의 바로 위에서(약 86°)
   const DW = 0.9;    // 문 폭
   const BD = 1.4;    // 기본형 전면 발코니 깊이
   const EPS = 1e-6;
@@ -265,7 +267,7 @@
     lines.forEach(L => {
       const cover = union(L.edges.map(e => [e.a, e.b]));
       const cuts = union(L.cuts), doors = union(L.doors);
-      const opens = union(L.doors.concat(WT > H ? L.wins.map(w => [w.a, w.b]) : []));   // 벽 윗면이 끊기는 자리(문 · 벽보다 키 큰 창)
+      const opens = union((DH < H ? [] : L.doors).concat(WT > H ? L.wins.map(w => [w.a, w.b]) : []));   // 벽 윗면이 끊기는 자리(벽 위까지 트인 문 · 벽보다 키 큰 창) — 실제 높이에서는 없음
       const pts = new Set();
       L.edges.forEach(e => { pts.add(e.a); pts.add(e.b); });
       cuts.concat(doors).forEach(v => { pts.add(v[0]); pts.add(v[1]); });
@@ -324,7 +326,7 @@
       const ea = atEnd(pc.a) ? T / 2 : 0, eb = atEnd(pc.b) ? T / 2 : 0;
       const base = { o: pc.o, c: pc.c, plus: pc.plus, minus: pc.minus };
       if (pc.type === "full") boxes.push(Object.assign({ a: pc.a - ea, b: pc.b + eb, y0: 0, y1: H }, base));
-      else if (pc.type === "door") { /* 문 자리는 벽 위까지 트인다(낮은 벽에 짧은 인방이 남지 않게) */ }
+      else if (pc.type === "door") { if (DH < H) boxes.push(Object.assign({ a: pc.a, b: pc.b, y0: DH, y1: H }, base)); }   // 문 위 인방
       else {
         boxes.push(Object.assign({ a: pc.a, b: pc.b, y0: 0, y1: pc.win.sill }, base));
         if (WT < H) boxes.push(Object.assign({ a: pc.a, b: pc.b, y0: WT, y1: H }, base));
@@ -635,7 +637,7 @@
           }
         } else if (k === "cove") {
           // 간접조명 — 천장 가장자리 빛 줄 + 벽 위쪽이 밝아짐(트인 쪽은 줄만)
-          const e = T / 2 + 0.12, f = T / 2 + 0.012, hh = 0.4, ym = H - 0.02 - hh / 2;
+          const e = T / 2 + 0.12, f = T / 2 + 0.012, hh = 0.75, ym = H - 0.02 - hh / 2;
           put(new THREE.BoxGeometry(r.w - 2 * e, 0.03, 0.05), fixture(), cx, H - 0.04, r.y + e);
           put(new THREE.BoxGeometry(r.w - 2 * e, 0.03, 0.05), fixture(), cx, H - 0.04, r.y + r.h - e);
           put(new THREE.BoxGeometry(0.05, 0.03, r.h - 2 * e), fixture(), r.x + e, H - 0.04, cy);
@@ -650,8 +652,8 @@
           const two = r.kind === "kitchen", py = two ? r.y + r.h * 0.62 : cy;
           (two ? [-0.35, 0.35] : [0]).forEach(d => {
             const x = alongX ? cx + d : cx, z = alongX ? py : py + d;
-            put(new THREE.CylinderGeometry(0.008, 0.008, 0.25, 6), basic(0x6B6B6B, 0.9, true), x, H - 0.125, z);
-            put(new THREE.CylinderGeometry(0.07, 0.2, 0.17, 24), fixture(), x, H - 0.335, z);
+            put(new THREE.CylinderGeometry(0.008, 0.008, 0.55, 6), basic(0x6B6B6B, 0.9, true), x, H - 0.275, z);
+            put(new THREE.CylinderGeometry(0.07, 0.2, 0.17, 24), fixture(), x, H - 0.635, z);
             pool(x, z, 0.75, 0.28);
           });
         }
@@ -830,6 +832,9 @@
       const d = dist * fk;
       camera.position.set(fx + d * Math.cos(tilt) * Math.sin(yaw), 0.6 + d * Math.sin(tilt), fz + d * Math.cos(tilt) * Math.cos(yaw));
       camera.lookAt(fx, 0.5, fz + 0.25 * fk);
+      // 햇빛도 시점과 함께 돈다 — 어느 쪽에서 보든 처음 모습과 같은 밝기(뒤쪽 벽이 어둡게 보이지 않게)
+      const a = yaw + 0.5, c = Math.cos(a), sn = Math.sin(a);
+      sun.position.set(-5 * c + 9 * sn, 12, 5 * sn + 9 * c);
     }
     function place() { aim(); invalidate(); }
     function invalidate() { if (!raf) raf = requestAnimationFrame(frame); }
@@ -860,7 +865,8 @@
     const move = e => {
       if (!drag || e.pointerId !== drag.id) return;
       yaw = drag.yaw - (e.clientX - drag.x) * 0.008;
-      if (drag.mouse) tilt = Math.min(1.45, Math.max(0.45, drag.tilt + (e.clientY - drag.y) * 0.005));
+      tilt = Math.min(TILT_MAX, Math.max(TILT_MIN, drag.tilt + (e.clientY - drag.y) * 0.006));   // 아래로 끌면 위에서 내려다보기
+      dist = fitDist();   // 이 각도에서 평면이 화면에 꼭 들어오는 거리
       place();
     };
     const up = e => { if (drag && e.pointerId === drag.id) { drag = null; stage.classList.remove("drag"); } };
@@ -921,7 +927,7 @@
       },
       /** id → 이름(방 라벨). 빈 글자면 라벨을 숨긴다. 없는 id는 기본 이름. */
       setLabels(map) { labelText = Object.assign({}, map || {}); applyLabels(); invalidate(); },
-      resetView() { yaw = -0.5; tilt = 0.98; place(); },
+      resetView() { yaw = -0.5; tilt = 0.98; dist = fitDist(); place(); },
       dispose() {
         if (raf) cancelAnimationFrame(raf);
         if (ro) ro.disconnect(); else window.removeEventListener("resize", fit);
