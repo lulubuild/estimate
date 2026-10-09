@@ -101,9 +101,6 @@ a { color: var(--link); }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 19px; letter-spacing: -0.02em; }
 .brand-mark { width: 22px; height: 22px; flex: none; color: var(--brand); }
 /* 보이는 알약은 작게(애플 바처럼), 누르는 자리는 44px */
-.nav-cta { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; -webkit-tap-highlight-color: transparent; }
-.nav-cta span { background: var(--accent); color: #fff; border-radius: 980px; padding: 5px 14px; font-size: 13px; font-weight: 500; letter-spacing: 0; transition: background .15s; }
-.nav-cta:hover span { background: var(--accent-hover); }
 
 /* 머리 — 큰 제목 + 회색 부제, 가운데 */
 header.hero { text-align: center; padding: 48px 0 8px; }
@@ -237,6 +234,7 @@ input[type="date"].input:not(.has-value) { color: var(--muted); }
 .trade-head[aria-expanded="true"] .t-arrow { transform: rotate(-90deg); }
 .trade-body { padding: 0 12px 14px; }
 .trade-body .t-hint { margin: 0 4px 10px; font-size: 13px; color: var(--muted); }
+.trade-body .t-hint .t-mode { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; font-size: 12px; font-weight: 600; color: var(--sel); }
 .step-err { display: none; margin-top: 16px; padding: 14px 16px; border-radius: var(--r-tile); background: var(--danger-soft); color: var(--danger); font-size: 15px; word-break: keep-all; }
 .invalid > .step-err { display: block; }
 .step-err .btn { margin-top: 10px; }
@@ -396,12 +394,10 @@ footer .sep { color: var(--line); }
 </head>
 <body>
 
-<!-- 위 반투명 바 — 상호 · '견적 요청'(누르면 마지막 동의 · 보내기 칸으로).
-     전화 상담은 견적 요청을 받은 뒤에만 — 번호는 접수 완료 화면에서 보인다(사용자 결정 2026-10-07) -->
+<!-- 위 반투명 바 — 상호만. 전화 번호는 접수 완료 화면에서 보인다 -->
 <nav class="nav" aria-label="상단">
   <div class="wrap nav-in">
     <div class="brand"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6 1.8 11.2l1.3 1.5L5 11.1V21h5.5v-6h3v6H19v-9.9l1.9 1.6 1.3-1.5z"/></svg><span id="companyName">룰루타일</span></div>
-    <a class="nav-cta" id="navCta" href="#consentSection" hidden><span>견적 요청</span></a>
   </div>
   <div class="progress" aria-hidden="true"><i id="progressBar"></i></div>
 </nav>
@@ -649,12 +645,12 @@ const CONFIG = {
   WHOLE_HOUSE_ROOM: "공용(전체)",
 };
 
-/* 공간 · 공종 · 상품 — 앱 '평면도 관리'의 **웹 견적 페이지에 반영**(408)이 Apps Script에 올린 설정을
+/* 공간 · 공종 · 상품 — 앱 '평면도 관리'의 **웹 견적 페이지에 반영**(4008)이 Apps Script에 올린 설정을
    페이지가 열릴 때 읽어 쓴다. 아래 DEFAULT_WEB은 그 설정을 아직 못 읽었을 때(처음 · 연결 실패)의 기본값이다.
    · rooms — 앱 기본 공간 카드(EstimateDraft.defaultRoomNames)
    · trades · products — 앱 '단가표 관리'의 공종 · 항목명과 **글자까지 같아야** 앱이 그 항목만 담는다.
      상품을 고르지 않은 공종은 앱이 그 공종의 항목을 전부 담는다. 가격은 싣지 않는다.
-   · categories — 앱 공간 분류와 그 분류에서 안 쓰는 공종(419). 공간 카드 → 분류 찾기는 앱 RoomTradeScope와 같은 규칙.
+   · categories — 앱 공간 분류와 그 분류에서 안 쓰는 공종(4107). 공간 카드 → 분류 찾기는 앱 RoomTradeScope와 같은 규칙.
      안 쓰는 공종은 그 공간 카드에 보이지 않고 전송에서도 빠진다(사용자 결정 2026-09-29 — 완전히 숨김).
    2026-09-29 기본값: 단가표(시공 항목 + 자재 DB Rev1 135건) · 도배 · 마루는 공용(전체)에서만. */
 const DEFAULT_WEB = {
@@ -675,7 +671,9 @@ const DEFAULT_WEB = {
     "타일": [["주방 벽타일 시공", "주방 기준"], ["욕실 벽/바닥 타일 시공", "욕실 기준"], ["타일 시공비 - 벽 (자재 별도)", "압착·떠발이 공임"], ["타일 시공비 - 바닥 (자재 별도)", "압착 공임"], ["포세린 타일 자재 600×600", "600각 포세린(자재만)"], ["줄눈(에폭시) 시공", "욕실 1개소 기준"], ["ARE 36001 크림 벽타일 (300×600)", "벳센타일 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["ARE 36002 아몬드 벽타일 (300×600)", "벳센타일 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["ARE 36003 비앙코 벽타일 (300×600)", "벳센타일 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["ARE 36004 그리지오 벽타일 (300×600)", "벳센타일 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["WT3606 백색 마블 벽타일 (300×600)", "베리굿타일앤스톤 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["WT36M06 아이보리 벽타일 (300×600)", "베리굿타일앤스톤 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["WT3604 라이트베이지 벽타일 (300×600)", "베리굿타일앤스톤 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["CW 7001 화이트 유광 서브웨이 벽타일 (300×600)", "CW·WM(수입) · 300*600, 8장/박스(1.44㎡), 도기질 유광"], ["CW 7003 진그레이 유광 서브웨이 벽타일 (300×600)", "CW·WM(수입) · 300*600, 8장/박스(1.44㎡), 도기질 유광"], ["WM 38000M 백색 무광 벽타일 (300×600)", "CW·WM(수입) · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["WM 37109M 우드스틱 라이트그레이 벽타일 (300×600)", "CW·WM(수입) · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["비바 베이지 포세린 (600×600)", "화신세라믹 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["비바 블랑코 포세린 (600×600)", "화신세라믹 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["66508 화이트 테라조 포세린 (600×600)", "화신세라믹 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["테라조 컬러스 포세린 (600×600)", "화신세라믹 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["PER6008 블랙 테라조 포세린 (600×600)", "베리굿타일앤스톤 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["PER6003 그레이 테라조 포세린 (600×600)", "베리굿타일앤스톤 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["LECCE 01 라이트그레이 포세린 (600×600)", "베리굿타일앤스톤 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["VG3309 욕실 바닥 자기질 (300×300)", "베리굿타일앤스톤 · 300*300, 16장/박스(1.44㎡), 자기질 무광"], ["GGK9394 욕실 바닥 논슬립 (300×300)", "이누스(아이에스동서) · 300*300, 16장/박스(1.44㎡), 국산 자기질 무광 논슬립"], ["GGK8394 욕실 바닥 논슬립 (300×300)", "이누스(아이에스동서) · 300*300, 16장/박스(1.44㎡), 국산 자기질 무광 논슬립"], ["비바 그레이 포세린 (600×1200)", "화신세라믹 · 600*1200, 2장/박스(1.44㎡), 포세린 무광 9.5T"], ["NOVA 포세린 (600×1200)", "베리굿타일앤스톤 · 600*1200, 2장/박스(1.44㎡), 포세린 무광"], ["LC 스톤챗 화이트 포세린 (600×1200)", "화신세라믹 라우체 · 600*1200, 2장/박스(1.44㎡), 포세린 무광 컬러바디"]],
     "필름": [["방문+문틀 필름 시공", "문짝+문틀 1틀"], ["현관문 필름 시공", "실내측 1짝"], ["베니프 우드 EW 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염(방염판 CW), 예: EW609 월넛"], ["베니프 우드 EGM 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염(방염판 RGM), 페인티드 우드, 예: EGM05"], ["베니프 프리미엄우드 NE 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염(방염판 NW), 예: NE041 화이트오크"], ["베니프 솔리드 ES 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염(방염판 RS), 예: ES130 화이트"], ["베니프 미스티 저광 솔리드 SM 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염, 저광 솔리드, 예: SM016"], ["베니프 솔리드 방염 RS 시리즈", "LX Z:IN · 1220mm*50m 롤, 방염, 예: RS130 화이트"], ["보닥 스탠다드우드 W 시리즈", "현대L&C · 1220mm*50m 롤, 비방염, 예: W933"], ["보닥 오리진우드 SPW 시리즈", "현대L&C · 1220mm*50m 롤, 비방염, 프리미엄 우드, 예: SPW45"], ["보닥 솔리드 S 시리즈", "현대L&C · 1220mm*50m 롤, 비방염, 예: S244 코튼화이트"], ["보닥 솔리드 방염 S 시리즈", "현대L&C · 1220mm*50m 롤, 방염, 예: S244"], ["보닥 슈퍼매트 SMT 시리즈", "현대L&C · 1220mm*50m 롤, 비방염, 프리미엄 무광, 예: SMT16"], ["영림 우드 PW 시리즈", "영림 · 1220mm*25m 롤, 비방염, 예: PW957"], ["영림 우드 방염 FPW 시리즈", "영림 · 1220mm*25m 롤, 방염, 예: FPW835"], ["영림 솔리드 PS 시리즈", "영림 · 1220mm*25m 롤, 비방염, 예: PS010 중백색"], ["영림 소프트매트 PSM 시리즈", "영림 · 1220mm*25m 롤, 비방염, 프리미엄 무광, 예: PSM190 포슬린"]],
   },
-  // 지금 규칙: 도배 · 마루는 공용(전체)에서만 — 앱 419에서 정해 반영하면 그 값으로 바뀐다.
+  // 단일 선택 공종(앱 '공종 설정' 5301, 2026-10-09) — 한 공간에 상품 1개만. 나머지는 중복 선택(여러 개).
+  single: ["도배", "마루"],
+  // 지금 규칙: 도배 · 마루는 공용(전체)에서만 — 앱 4107에서 정해 반영하면 그 값으로 바뀐다.
   categories: [
     { name: "거실", excluded: ["도배", "마루"] },
     { name: "주방", excluded: ["도배", "마루"] },
@@ -728,7 +726,7 @@ const state = {
   photos: [],         // { name, dataUrl }
 };
 
-// ── 공간 · 공종 설정 (앱 408 → Apps Script → 여기) ─────────────────────
+// ── 공간 · 공종 설정 (앱 4008 → Apps Script → 여기) ─────────────────────
 const WEB_CACHE_KEY = "estimate-web-config-v1";
 // 설정을 못 주는 스크립트(옛 버전)에 매번 묻지 않도록 쉬는 시각 — 옛 스크립트는 이 요청을 틀린 키로 세어 앱 동기화를 막는다.
 const WEB_PAUSE_KEY = "estimate-web-config-pause-until-v2";   // v2(2026-09-30): 새 스크립트는 발급 표를 주므로 옛 멈춤 기록은 무시
@@ -766,7 +764,19 @@ function normalizeWebConfig(raw) {
     categories.push({ name, excluded: new Set((Array.isArray(c.excluded) ? c.excluded : []).map(x => str(x, 100)).filter(Boolean)) });
   });
   if (!rooms.length || !trades.length) return null;
-  return { rooms, trades, products, categories };
+  // 단일 선택 공종 — 싣는 공종 안의 것만. 키가 없으면(옛 설정 · 옛 스크립트) 모두 중복 선택(예전 동작 그대로).
+  const single = new Set((Array.isArray(raw.single) ? raw.single : [])
+    .map(t => str(t, WEB_LIMITS.trade)).filter(t => t && t in products));
+  return { rooms, trades, products, categories, single };
+}
+/** 이 공종은 단일 선택인가(한 공간에 상품 1개) — 아니면 중복 선택(여러 개). */
+const isSingle = trade => !!(WEB.single && WEB.single.has(trade));
+/** 단일 선택 공종에 여러 개가 담겨 있으면(옛 초안 · 설정이 바뀐 뒤) 먼저 고른 1개만 남긴다. 줄였으면 true. */
+function keepFirstIfSingle(trade, set) {
+  if (!isSingle(trade) || set.size <= 1) return false;
+  const first = set.values().next().value;
+  set.clear(); set.add(first);
+  return true;
 }
 
 let WEB = normalizeWebConfig(DEFAULT_WEB);
@@ -861,6 +871,7 @@ function applyWebConfig(next, source) {
     });
     [...data.items].forEach(([t, set]) => {
       [...set].forEach(n => { if (!(WEB.products[t] || []).some(([pn]) => pn === n)) { set.delete(n); changed = true; } });
+      if (keepFirstIfSingle(t, set)) changed = true;   // 중복 → 단일 선택으로 바뀐 공종
       if (!set.size) data.items.delete(t);
     });
   });
@@ -950,11 +961,6 @@ document.title = `온라인 견적 요청 · ${CONFIG.COMPANY_NAME}`;
 // 전화번호는 접수 완료 화면에서만(머리 · 바닥글에는 상호만). 보내기 실패 안내에는 남긴다 — 요청을 보내려다 막힌 고객의 연락 길.
 $("#footerText").textContent = CONFIG.COMPANY_NAME;
 if (CONFIG.PRIVACY_URL) { $("#footerPrivacy").href = CONFIG.PRIVACY_URL; $("#footerPrivacy").hidden = false; $("#footerSep").hidden = false; }
-// 위 바 '견적 요청' — 마지막 동의 · 보내기 칸으로(보내지는 않는다)
-$("#navCta").addEventListener("click", e => {
-  e.preventDefault();
-  $("#consentSection").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
-});
 $("#donePhone").href = "tel:" + CONFIG.COMPANY_PHONE.replace(/[^\d+]/g, "");
 $("#donePhoneText").textContent = `전화하기 ${CONFIG.COMPANY_PHONE}`;
 $("#donePhone").setAttribute("aria-label", `전화하기 ${CONFIG.COMPANY_PHONE}`);
@@ -966,7 +972,8 @@ if (CONFIG.PRIVACY_URL) { $("#privacyLink").href = CONFIG.PRIVACY_URL; $("#priva
 let toastTimer;
 function toast(msg) {
   const t = $("#toast"); t.textContent = msg; t.classList.add("on");
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("on"), 2600);
+  // 긴 안내(접수 실패 · 연결 끊김)는 읽을 만큼 오래 — 글자 수에 맞춰 2.6~7초(2026-10-09).
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("on"), Math.min(7000, Math.max(2600, msg.length * 90)));
 }
 
 // ── 연락처 자동 하이픈 ─────────────────────────────────────────────
@@ -1271,26 +1278,33 @@ function tradeItem(room, trade) {
   box.appendChild(head);
   if (!open) return box;
   const body = document.createElement("div"); body.className = "trade-body"; body.id = bodyId;
+  // 단일 선택(한 공간에 1개 — 다른 상품을 누르면 바뀜) · 중복 선택(여러 개) — 앱 '공종 설정'(5301)이 정한다(2026-10-09).
+  const single = isSingle(trade);
   const hint = document.createElement("p"); hint.className = "t-hint";
-  hint.textContent = "여러 개 고를 수 있어요. 고르면 아래 도면에 들어가는 자리가 깜빡여요.";
+  const mode = document.createElement("span"); mode.className = "t-mode"; mode.textContent = single ? "단일 선택" : "중복 선택";
+  hint.append(mode, single
+    ? "1개만 고를 수 있어요. 다른 상품을 누르면 바뀌고, 아래 도면에 들어가는 자리가 깜빡여요."
+    : "여러 개 고를 수 있어요. 고르면 아래 도면에 들어가는 자리가 깜빡여요.");
   const grid = document.createElement("div"); grid.className = "product-grid";
-  grid.setAttribute("role", "group"); grid.setAttribute("aria-label", `${room} ${trade} 상품`);
+  grid.setAttribute("role", "group"); grid.setAttribute("aria-label", `${room} ${trade} 상품 — ${single ? "단일 선택, 1개만" : "중복 선택, 여러 개"}`);
   (WEB.products[trade] || []).forEach(([name, subText]) => {
     const b = document.createElement("button");
-    b.type = "button"; b.className = "product-chip";
+    b.type = "button"; b.className = "product-chip"; b.dataset.name = name;
     const set0 = data.items.get(trade);
     b.setAttribute("aria-pressed", String(!!(set0 && set0.has(name))));
     const n = document.createElement("span"); n.textContent = name;
     b.append(n);
     if (subText) { const s = document.createElement("small"); s.textContent = subText; b.append(s); b.title = `${name} — ${subText}`; }
     b.addEventListener("click", () => {
-      const set = data.items.get(trade) || new Set();
+      let set = data.items.get(trade) || new Set();
       const adding = !set.has(name);
-      if (adding) set.add(name); else set.delete(name);
+      if (adding) { if (single) set = new Set(); set.add(name); }   // 단일 선택은 고른 1개로 바꾼다
+      else set.delete(name);
       // 상품이 있으면 담기, 마지막 상품을 빼면 빠진다(상품 필수 — 사용자 결정 2026-10-07)
       if (set.size) { data.items.set(trade, set); data.trades.add(trade); }
       else { data.items.delete(trade); data.trades.delete(trade); }
-      b.setAttribute("aria-pressed", String(set.has(name)));
+      // 단일 선택에서 바뀐 옛 칩도 함께 끈다.
+      $$(".product-chip", grid).forEach(c => c.setAttribute("aria-pressed", String(set.has(c.dataset.name))));
       paint(); afterChange();
       if (adding) previewBlink(room, trade);
     });
@@ -1345,6 +1359,10 @@ function renderSummary() {
     b.addEventListener("click", () => goTo(step));
     d.append(left, b); box.appendChild(d);
   };
+  // 이름 · 연락처 · 주소도 보이게 — 보내기 전에 오타를 볼 수 있게(2026-10-09). 글자로만 넣는다.
+  const who = [$("#name").value.trim() || "이름 미입력", $("#phone").value.trim() || "연락처 미입력"].join(" · ");
+  const addr = [$("#address").value.trim(), $("#addressDetail").value.trim()].filter(Boolean).join(" ") || "주소 미입력";
+  row("이름 · 연락처 · 주소", [who, addr], "info", infoBad().some(k => ["name", "phone", "address"].includes(k)));
   const py = parseFloat($("#pyeong").value);
   const s = $("#startDate").value, e = $("#endDate").value;
   const basics = [`${py > 0 ? py + "평" : "평형 미입력"} · ${state.scope === "부분" ? "부분 시공" : "전체 시공"}`];
@@ -1479,7 +1497,7 @@ $("#addrLayer").addEventListener("click", e => { if (e.target.id === "addrLayer"
 // 고른 공간 · 공종을 도면(사장님이 주신 실제 도면 78 · 79 · 86 · 109㎡)의 방 벽 · 바닥 · 창 · 문 · 조명에 칠한다. 보는 것만 — 전송 · 초안과 무관.
 // 고른 내용은 페이지를 넘겨도 그대로 남고, 지금 공간은 이름표 강조 · 시점 이동, 상품을 고르면 들어가는 자리가 깜빡인다(사용자 결정 2026-10-09).
 // 3D 파일(three.min.js → room3d.js)은 도면이 처음 보일 때 한 번만 불러온다(같은 사이트 파일 — CSP 'self').
-const PREVIEW_FILES = ["three.min.js", "room3d.js?v=20261009h"];
+const PREVIEW_FILES = ["three.min.js", "room3d.js?v=20261010a"];
 // 공종 → 칠할 부위. 공종 이름은 설정과 글자까지 같아야 한다(다른 공종은 여기에 줄을 더한다).
 // whole = 공용(전체)일 때 칠할 방 종류(null = 모든 방), parts(방 종류) = 그 방에서 칠할 면.
 const PREVIEW_DRY = ["living", "kitchen", "hall", "master", "bed", "alpha", "dress", "pantry", "entry", "powder"];
@@ -1559,7 +1577,7 @@ const PREVIEW_FIXED = {
 let preview = null;          // Room3D 화면(불러온 뒤)
 let previewLoad = null;      // 불러오는 중 · 끝(Promise)
 let previewInfo = null;      // 마지막으로 칠한 내용(깜빡일 자리 찾기)
-let previewPlan = "86", previewMode = "e", previewPlanManual = false;
+let previewPlan = "86", previewPlanManual = false;
 
 /** 평형 → 도면(고객이 칩을 누르면 그 뒤로는 고른 것). 25평 미만 79㎡(24평형) · 30평 미만 86㎡(26평형) · 그 위 109㎡(33평형).
     78㎡(24평형 계단식)는 칩으로만. 평형을 모르면 86㎡. */
@@ -1569,8 +1587,8 @@ function previewAutoPlan() {
 }
 /** 공간 이름 → 방 id 목록(공용(전체)는 "ALL"). 설정의 공간과 고른 공간 모두 같은 규칙이라 고른 것을 바꿔도 자리가 그대로다.
     names: 방 id → 라벨로 쓸 공간 이름(한 방에 딱 맞는 이름만 — 발코니 이름은 다용도실 라벨을 바꾸지 않는다). */
-function previewSlots(plan, mode) {
-  const ids = new Set(Room3D.rooms(plan, mode).map(r => r.id));
+function previewSlots(plan) {
+  const ids = new Set(Room3D.rooms(plan).map(r => r.id));
   const groups = { bed: Room3D.PLANS[plan].bedrooms.filter(id => ids.has(id)), bath: ["bath1", "bath2"].filter(id => ids.has(id)) };
   const taken = { bed: new Set(), bath: new Set() };
   const slots = new Map(), names = {}, waiting = [];
@@ -1604,10 +1622,10 @@ function previewSlots(plan, mode) {
 }
 /** 고른 것 → 칠할 면 목록 · 방 이름 · 범례 거리. 공용(전체)를 먼저 칠하고 개별 공간이 그 위에(같은 면이면 개별 공간 색).
     byRoom: 공간 → 공종 → 칠한 면들(깜빡이기 · 지금 공간 범례). */
-function previewPaint(plan, mode) {
-  const rooms = Room3D.rooms(plan, mode), kindOf = new Map(rooms.map(r => [r.id, r.kind]));
+function previewPaint(plan) {
+  const rooms = Room3D.rooms(plan), kindOf = new Map(rooms.map(r => [r.id, r.kind]));
   const partsOf = new Map(rooms.map(r => [r.id, new Set(r.parts)]));   // 그 방에 있는 면(문이 없는 방 · 창이 없는 방)
-  const { slots, names: labels } = previewSlots(plan, mode), whole = CONFIG.WHOLE_HOUSE_ROOM;
+  const { slots, names: labels } = previewSlots(plan), whole = CONFIG.WHOLE_HOUSE_ROOM;
   const list = [], legend = new Map(), byRoom = new Map(), skipTrades = new Set(), skipRooms = new Set(), noSpot = new Set();
   // 방 id → 가구(종류 · 싱크대 길이). 조명처럼 개별 공간이 공용(전체)보다 우선.
   const furn = new Map(), ownFurn = new Set();
@@ -1728,17 +1746,15 @@ function renderPreviewLegend(info, room) {
 function updateRoomPreview() {
   if (!previewPlanManual) previewPlan = previewAutoPlan();
   $$("#room3dPlans [data-plan]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.plan === previewPlan)));
-  $$("#room3dModes [data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === previewMode)));
-  const fixedPlan = !!(window.Room3D && Room3D.PLANS[previewPlan] && Room3D.PLANS[previewPlan].fixed);
-  // 실제 도면(78 · 79 · 86 · 109)은 그림 그대로 — 확장 · 비확장 칩 없음(2026-10-09 대표 평면 3개와 함께 뺌)
   const room = stepRoom(current);
   $("#dockRoom").textContent = room !== null ? room : current === "rooms" ? (state.rooms.size ? `고른 공간 ${state.rooms.size}곳` : "공간을 골라 주세요") : current === "finish" ? "고른 공사 모두" : "";
   if (!window.Room3D) return;
-  $("#dockPlanBtn").textContent = `${Room3D.PLANS[previewPlan].label} · ${fixedPlan ? Room3D.PLANS[previewPlan].sub : previewMode === "e" ? "확장형" : "비확장"}`;
-  const info = previewInfo = previewPaint(previewPlan, previewMode);
+  // 실제 도면(78 · 79 · 86 · 109)은 그림 그대로 — 확장 · 비확장 구분 없이 평형만 붙인다.
+  $("#dockPlanBtn").textContent = `${Room3D.PLANS[previewPlan].label} · ${Room3D.PLANS[previewPlan].sub}`;
+  const info = previewInfo = previewPaint(previewPlan);
   renderPreviewLegend(info, room);
   if (!preview) return;
-  preview.setPlan(previewPlan, previewMode);
+  preview.setPlan(previewPlan);
   preview.setLabels(info.labels);
   if (preview.setLights) preview.setLights(info.lights);   // 등 종류 먼저 — 칠할 목록이 오면 그 방에 그린다
   if (preview.setFurniture) preview.setFurniture(info.furn);   // 가구도 같은 방식
@@ -1765,7 +1781,7 @@ function loadPreview() {
     document.head.appendChild(s);
   });
   previewLoad = PREVIEW_FILES.reduce((p, src) => p.then(() => add(src)), Promise.resolve()).then(() => {
-    try { preview = Room3D.create($("#room3dStage"), { plan: previewPlan, mode: previewMode }); msg.hidden = true; }
+    try { preview = Room3D.create($("#room3dStage"), { plan: previewPlan }); msg.hidden = true; }
     catch (_) { preview = null; msg.textContent = "이 기기에서는 3D 미리보기를 볼 수 없어요. 아래 목록으로 확인해 주세요."; }
     updateRoomPreview();
   }, () => { msg.textContent = "미리보기를 불러오지 못했어요. 새로 고침하면 다시 시도합니다."; });
@@ -1773,7 +1789,6 @@ function loadPreview() {
 }
 // 칩 — 도면 크기 · 발코니(보는 것만 바뀐다)
 $$("#room3dPlans [data-plan]").forEach(b => b.addEventListener("click", () => { previewPlanManual = true; previewPlan = b.dataset.plan; updateRoomPreview(); }));
-$$("#room3dModes [data-mode]").forEach(b => b.addEventListener("click", () => { previewMode = b.dataset.mode; updateRoomPreview(); }));
 // 폰: 도면 칩은 '86㎡ · 26평형'을 눌러 펼친다 · 도면 접기(이 브라우저에 기억)
 $("#dockPlanBtn").addEventListener("click", () => {
   const open = $("#room3d").classList.toggle("opts-open");
@@ -1828,6 +1843,7 @@ function loadDraft() {
     (Array.isArray(it) ? it : []).forEach(([tr, names]) => {
       if (!trades.has(tr) || !Array.isArray(names)) return;
       const valid = new Set(names.filter(n => (WEB.products[tr] || []).some(([pn]) => pn === n)));
+      keepFirstIfSingle(tr, valid);   // 예전 초안에 단일 선택 공종이 여러 개 담겼으면 먼저 고른 1개만
       if (valid.size) items.set(tr, valid);
     });
     state.rooms.set(k, { trades, pyeong: typeof p === "string" ? p : "", items });
@@ -1856,7 +1872,9 @@ function infoBad() {
   const bad = [];
   if (!$("#name").value.trim()) bad.push("name");
   const phoneDigits = $("#phone").value.replace(/\D/g, "");
-  if (phoneDigits.length < 9 || phoneDigits.length > 11 || !phoneDigits.startsWith("0")) bad.push("phone");
+  // 010 휴대폰은 11자리만(10자리 010 번호는 없다, 2026-10-09). 그 밖(지역 번호 · 070)은 9~11자리.
+  if (phoneDigits.length < 9 || phoneDigits.length > 11 || !phoneDigits.startsWith("0")
+      || (phoneDigits.startsWith("010") && phoneDigits.length !== 11)) bad.push("phone");
   if (!$("#address").value.trim()) bad.push("address");
   const zip = $("#zip").value.trim();
   if (zip && !/^\d{5}$/.test(zip)) bad.push("zip");
@@ -1962,14 +1980,19 @@ async function submit() {
     }
     clearDraft();
     $("#receipt").textContent = receipt ? `접수번호 ${receipt}` : "접수 완료";
-    $("#form").hidden = true; $("#bar").hidden = true; $("#side").hidden = true; $("#donePanel").hidden = false; $("#navCta").hidden = true;
+    $("#form").hidden = true; $("#bar").hidden = true; $("#side").hidden = true; $("#donePanel").hidden = false;
     $(".layout").classList.add("is-done");
     document.body.style.paddingBottom = "0";
     window.scrollTo({ top: 0, behavior: "smooth" });
     rewindHistory();           // 접수 뒤 '뒤로' 한 번이면 이 페이지를 떠나게
   } catch (err) {
-    const msg = err.name === "AbortError" ? "응답이 늦어요. 잠시 후 다시 시도해 주세요." : (err.message || "전송에 실패했어요.");
-    toast(`${msg} 계속 안 되면 ${CONFIG.COMPANY_PHONE}로 연락 주세요.`);
+    // 연결이 끊기거나(Safari "Load failed" · Chrome "Failed to fetch" — TypeError) 응답이 늦으면 서버에는 접수됐을 수 있다.
+    // 영어 원문을 보이지 않고, 같은 연락처를 곧바로 다시 보내지 않게 안내한다(2026-10-09).
+    const network = err.name === "AbortError" || err.name === "TypeError";
+    const msg = network
+      ? `${err.name === "AbortError" ? "응답이 늦어요." : "연결이 끊겼어요."} 접수됐을 수 있어요 — 10분 뒤 다시 보내거나`
+      : `${err.message || "전송에 실패했어요."} 계속 안 되면`;
+    toast(`${msg} ${CONFIG.COMPANY_PHONE}로 연락 주세요.`);
   } finally {
     sending = false; btn.disabled = false; $("#prevBtn").disabled = false; btn.textContent = "견적 요청 보내기";
   }
