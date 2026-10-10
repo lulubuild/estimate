@@ -218,6 +218,12 @@ input[type="date"].input:not(.has-value) { color: var(--muted); }
 .room-chips .chip .ok { width: 7px; height: 7px; border-radius: 50%; background: var(--sel); flex: none; }
 .room-chips .chip.edit { color: var(--link); border-style: dashed; }
 .room-py { max-width: 240px; margin: 0 0 20px; }
+/* 공간 크기(크기 그룹 공간, 2026-10-10 사용자 결정) — 작음 · 보통 · 큼 타일(필수). 고른 크기 = 파란 테두리, 빠졌으면 빨간 테두리 */
+.room-size { margin: 18px 0 0; }
+.tiles3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.room-size.need .tile:not([aria-pressed="true"]) { border-color: var(--danger); }
+/* 가구 길이(주방가구 · 빌트인장, 2026-10-10) — 펼친 공종 안 상품 아래(선택) */
+.t-len { max-width: 260px; margin: 12px 4px 0; }
 
 /* 공종 목록 — 누르면 그 자리에서 상품이 펼쳐진다(팝업 대신 — 아래 3D 도면을 가리지 않게) */
 .trades { display: grid; gap: 10px; }
@@ -500,6 +506,12 @@ footer .sep { color: var(--line); }
           <span class="sfx">평</span>
         </label>
         <div class="trades" id="tradeList"></div>
+        <!-- 공간 크기(크기 그룹에 든 공간 — 타일 등 크기를 묻는 공종의 상품을 고르면 보인다, 필수). 앱이 공간 치수(물량 산출 탭 '공간 크기')로 바꾼다 -->
+        <div class="room-size" id="roomSizeWrap" hidden>
+          <span class="group-label" id="roomSizeLabel">공간 크기 <span class="opt">(필수 · 수량 계산에 써요)</span></span>
+          <div class="tiles3" id="roomSizeTiles" role="group" aria-labelledby="roomSizeLabel"></div>
+          <div class="hint" id="roomSizeHint"></div>
+        </div>
         <div class="step-err" id="roomErr" role="alert"><span id="roomErrText"></span><div><button type="button" class="btn" id="roomRemoveBtn" hidden>이 공간 빼기</button></div></div>
       </section>
 
@@ -722,7 +734,7 @@ let issuedAt = 0;
 
 const state = {
   scope: "전체",
-  rooms: new Map(),   // room -> { trades:Set, pyeong:"", items:Map(trade -> Set(상품명)) }
+  rooms: new Map(),   // room -> { trades:Set, pyeong:"", items:Map(trade -> Set(상품명)), size:"작음|보통|큼", len:Map(trade -> "3.2") }
   photos: [],         // { name, dataUrl }
 };
 
@@ -733,6 +745,35 @@ const WEB_PAUSE_KEY = "estimate-web-config-pause-until-v2";   // v2(2026-09-30):
 const WEB_PAUSE_MS = 6 * 60 * 60 * 1000;
 // 길이 · 개수 상한 — Apps Script(웹문의.gs WEBCFG)와 같게. 접수 때 서버가 공간 20자 · 공종 20자 · 상품명 60자로 자른다.
 const WEB_LIMITS = { rooms: 30, room: 20, trades: 60, trade: 20, perTrade: 300, name: 60, sub: 200, categories: 60, category: 40 };
+
+// 공간 크기(2026-10-10 사용자 결정) — 작음 · 보통 · 큼. 크기 그룹(앱 물량 산출 탭 '공간 크기' 8031)이 설정의 sizeGroups로 온다:
+// 그룹마다 공간 분류(cats) · 바닥+벽 여부(wall) · 안내 치수(sizes — [가로, 세로(, 높이)] m). 설정에 없으면(옛 설정) 아래 처음 값.
+const SIZE_TITLES = ["작음", "보통", "큼"];
+const WALL_SIZES = [[1.4, 1.8, 2.3], [1.6, 2.2, 2.3], [1.8, 2.6, 2.3]], FLOOR_SIZES = [[1.2, 2.0], [1.4, 3.0], [1.5, 4.5]];
+const DEFAULT_SIZE_GROUPS = [
+  { cats: ["욕실"], wall: true, sizes: WALL_SIZES },
+  { cats: ["발코니/베란다"], wall: false, sizes: FLOOR_SIZES },
+];
+/** 크기 그룹 — 칸마다 검사(가로 · 세로 0.3~20m, 바닥+벽은 높이 1.5~5m, 틀리면 처음 치수), 한 분류는 앞 그룹만, 최대 8개. */
+function normalizeSizeGroups(raw) {
+  if (!Array.isArray(raw)) return DEFAULT_SIZE_GROUPS;
+  const seen = new Set(), out = [];
+  raw.slice(0, 8).forEach(g => {
+    if (!g || typeof g !== "object") return;
+    const cats = (Array.isArray(g.cats) ? g.cats : []).filter(c => typeof c === "string" && c.trim() && c.length <= 40 && !seen.has(c.trim()))
+      .map(c => c.trim());
+    if (!cats.length) return;
+    cats.forEach(c => seen.add(c));
+    const wall = g.wall !== false, fallback = wall ? WALL_SIZES : FLOOR_SIZES;
+    const sizes = fallback.map((d, i) => {
+      const v = Array.isArray(g.sizes) && Array.isArray(g.sizes[i]) ? g.sizes[i].map(Number) : [];
+      const ok = v.length >= 2 && v.slice(0, 2).every(n => n >= 0.3 && n <= 20) && (!wall || (v[2] >= 1.5 && v[2] <= 5));
+      return ok ? v.slice(0, wall ? 3 : 2) : d;
+    });
+    out.push({ cats, wall, sizes });
+  });
+  return out;
+}
 
 /** 받은 설정을 검사해 쓰기 좋은 모양으로 — 모양이 틀렸거나 공간 · 공종이 비면 null(= 지금 설정 그대로). */
 function normalizeWebConfig(raw) {
@@ -767,7 +808,10 @@ function normalizeWebConfig(raw) {
   // 단일 선택 공종 — 싣는 공종 안의 것만. 키가 없으면(옛 설정 · 옛 스크립트) 모두 중복 선택(예전 동작 그대로).
   const single = new Set((Array.isArray(raw.single) ? raw.single : [])
     .map(t => str(t, WEB_LIMITS.trade)).filter(t => t && t in products));
-  return { rooms, trades, products, categories, single };
+  // 공간 크기를 묻는 공종(앱 물량 산출 규칙이 있는 공종, 2026-10-10) — 키가 없으면(옛 설정) '타일', 빈 목록이면 묻지 않음.
+  const sized = new Set((Array.isArray(raw.sized) ? raw.sized : ["타일"])
+    .map(t => str(t, WEB_LIMITS.trade)).filter(t => t && t in products));
+  return { rooms, trades, products, categories, single, sized, sizeGroups: normalizeSizeGroups(raw.sizeGroups) };
 }
 /** 이 공종은 단일 선택인가(한 공간에 상품 1개) — 아니면 중복 선택(여러 개). */
 const isSingle = trade => !!(WEB.single && WEB.single.has(trade));
@@ -1034,7 +1078,7 @@ function setScope(scope) {
 // ── 공간 고르기 ──────────────────────────────────────────────────────
 // 공간 칩은 가나다순(방1 < 방2 < 방10). 전송 순서는 앱 공간 순서(WEB.rooms) 그대로.
 const koSort = (a, b) => a.localeCompare(b, "ko", { numeric: true });
-const newRoom = () => ({ trades: new Set(), pyeong: "", items: new Map() });
+const newRoom = () => ({ trades: new Set(), pyeong: "", items: new Map(), size: "", len: new Map() });
 const productNames = trade => (WEB.products[trade] || []).map(([n]) => n);
 const pickedNames = (data, trade) => { const set = data.items.get(trade); return set ? productNames(trade).filter(n => set.has(n)) : []; };
 
@@ -1064,7 +1108,7 @@ function toggleRoom(room) {
 function afterChange() {
   clearInvalid("rooms"); clearInvalid("room");
   if (current === "rooms") renderRoomToggles();
-  if (stepRoom(current) !== null) renderRoomChips();
+  if (stepRoom(current) !== null) { renderRoomChips(); renderRoomSize(); }
   saveDraft(); updateBar();
 }
 
@@ -1209,7 +1253,9 @@ function renderRoomPage() {
   $("#roomPyWrap").hidden = !showPy;
   if (showPy) $("#roomPy").value = data.pyeong;
   clearInvalid("room");
+  $("#roomSizeWrap").classList.remove("need");
   renderTradeList();
+  renderRoomSize();
 }
 $("#roomPy").addEventListener("input", e => {
   const data = state.rooms.get(stepRoom(current));
@@ -1218,6 +1264,65 @@ $("#roomPy").addEventListener("input", e => {
   e.target.value = v;
   if (data) { data.pyeong = v; saveDraft(); }
 });
+
+// ── 공간 크기 · 가구 길이 (사용자 결정 2026-10-10) ─────────────────────
+// 크기 그룹에 든 공간은 크기(작음 · 보통 · 큼)만, 주방가구 · 빌트인장은 길이(m)만 받는다 — 앱이 공간 치수 · 줄 수량으로 바꾼다.
+const LEN_RANGE = [0.3, 20];
+const FURN_LEN = /싱크대|주방\s*가구|상부장|하부장|빌트인|붙박이|옷장|드레스장|시스템장|신발장/;
+/** 이 공간의 크기 그룹 — 공간 카드 → 공간 분류는 안 쓰는 공종과 같은 규칙(matchCategory), 후보는 그룹에 든 분류만(앱 RoomSizeTable과 같게). */
+function sizeGroupOf(room) {
+  const groups = WEB.sizeGroups || [];
+  const name = matchCategory(room, groups.flatMap(g => g.cats));
+  return name ? groups.find(g => g.cats.includes(name)) || null : null;
+}
+/** 이 공간에서 크기를 묻는가 — 크기 그룹 공간에서 크기를 묻는 공종(타일 등)의 상품을 골랐을 때. */
+function needsSize(room) {
+  const data = state.rooms.get(room);
+  if (!data || !sizeGroupOf(room)) return false;
+  return roomTrades(room).some(t => data.trades.has(t) && WEB.sized.has(t) && pickedNames(data, t).length > 0);
+}
+/** 이 공종에서 길이를 받는가 — 주방가구 · 빌트인장 상품을 골랐을 때. */
+const needsLen = (data, trade) => pickedNames(data, trade).some(n => FURN_LEN.test(n));
+/** 적은 길이 — 0.3~20m면 숫자(소수 둘째 자리), 비었으면 null, 틀리면 NaN. */
+function lenValue(text) {
+  if (!text) return null;
+  const v = parseFloat(text);
+  return v >= LEN_RANGE[0] && v <= LEN_RANGE[1] ? Math.round(v * 100) / 100 : NaN;
+}
+/** "가로 1.6 × 세로 2.2 × 높이 2.3m" — 어느 쪽이 가로 · 세로인지 보이게(사용자 결정). */
+const sizeText = (group, i) => {
+  const v = group.sizes[i] || [];
+  return `가로 ${v[0]} × 세로 ${v[1]}` + (group.wall && v[2] ? ` × 높이 ${v[2]}` : "") + "m";
+};
+/** 공간 크기 줄 — 크기를 물을 때만 보인다. 고르면 파란 테두리. */
+function renderRoomSize() {
+  const room = stepRoom(current), wrap = $("#roomSizeWrap");
+  const data = room !== null ? state.rooms.get(room) : null;
+  const show = !!data && needsSize(room);
+  wrap.hidden = !show;
+  if (!show) return;
+  const group = sizeGroupOf(room), tiles = $("#roomSizeTiles");
+  tiles.textContent = "";
+  SIZE_TITLES.forEach((title, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "tile";
+    b.setAttribute("aria-pressed", String(data.size === title));
+    const t = document.createElement("b"); t.textContent = title;
+    const s = document.createElement("span"); s.textContent = "약 " + sizeText(group, i);
+    b.append(t, s);
+    b.setAttribute("aria-label", `${room} 크기 ${title} — 약 ${sizeText(group, i)}`);
+    b.addEventListener("click", () => {
+      data.size = title;
+      $$(".tile", tiles).forEach((x, j) => x.setAttribute("aria-pressed", String(j === i)));
+      wrap.classList.remove("need"); clearInvalid("room");
+      saveDraft(); updateBar();
+    });
+    tiles.appendChild(b);
+  });
+  $("#roomSizeHint").textContent = group.wall
+    ? "가로 × 세로 × 천장 높이 — 바닥 · 벽 수량에 써요. 정확한 치수는 방문 실측으로 맞춰요."
+    : "가로 × 세로 — 바닥 수량에 써요. 정확한 치수는 방문 실측으로 맞춰요.";
+}
 
 let tradeSeq = 0;
 function renderTradeList() {
@@ -1305,12 +1410,29 @@ function tradeItem(room, trade) {
       else { data.items.delete(trade); data.trades.delete(trade); }
       // 단일 선택에서 바뀐 옛 칩도 함께 끈다.
       $$(".product-chip", grid).forEach(c => c.setAttribute("aria-pressed", String(set.has(c.dataset.name))));
-      paint(); afterChange();
+      paint(); syncLen(); afterChange();
       if (adding) previewBlink(room, trade);
     });
     grid.appendChild(b);
   });
-  body.append(hint, grid);
+  // 가구 길이(주방가구 · 빌트인장 — 2026-10-10) — 그 상품을 고르면 보인다(선택). 앱이 m · mm · 자 단위 줄 수량으로 바꾼다.
+  const lenWrap = document.createElement("label"); lenWrap.className = "fl with-sfx t-len";
+  const lenInput = document.createElement("input");
+  lenInput.className = "input"; lenInput.inputMode = "decimal"; lenInput.maxLength = 5; lenInput.placeholder = " ";
+  lenInput.value = data.len.get(trade) || "";
+  const lenLabel = document.createElement("span"); lenLabel.className = "fl-label"; lenLabel.textContent = "가구 길이 (모르면 비워 두세요)";
+  const lenSfx = document.createElement("span"); lenSfx.className = "sfx"; lenSfx.textContent = "m";
+  lenWrap.append(lenInput, lenLabel, lenSfx);
+  function syncLen() { lenWrap.hidden = !needsLen(data, trade); }
+  syncLen();
+  lenInput.addEventListener("input", e => {
+    let v = e.target.value.replace(/[^\d.]/g, "");
+    const i = v.indexOf("."); if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, "").slice(0, 2);
+    e.target.value = v;
+    if (v) data.len.set(trade, v); else data.len.delete(trade);
+    clearInvalid("room"); saveDraft();
+  });
+  body.append(hint, grid, lenWrap);
   box.appendChild(body);
   return box;
 }
@@ -1321,6 +1443,10 @@ function roomIssue(room) {
   if (!data) return null;
   const need = roomTrades(room).filter(t => data.trades.has(t) && productNames(t).length && !pickedNames(data, t).length);
   if (need.length) return { room, text: `${need.join(" · ")} 상품을 골라 주세요. 고르지 않으면 견적 요청을 보낼 수 없어요.`, trade: need[0] };
+  // 공간 크기(필수) · 가구 길이(선택 — 적었으면 0.3~20m), 2026-10-10.
+  if (needsSize(room) && !SIZE_TITLES.includes(data.size)) return { room, text: `${room} 크기를 골라 주세요. 수량 계산에 써요.`, size: true };
+  const badLen = roomTrades(room).find(t => data.trades.has(t) && needsLen(data, t) && Number.isNaN(lenValue(data.len.get(t))));
+  if (badLen) return { room, text: `${badLen} 가구 길이는 0.3 ~ 20m로 적어 주세요. 모르면 비워 두세요.`, trade: badLen };
   if (!roomHasWork(room)) return { room, text: `${room}에 고른 상품이 없어요. 상품을 고르거나 이 공간을 빼 주세요.`, empty: true };
   return null;
 }
@@ -1329,7 +1455,9 @@ function showRoomIssue(issue) {
   $("#roomErrText").textContent = issue.text;
   $("#roomRemoveBtn").hidden = !issue.empty;
   setInvalid("room");
-  const target = issue.trade ? $$("#tradeList .trade").find(b => b.dataset.trade === issue.trade) : $("#roomErr");
+  if (issue.size) $("#roomSizeWrap").classList.add("need");
+  const target = issue.size ? $("#roomSizeWrap")
+    : issue.trade ? $$("#tradeList .trade").find(b => b.dataset.trade === issue.trade) : $("#roomErr");
   reveal(target);
 }
 $("#roomRemoveBtn").addEventListener("click", () => {
@@ -1374,8 +1502,10 @@ function renderSummary() {
     const data = state.rooms.get(room);
     const lines = roomTrades(room).filter(t => data.trades.has(t)).map(t => {
       const picked = pickedNames(data, t);
-      return picked.length ? `${t}: ${picked.join(", ")}` : `${t}: 상품을 골라 주세요`;
+      const len = needsLen(data, t) ? lenValue(data.len.get(t)) : null;
+      return picked.length ? `${t}: ${picked.join(", ")}${len > 0 ? ` · 가구 길이 ${len}m` : ""}` : `${t}: 상품을 골라 주세요`;
     });
+    if (needsSize(room)) lines.unshift(`공간 크기: ${SIZE_TITLES.includes(data.size) ? data.size : "골라 주세요"}`);
     const issue = roomIssue(room);
     const py2 = state.scope === "부분" && room !== CONFIG.WHOLE_HOUSE_ROOM && parseFloat(data.pyeong) > 0 ? ` · ${data.pyeong}평` : "";
     row(room + py2, lines.length ? lines : ["아직 고른 상품이 없어요."], "room:" + room, !!issue);
@@ -1818,7 +1948,7 @@ function updateBar() {
 const draftFields = ["pyeong", "startDate", "endDate", "note"];
 function saveDraft() {
   try {
-    const d = { scope: state.scope, rooms: [...state.rooms].map(([k, v]) => [k, [...v.trades], v.pyeong, [...v.items].map(([t, s]) => [t, [...s]])]) };
+    const d = { scope: state.scope, rooms: [...state.rooms].map(([k, v]) => [k, [...v.trades], v.pyeong, [...v.items].map(([t, s]) => [t, [...s]]), v.size, [...v.len]]) };
     draftFields.forEach(f => d[f] = $("#" + f).value);
     d.savedAt = Date.now();
     localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
@@ -1835,7 +1965,7 @@ function loadDraft() {
   if (!Array.isArray(d.rooms)) d.rooms = [];
   d.rooms.forEach(entry => {
     if (!Array.isArray(entry)) return;
-    const [k, t, p, it] = entry;
+    const [k, t, p, it, sz, ln] = entry;
     if (!WEB.rooms.includes(k)) return;
     // 지금 설정에서 이 공간에 안 보이는 공종(예전 초안 · 설정이 바뀐 뒤)은 버린다.
     const trades = new Set((Array.isArray(t) ? t : []).filter(x => tradeAllowed(k, x)));
@@ -1846,7 +1976,9 @@ function loadDraft() {
       keepFirstIfSingle(tr, valid);   // 예전 초안에 단일 선택 공종이 여러 개 담겼으면 먼저 고른 1개만
       if (valid.size) items.set(tr, valid);
     });
-    state.rooms.set(k, { trades, pyeong: typeof p === "string" ? p : "", items });
+    const len = new Map((Array.isArray(ln) ? ln : []).filter(x => Array.isArray(x) && trades.has(x[0]) && typeof x[1] === "string")
+      .map(([tr, v]) => [tr, v.slice(0, 5)]));
+    state.rooms.set(k, { trades, pyeong: typeof p === "string" ? p : "", items, size: SIZE_TITLES.includes(sz) ? sz : "", len });
   });
   if (d.scope === "부분") state.scope = "부분";
   $("#pyeong").dispatchEvent(new Event("input"));
@@ -1917,7 +2049,11 @@ function buildPayload() {
     // 고른 상품만 — 공종별 { 공종: [상품명…] }. 안 고른 공종은 빠진다(앱이 공종 전체를 담는다).
     const items = Object.create(null);
     trades.forEach(t => { const set = v.items.get(t); if (set && set.size) items[t] = (WEB.products[t] || []).map(([n]) => n).filter(n => set.has(n)); });
-    return { room: r, trades, items, pyeong: state.scope === "부분" ? v.pyeong : "" };
+    // 공간 크기(물을 때만) · 가구 길이(0.3~20m로 적은 것만) — 2026-10-10. 앱이 공간 치수 · 줄 수량으로 바꾼다.
+    const size = needsSize(r) && SIZE_TITLES.includes(v.size) ? v.size : "";
+    const len = {};
+    trades.forEach(t => { if (needsLen(v, t)) { const m = lenValue(v.len.get(t)); if (m > 0) len[t] = m; } });
+    return { room: r, trades, items, pyeong: state.scope === "부분" ? v.pyeong : "", size, len };
   });
   return {
     action: "webInquiry",
