@@ -1110,6 +1110,8 @@ function toggleRoom(room) {
 /** 고른 것이 바뀐 뒤 — 오류 표시 지우기 · 지금 화면 숫자 · 초안 · 아래 바 · 3D 도면. */
 function afterChange() {
   clearInvalid("rooms"); clearInvalid("room");
+  // 크기를 묻는 상품을 모두 빼면 고른 크기도 지운다 — 다시 고르면 크기는 미선택부터(사용자 결정 2026-10-10).
+  state.rooms.forEach((v, r) => { if (v.size && !needsSize(r)) v.size = ""; });
   if (current === "rooms") renderRoomToggles();
   if (stepRoom(current) !== null) { renderRoomChips(); renderRoomSize(); }
   saveDraft(); updateBar();
