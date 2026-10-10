@@ -266,7 +266,7 @@ input[type="date"].input:not(.has-value) { color: var(--muted); }
 .room3d-opts { display: none; flex-wrap: wrap; gap: 8px 16px; padding: 4px 0 8px; }
 .dock.opts-open .room3d-opts { display: flex; }
 .room3d-opts .chip { padding: 0 14px; font-size: 14px; }
-@media (max-width: 419px) { .room3d-opts .chip small { display: none; } }   /* 좁은 폰은 78㎡ · 79㎡ · 86㎡ · 109㎡만 — 한 줄에 */
+@media (max-width: 419px) { .room3d-opts .chip small { display: none; } }   /* 좁은 폰은 2베이 · 3베이 · 4베이만 — 한 줄에 */
 .room3d-stage { position: relative; height: clamp(140px, 24vh, 230px); border-radius: var(--r-tile); overflow: hidden;
   touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }   /* 도면 위에서는 끄는 대로 상하좌우 돌리기(페이지는 도면 밖을 밀어서) */
 .room3d-stage.drag { cursor: grabbing; }
@@ -595,22 +595,25 @@ footer .sep { color: var(--line); }
       <div class="dock-in">
         <div class="dock-head">
           <div class="dock-title"><b>완성 모습</b><span id="dockRoom"></span></div>
-          <button type="button" class="dock-btn" id="dockPlanBtn" aria-expanded="false">86㎡ · 26평형</button>
+          <button type="button" class="dock-btn" id="dockPlanBtn" aria-expanded="false">3베이 · 비확장</button>
           <button type="button" class="dock-btn" id="dockToggle" aria-expanded="true">접기</button>
         </div>
         <div class="room3d-opts">
-          <div class="chips" role="group" aria-label="도면 크기" id="room3dPlans">
-            <button type="button" class="chip" data-plan="78" aria-pressed="false">78㎡<small>24평형</small></button>
-            <button type="button" class="chip" data-plan="79" aria-pressed="false">79㎡<small>24평형</small></button>
-            <button type="button" class="chip" data-plan="86" aria-pressed="true">86㎡<small>26평형</small></button>
-            <button type="button" class="chip" data-plan="109" aria-pressed="false">109㎡<small>33평형</small></button>
+          <div class="chips" role="group" aria-label="도면 구조" id="room3dPlans">
+            <button type="button" class="chip" data-plan="2bay" aria-pressed="false">2베이<small>25평형</small></button>
+            <button type="button" class="chip" data-plan="3bay" aria-pressed="true">3베이<small>32평형</small></button>
+            <button type="button" class="chip" data-plan="4bay" aria-pressed="false">4베이<small>41평형</small></button>
+          </div>
+          <div class="chips" role="group" aria-label="발코니" id="room3dModes">
+            <button type="button" class="chip" data-mode="b" aria-pressed="true">비확장</button>
+            <button type="button" class="chip" data-mode="e" aria-pressed="false">확장형</button>
           </div>
         </div>
         <div class="room3d-stage" id="room3dStage" role="img" aria-label="완성 모습 미리보기">
           <div class="room3d-msg" id="room3dMsg">미리보기를 준비하고 있어요.</div>
         </div>
         <div class="room3d-legend" id="room3dLegend"></div>
-        <p class="room3d-note">비슷한 평형의 도면으로 보여 드리는 그림이에요. 실제 구조와 시공 범위는 상담 때 확정합니다. 끌어서 위아래 · 좌우로 돌려 볼 수 있어요.</p>
+        <p class="room3d-note">가까운 구조(베이)의 대표 도면으로 보여 드리는 그림이에요. 실제 구조와 시공 범위는 상담 때 확정합니다. 끌어서 위아래 · 좌우로 돌려 볼 수 있어요.</p>
       </div>
     </div>
     <div class="bar" id="bar">
@@ -1624,10 +1627,10 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") $("#addrLaye
 $("#addrLayer").addEventListener("click", e => { if (e.target.id === "addrLayer") e.currentTarget.classList.remove("on"); });
 
 // ── 완성 모습 미리보기 (3D 도면) ─────────────────────────────────────
-// 고른 공간 · 공종을 도면(사장님이 주신 실제 도면 78 · 79 · 86 · 109㎡)의 방 벽 · 바닥 · 창 · 문 · 조명에 칠한다. 보는 것만 — 전송 · 초안과 무관.
+// 고른 공간 · 공종을 도면(베이별 대표 평면 2 · 3 · 4베이 × 비확장 · 확장형)의 방 벽 · 바닥 · 창 · 문 · 조명에 칠한다. 보는 것만 — 전송 · 초안과 무관.
 // 고른 내용은 페이지를 넘겨도 그대로 남고, 지금 공간은 이름표 강조 · 시점 이동, 상품을 고르면 들어가는 자리가 깜빡인다(사용자 결정 2026-10-09).
 // 3D 파일(three.min.js → room3d.js)은 도면이 처음 보일 때 한 번만 불러온다(같은 사이트 파일 — CSP 'self').
-const PREVIEW_FILES = ["three.min.js", "room3d.js?v=20261010a"];
+const PREVIEW_FILES = ["three.min.js", "room3d.js?v=20261010b"];
 // 공종 → 칠할 부위. 공종 이름은 설정과 글자까지 같아야 한다(다른 공종은 여기에 줄을 더한다).
 // whole = 공용(전체)일 때 칠할 방 종류(null = 모든 방), parts(방 종류) = 그 방에서 칠할 면.
 const PREVIEW_DRY = ["living", "kitchen", "hall", "master", "bed", "alpha", "dress", "pantry", "entry", "powder"];
@@ -1707,14 +1710,12 @@ const PREVIEW_FIXED = {
 let preview = null;          // Room3D 화면(불러온 뒤)
 let previewLoad = null;      // 불러오는 중 · 끝(Promise)
 let previewInfo = null;      // 마지막으로 칠한 내용(깜빡일 자리 찾기)
-let previewPlan = "86", previewPlanManual = false;
+let previewPlan = "3bay", previewMode = "b", previewPlanManual = false;
 
-/** 평형 → 도면(고객이 칩을 누르면 그 뒤로는 고른 것). 25평 미만 79㎡(24평형) · 30평 미만 86㎡(26평형) · 그 위 109㎡(33평형).
-    78㎡(24평형 계단식)는 칩으로만. 평형을 모르면 86㎡. */
-function previewAutoPlan() {
-  const py = parseFloat($("#pyeong").value);
-  return py > 0 ? (py < 25 ? "79" : py < 30 ? "86" : "109") : "86";
-}
+/** 처음 도면 — 평형으로 고르지 않고 늘 3베이(사용자 결정 2026-10-10: 면적별이 아닌 베이별). 고객이 칩으로 바꾼다. */
+function previewAutoPlan() { return "3bay"; }
+/** 엔진 평면 키 — 비확장은 그대로, 확장형은 끝에 "-e". */
+const previewKey = () => previewPlan + (previewMode === "e" ? "-e" : "");
 /** 공간 이름 → 방 id 목록(공용(전체)는 "ALL"). 설정의 공간과 고른 공간 모두 같은 규칙이라 고른 것을 바꿔도 자리가 그대로다.
     names: 방 id → 라벨로 쓸 공간 이름(한 방에 딱 맞는 이름만 — 발코니 이름은 다용도실 라벨을 바꾸지 않는다). */
 function previewSlots(plan) {
@@ -1740,7 +1741,7 @@ function previewSlots(plan) {
       // 발코니가 여러 곳인 실제 도면(balcony · balcony2 …)은 번호대로, 아니면 발코니 · 다용도실
       const balc = [...ids].filter(id => /^balcony\d*$/.test(id)).sort(), m = String(name).match(/(\d+)\s*$/);
       if (balc.length > 1) put(name, m && balc[Number(m[1]) - 1] ? [balc[Number(m[1]) - 1]] : balc, true);
-      else put(name, ["balcony", "utility"].filter(id => ids.has(id)), false);
+      else { const rear = m && Number(m[1]) > 1; put(name, [rear ? "utility" : "balcony"].filter(id => ids.has(id)), !rear); }
     }
     else if (cat) put(name, [{ "주방": "kitchen", "거실": "living", "현관": "entry" }[cat]], true);
   });
@@ -1870,21 +1871,21 @@ function renderPreviewLegend(info, room) {
     if (info.skipTrades.size) muted(`도면에 표시하지 않는 공사: ${[...info.skipTrades].join(" · ")}`);
     if (info.skipRooms.size) muted(`이 도면에 없는 공간: ${[...info.skipRooms].join(" · ")}`);
   }
-  $("#room3dStage").setAttribute("aria-label", `완성 모습 미리보기 — ${Room3D.PLANS[previewPlan].label} 도면` +
+  $("#room3dStage").setAttribute("aria-label", `완성 모습 미리보기 — ${Room3D.PLANS[previewPlan].label} ${previewMode === "e" ? "확장형" : "비확장"} 도면` +
     (room !== null ? `, ${room}` : "") + (said.length ? `, ${said.join(" / ")}` : ", 아직 칠한 공사 없음"));
 }
 function updateRoomPreview() {
   if (!previewPlanManual) previewPlan = previewAutoPlan();
   $$("#room3dPlans [data-plan]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.plan === previewPlan)));
+  $$("#room3dModes [data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === previewMode)));
   const room = stepRoom(current);
   $("#dockRoom").textContent = room !== null ? room : current === "rooms" ? (state.rooms.size ? `고른 공간 ${state.rooms.size}곳` : "공간을 골라 주세요") : current === "finish" ? "고른 공사 모두" : "";
   if (!window.Room3D) return;
-  // 실제 도면(78 · 79 · 86 · 109)은 그림 그대로 — 확장 · 비확장 구분 없이 평형만 붙인다.
-  $("#dockPlanBtn").textContent = `${Room3D.PLANS[previewPlan].label} · ${Room3D.PLANS[previewPlan].sub}`;
-  const info = previewInfo = previewPaint(previewPlan);
+  $("#dockPlanBtn").textContent = `${Room3D.PLANS[previewPlan].label} · ${previewMode === "e" ? "확장형" : "비확장"}`;
+  const info = previewInfo = previewPaint(previewKey());
   renderPreviewLegend(info, room);
   if (!preview) return;
-  preview.setPlan(previewPlan);
+  preview.setPlan(previewKey());
   preview.setLabels(info.labels);
   if (preview.setLights) preview.setLights(info.lights);   // 등 종류 먼저 — 칠할 목록이 오면 그 방에 그린다
   if (preview.setFurniture) preview.setFurniture(info.furn);   // 가구도 같은 방식
@@ -1911,7 +1912,7 @@ function loadPreview() {
     document.head.appendChild(s);
   });
   previewLoad = PREVIEW_FILES.reduce((p, src) => p.then(() => add(src)), Promise.resolve()).then(() => {
-    try { preview = Room3D.create($("#room3dStage"), { plan: previewPlan }); msg.hidden = true; }
+    try { preview = Room3D.create($("#room3dStage"), { plan: previewKey() }); msg.hidden = true; }
     catch (_) { preview = null; msg.textContent = "이 기기에서는 3D 미리보기를 볼 수 없어요. 아래 목록으로 확인해 주세요."; }
     updateRoomPreview();
   }, () => { msg.textContent = "미리보기를 불러오지 못했어요. 새로 고침하면 다시 시도합니다."; });
@@ -1919,7 +1920,8 @@ function loadPreview() {
 }
 // 칩 — 도면 크기 · 발코니(보는 것만 바뀐다)
 $$("#room3dPlans [data-plan]").forEach(b => b.addEventListener("click", () => { previewPlanManual = true; previewPlan = b.dataset.plan; updateRoomPreview(); }));
-// 폰: 도면 칩은 '86㎡ · 26평형'을 눌러 펼친다 · 도면 접기(이 브라우저에 기억)
+$$("#room3dModes [data-mode]").forEach(b => b.addEventListener("click", () => { previewMode = b.dataset.mode; updateRoomPreview(); }));
+// 폰: 도면 칩은 '3베이 · 비확장'을 눌러 펼친다 · 도면 접기(이 브라우저에 기억)
 $("#dockPlanBtn").addEventListener("click", () => {
   const open = $("#room3d").classList.toggle("opts-open");
   $("#dockPlanBtn").setAttribute("aria-expanded", String(open));
