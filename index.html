@@ -225,22 +225,28 @@ input[type="date"].input:not(.has-value) { color: var(--muted); }
 /* 가구 길이(주방가구 · 빌트인장, 2026-10-10) — 펼친 공종 안 상품 아래(선택) */
 .t-len { max-width: 260px; margin: 12px 4px 0; }
 
-/* 공종 목록 — 누르면 그 자리에서 상품이 펼쳐진다(팝업 대신 — 아래 3D 도면을 가리지 않게) */
-.trades { display: grid; gap: 10px; }
-.trade { border: 1px solid var(--line); border-radius: var(--r-tile); background: var(--surface); scroll-margin-top: 64px; transition: border-color .15s, box-shadow .15s; }
+/* 공종 카드(2026-10-10 사용자 결정) — 12칸 격자에 폰 2열 · 넓은 칸 3열. 마지막 줄은 남은 카드가 줄 폭을 나눠 채워 빈칸이 없다.
+   카드를 누르면 그 카드 줄 바로 아래에 상품 카드 칸이 줄 폭 전체로 펼쳐진다(팝업 대신 — 아래 3D 도면을 가리지 않게).
+   단일 선택 공종은 상품 1개를 고르면 접힌다. 칸 수(grid-column)는 renderTradeList가 정한다. */
+.trades { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; }
+.trades > .empty { grid-column: 1 / -1; }
+.trade { grid-column: span 6; display: flex; min-width: 0; border: 1px solid var(--line); border-radius: var(--r-tile); background: var(--surface); scroll-margin-top: 64px; transition: border-color .15s, box-shadow .15s, background-color .15s; }
 .trade.on { border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel); }
 .trade.need { border-color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); }
-.trade-head { width: 100%; min-height: 60px; display: flex; align-items: center; gap: 12px; padding: 8px 14px 8px 16px; border: 0; border-radius: var(--r-tile);
-  background: transparent; color: var(--ink); cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent; }
-.trade-head .t-name { font-size: 17px; font-weight: 600; flex: none; }
-.trade-head .t-sub { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trade.open { background: var(--accent-soft); }
+.trade-head { position: relative; width: 100%; min-width: 0; min-height: 76px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px;
+  padding: 12px 34px 12px 14px; border: 0; border-radius: var(--r-tile); background: transparent; color: var(--ink); cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent; }
+.trade-head .t-name { font-size: 16px; font-weight: 600; line-height: 1.25; word-break: keep-all; }
+.trade-head .t-sub { max-width: 100%; font-size: 13px; line-height: 1.3; color: var(--muted); overflow-wrap: anywhere; word-break: keep-all;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .trade.on .t-sub { color: var(--sel); font-weight: 500; }
 .trade.need .t-sub { color: var(--danger); font-weight: 500; }
-.trade-head .t-arrow { flex: none; width: 20px; text-align: center; font-size: 20px; line-height: 1; color: var(--muted); transform: rotate(90deg); transition: transform .15s; }
+.trade-head .t-arrow { position: absolute; top: 50%; right: 10px; width: 20px; margin-top: -10px; text-align: center; font-size: 20px; line-height: 20px; color: var(--muted); transform: rotate(90deg); transition: transform .15s; }
 .trade-head[aria-expanded="true"] .t-arrow { transform: rotate(-90deg); }
-.trade-body { padding: 0 12px 14px; }
-.trade-body .t-hint { margin: 0 4px 10px; font-size: 13px; color: var(--muted); }
-.trade-body .t-hint .t-mode { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; font-size: 12px; font-weight: 600; color: var(--sel); }
+.trade-panel { grid-column: 1 / -1; min-width: 0; padding: 12px 10px 14px; border-radius: var(--r-tile); background: var(--bg-alt); scroll-margin-top: 64px; }
+.trade-panel .t-title { margin: 0 4px 6px; font-size: 15px; font-weight: 600; }
+.trade-panel .t-hint { margin: 0 4px 10px; font-size: 13px; color: var(--muted); }
+.trade-panel .t-hint .t-mode { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; font-size: 12px; font-weight: 600; color: var(--sel); }
 .step-err { display: none; margin-top: 16px; padding: 14px 16px; border-radius: var(--r-tile); background: var(--danger-soft); color: var(--danger); font-size: 15px; word-break: keep-all; }
 .invalid > .step-err { display: block; }
 .step-err .btn { margin-top: 10px; }
@@ -283,9 +289,9 @@ input[type="date"].input:not(.has-value) { color: var(--muted); }
 .dock.collapsed .room3d-stage, .dock.collapsed .room3d-legend, .dock.collapsed .room3d-opts { display: none; }
 .empty { padding: 24px 18px; border-radius: var(--r-tile); background: var(--bg-alt); color: var(--muted); font-size: 15px; text-align: center; }
 
-/* 상품 칩 — 공간 페이지에서 공종을 펼치면 보인다 */
-.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, calc(50% - 4px)), 1fr)); gap: 8px; }
-.product-chip { width: 100%; min-width: 0; min-height: 56px; padding: 10px 12px; border-radius: var(--r-tile); border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; font-size: 14px; font-weight: 500; line-height: 1.25; display: flex; flex-direction: column; justify-content: center; -webkit-tap-highlight-color: transparent; transition: border-color .15s, box-shadow .15s; }
+/* 상품 카드 — 공종 카드를 누르면 보인다. 공종 카드처럼 12칸 격자 2 · 3열, 마지막 줄은 남은 카드가 채운다(빈칸 없음). */
+.product-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; }
+.product-chip { grid-column: span 6; height: 100%; width: 100%; min-width: 0; min-height: 64px; padding: 10px 12px; border-radius: var(--r-tile); border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; font-size: 14px; font-weight: 500; line-height: 1.25; display: flex; flex-direction: column; justify-content: center; -webkit-tap-highlight-color: transparent; transition: border-color .15s, box-shadow .15s; }
 .product-chip:hover { border-color: var(--muted); }
 .product-chip > span { word-break: keep-all; overflow-wrap: anywhere; }
 /* 규격이 긴 자재(욕실 도기 · 조명)는 두 줄까지만 — 전체는 마우스를 올리면(title) 보인다 */
@@ -923,7 +929,7 @@ function applyWebConfig(next, source) {
     });
   });
   renderRoomsDesc();
-  const focusTrade = (active && active.closest && active.closest("#tradeList .trade") || {}).dataset;
+  const focusTrade = (active && active.closest && active.closest("#tradeList [data-trade]") || {}).dataset;
   if (!steps().includes(current)) goTo("rooms", { push: false, focus: false });
   else {
     renderStep();
@@ -1329,7 +1335,14 @@ function renderRoomSize() {
     : "가로 × 세로 — 바닥 수량에 써요. 정확한 치수는 방문 실측으로 맞춰요.";
 }
 
-let tradeSeq = 0;
+let tradeSeq = 0, tradeCols = 0;
+/** 카드 열 수 — 칸 폭 520px부터 3열, 그보다 좁으면 2열. */
+const cardCols = el => ((el && el.clientWidth) || 0) >= 520 ? 3 : 2;
+/** 12칸 격자에서 카드마다 칸 수 — cols열로 채우고, 마지막 줄은 남은 카드가 줄 폭을 나눠 채운다(빈칸 없음). */
+function cardSpans(n, cols) {
+  const rest = n % cols, full = n - rest;
+  return Array.from({ length: n }, (_, i) => i < full ? 12 / cols : 12 / rest);
+}
 function renderTradeList() {
   const room = stepRoom(current), wrap = $("#tradeList");
   wrap.textContent = "";
@@ -1339,10 +1352,24 @@ function renderTradeList() {
     e.textContent = "이 공간에서 고를 수 있는 공사가 없어요. 이 공간은 빼고 요청사항에 적어 주세요.";
     wrap.appendChild(e); return;
   }
-  trades.forEach(trade => wrap.appendChild(tradeItem(room, trade)));
+  const cols = tradeCols = cardCols(wrap), spans = cardSpans(trades.length, cols);
+  const items = trades.map(trade => tradeItem(room, trade, cols));
+  // 펼친 공종의 상품 칸은 그 카드 줄의 끝 카드 다음에(줄 폭 전체)
+  const oi = trades.indexOf(openTrade), full = trades.length - trades.length % cols;
+  const end = oi < 0 || !items[oi].panel ? -1 : oi < full ? (Math.floor(oi / cols) + 1) * cols - 1 : trades.length - 1;
+  items.forEach(({ card }, i) => {
+    card.style.gridColumn = `span ${spans[i]}`;
+    wrap.appendChild(card);
+    if (i === end) wrap.appendChild(items[oi].panel);
+  });
 }
-/** 공종 한 줄 — 이름 · 고른 상품(첫 이름 외 N개). 누르면 상품이 펼쳐지고, 고르면 담기 · 모두 빼면 빠진다(상품 필수). */
-function tradeItem(room, trade) {
+// 칸 폭이 바뀌어 열 수가 달라지면(화면 돌리기 · 창 크기) 다시 나눈다
+if (window.ResizeObserver) new ResizeObserver(() => {
+  if (stepRoom(current) !== null && tradeCols && cardCols($("#tradeList")) !== tradeCols) renderTradeList();
+}).observe($("#tradeList"));
+/** 공종 카드 — 이름 · 고른 상품(첫 이름 외 N개). 누르면 그 줄 아래에 상품 카드가 펼쳐지고, 고르면 담기 · 모두 빼면 빠진다(상품 필수).
+    돌려주는 값: { card, panel } — panel은 펼쳤을 때만(renderTradeList가 줄 끝에 넣는다). */
+function tradeItem(room, trade, cols) {
   const data = state.rooms.get(room);
   const hasProducts = productNames(trade).length > 0;
   const box = document.createElement("div"); box.className = "trade"; box.dataset.trade = trade;
@@ -1370,7 +1397,7 @@ function tradeItem(room, trade) {
       if (data.trades.has(trade)) previewBlink(room, trade);
     });
     box.appendChild(head);
-    return box;
+    return { card: box, panel: null };
   }
   head.appendChild(arrow);
   const open = openTrade === trade;
@@ -1386,8 +1413,11 @@ function tradeItem(room, trade) {
     }
   });
   box.appendChild(head);
-  if (!open) return box;
-  const body = document.createElement("div"); body.className = "trade-body"; body.id = bodyId;
+  box.classList.toggle("open", open);
+  if (!open) return { card: box, panel: null };
+  const body = document.createElement("div"); body.className = "trade-panel"; body.id = bodyId; body.dataset.trade = trade;
+  body.setAttribute("role", "region"); body.setAttribute("aria-label", `${trade} 상품`);
+  const title = document.createElement("p"); title.className = "t-title"; title.textContent = `${trade} 상품`;
   // 단일 선택(한 공간에 1개 — 다른 상품을 누르면 바뀜) · 중복 선택(여러 개) — 앱 '공종 설정'(5301)이 정한다(2026-10-09).
   const single = isSingle(trade);
   const hint = document.createElement("p"); hint.className = "t-hint";
@@ -1397,9 +1427,11 @@ function tradeItem(room, trade) {
     : "여러 개 고를 수 있어요. 고르면 아래 도면에 들어가는 자리가 깜빡여요.");
   const grid = document.createElement("div"); grid.className = "product-grid";
   grid.setAttribute("role", "group"); grid.setAttribute("aria-label", `${room} ${trade} 상품 — ${single ? "단일 선택, 1개만" : "중복 선택, 여러 개"}`);
-  (WEB.products[trade] || []).forEach(([name, subText]) => {
+  const plist = WEB.products[trade] || [], pspans = cardSpans(plist.length, cols || 2);
+  plist.forEach(([name, subText], pi) => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "product-chip"; b.dataset.name = name;
+    b.style.gridColumn = `span ${pspans[pi]}`;
     const set0 = data.items.get(trade);
     b.setAttribute("aria-pressed", String(!!(set0 && set0.has(name))));
     const n = document.createElement("span"); n.textContent = name;
@@ -1417,6 +1449,13 @@ function tradeItem(room, trade) {
       $$(".product-chip", grid).forEach(c => c.setAttribute("aria-pressed", String(set.has(c.dataset.name))));
       paint(); syncLen(); afterChange();
       if (adding) previewBlink(room, trade);
+      // 단일 선택은 1개를 고르면 잠깐 보여 주고 접는다 — 그 공종 카드로 화면을 돌린다(사용자 결정 2026-10-10)
+      if (adding && single) setTimeout(() => {
+        if (openTrade !== trade || stepRoom(current) !== room) return;
+        openTrade = null; renderTradeList();
+        const again = $$("#tradeList .trade").find(x => x.dataset.trade === trade);
+        if (again) { $(".trade-head", again).focus({ preventScroll: true }); reveal(again); }
+      }, 300);
     });
     grid.appendChild(b);
   });
@@ -1437,9 +1476,8 @@ function tradeItem(room, trade) {
     if (v) data.len.set(trade, v); else data.len.delete(trade);
     clearInvalid("room"); saveDraft();
   });
-  body.append(hint, grid, lenWrap);
-  box.appendChild(body);
-  return box;
+  body.append(title, hint, grid, lenWrap);
+  return { card: box, panel: body };
 }
 
 /** 공간 페이지 검사 — 상품 없이 담긴 공사 · 상품이 하나도 없는 공간. 문제가 없으면 null. */
