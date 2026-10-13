@@ -1,0 +1,1613 @@
+/* 웹 견적요청 페이지 동작 — index.html이 이 파일을 읽는다(D단계 F-14, 2026-10-14).
+   페이지 안에 글로 넣은 스크립트를 이 파일로 옮겨, 보안 설정(CSP)에서 'unsafe-inline'을 뺐다 — 주입된 글이 스크립트로 돌지 않게.
+   ⚠️ 이 파일 안에 HTML 문자열로 <script>를 만들지 않는다. 고칠 때 index.html의 app.js?v= 값을 바꿔 옛 판이 캐시에서 섞이지 않게 한다. */
+/* ════════════════════════════════════════════════════════════════════
+   설정 — 이 블록만 고치면 됩니다
+   ════════════════════════════════════════════════════════════════════ */
+const CONFIG = {
+  // 앱의 '웹 문의 연동 설정 → Web App 주소'와 같은 주소 (…/exec).
+  // 비워 두면 미리보기 모드로 동작합니다(전송하지 않음).
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzRtjXk_fWwx6yxK_Vonj8sMRMild_j9hOrgCNXh34qBLupLQZqUnyu0VkwpAPULXn0/exec",
+  COMPANY_NAME: "룰루타일",
+  COMPANY_PHONE: "010-9896-8980",
+  PRIVACY_URL: "https://lulubuild.github.io/estimate/privacy.html", // 개인정보처리방침 페이지 주소 (있으면 링크 표시)
+  RETENTION: "문의일로부터 1년 (계약 시 관련 법령에 따른 기간)",
+  // 동의 기록에 남기는 처리방침 판(시행일) — privacy.html 머리의 시행일과 같게 바꾼다.
+  POLICY_VERSION: "2026-10-07",
+  // 공지 중인 다음 처리방침(시행 7일 전 공지 — 처리방침 10항). 시행 시각부터 판이 바뀌고 기기 구분 번호를 보낸다(2026-10-07).
+  NEXT_POLICY: { version: "2026-10-14", from: "2026-10-14T00:00:00+09:00" },
+  MAX_PHOTOS: 5,
+  // 전체 평형을 그대로 쓰는 공간 — 공간 평형 칸을 두지 않는다(앱 EstimateDraft.wholeHouseRoomName).
+  WHOLE_HOUSE_ROOM: "공용(전체)",
+};
+
+/* 공간 · 공종 · 상품 — 앱 '평면도 관리'의 **웹 견적 페이지에 반영**(4008)이 Apps Script에 올린 설정을
+   페이지가 열릴 때 읽어 쓴다. 아래 DEFAULT_WEB은 그 설정을 아직 못 읽었을 때(처음 · 연결 실패)의 기본값이다.
+   · rooms — 앱 기본 공간 카드(EstimateDraft.defaultRoomNames)
+   · trades · products — 앱 '단가표 관리'의 공종 · 항목명과 **글자까지 같아야** 앱이 그 항목만 담는다.
+     상품을 고르지 않은 공종은 앱이 그 공종의 항목을 전부 담는다. 가격은 싣지 않는다.
+   · categories — 앱 공간 분류와 그 분류에서 안 쓰는 공종(4107). 공간 카드 → 분류 찾기는 앱 RoomTradeScope와 같은 규칙.
+     안 쓰는 공종은 그 공간 카드에 보이지 않고 전송에서도 빠진다(사용자 결정 2026-09-29 — 완전히 숨김).
+   2026-09-29 기본값: 단가표(시공 항목 + 자재 DB Rev1 135건) · 도배 · 마루는 공용(전체)에서만. */
+const DEFAULT_WEB = {
+  v: 1,
+  rooms: ["거실", "공용(전체)", "발코니1", "안방", "방1", "방2", "화장실1", "화장실2", "주방", "현관"],
+  trades: ["도배", "도장", "마루", "목공", "문·문틀", "욕실", "전기·조명", "제작가구", "창호", "철거·청소", "타일", "필름"],
+  products: {
+    "도배": [["디아망 실크벽지", "LX Z:IN · 106cm*1560cm"], ["베스띠 실크벽지", "LX Z:IN · 106cm*1560cm"], ["베이스(테라피) 실크벽지", "LX Z:IN · 106cm*1560cm"], ["휘앙세 장폭합지", "LX Z:IN · 93cm*1775cm"], ["프리모 실크벽지", "개나리벽지 · 106cm*1560cm"], ["로하스 실크벽지", "개나리벽지 · 106cm*1560cm"], ["아트북 실크벽지", "개나리벽지 · 106cm*1560cm"], ["파사드 실크벽지", "신한벽지 · 106cm*1560cm"], ["스케치 실크벽지", "신한벽지 · 106cm*1560cm"], ["아이리스 장폭합지", "신한벽지 · 93cm*1775cm"]],
+    "도장": [["숲으로 웰빙 수성 내부용", "KCC · 18L, 수성, 무광, 백색, 실내 벽 · 천장(벽지 · 석고보드), 고급형"], ["숲으로 에이스 수성 내부용", "KCC · 18L, 수성, 무광, 백색, 실내 벽 · 천장, 표준형"], ["숲으로 에코플러스 수성 내부용", "KCC · 18L, 수성, 무광, 백색(K), 실내 벽 · 천장, 보급형"], ["순앤수 원터치 수성 내부용", "노루페인트 · 16L, 수성, 무광, 백색, 실내 벽 · 천장, 1회 도장 고급형(18L 없음)"], ["순앤수 수성 내부용 KS 2급", "노루페인트 · 18L, 수성, 무광, 백색, 실내 벽 · 천장, 표준형(KS M 6010 2종 2급)"], ["순앤수 100 수성 내부용", "노루페인트 · 18L, 수성, 무광, 백색, 실내 벽 · 천장, 보급형"], ["아이럭스 멀티플랫 수성", "삼화페인트 · 4L, 수성, 무광, 백색, 실내 벽 · 벽지, 고급형(18L 없음)"], ["아이생각 수성 내부 프로", "삼화페인트 · 18L, 수성, 무광, 백색, 실내 벽 · 천장, 보급형"], ["숲으로 홈앤 멀티멜 수용성 에나멜", "KCC · 3.78L, 수용성 에나멜, 반광, 백색, 문 · 몰딩 · 가구 · 목재 · 철재"], ["숲으로 올인원 다용도 수성", "KCC · 3.78L, 수성 다용도(젯소 없이), 반광, 백색, 문 · 창틀 · 몰딩 · 목재 · 철재"], ["순앤수 올커버 다용도 수성", "노루페인트 · 4L, 수성 다용도, 반광, 백색, 방문 · 몰딩 · 가구 · 목재 · 철재 · 시트지"], ["멀티플러스 다용도 수성", "노루페인트 · 3.8L, 수성 다용도, 반광, 백색, 가구 · 방문 · 목재 · 철재"], ["아이럭스 올코팅 수성 에나멜", "삼화페인트 · 4L, 수성 에나멜, 백색, 몰딩 · 가구 · 방문 · 목재 · 철재(광도 선택)"], ["홈스타 파스텔OK 플러스 멀티 수성", "삼화페인트 · 4L, 수성 멀티, 반광, 백색, 방문 · 가구 · 벽지"]],
+    "마루": [["에디톤 스톤 5T (450×900)", "LX Z:IN · 450*900*5T, 4장/박스(1.62㎡·약 0.5평)"], ["에디톤 스톤 스퀘어 5T (600×600)", "LX Z:IN · 600*600*5T, 4장/박스(1.44㎡)"], ["에디톤 마루 5T (우드 180×1220)", "LX Z:IN · 180*1220*5T, 7장/박스(1.54㎡)"], ["나투스강 7.5T 강마루", "동화자연마루 · 95*800*7.5T, 42장/박스(3.19㎡)"], ["나투스진 그란데 7T 강마루", "동화자연마루 · 325*810*7T, 12장/박스(3.16㎡)"], ["나투스진 테라 7.5T 강마루", "동화자연마루 · 161*1215*7.5T, 16장/박스(3.13㎡)"], ["구정강 7.5T 강마루", "구정마루 · 94*800*7.5T, 1박스 3.23㎡(약 1평)"], ["그랜드텍스쳐 165 강마루", "구정마루 · 165*1200*7.5T, 16장/박스(3.17㎡)"], ["마뷸러스 젠 대리석 강마루", "구정마루 · 597*597*8.7T, 9장/박스(3.2㎡)"]],
+    "목공": [["몰딩/걸레받이 교체", "거실 기준"], ["붙박이장 제작", "침실 기준"], ["천장 돔 시공", "욕실 기준"], ["신발장 제작/교체", "현관 기준"], ["중문 설치", "현관 기준"], ["방문 교체(문틀 포함)", "공용(전체) 기준"]],
+    "문·문틀": [["중문 - 3연동", "3연동 슬라이딩"], ["중문 - 스윙·슬림도어", "여닫이·원슬라이딩"], ["방문 교체 - ABS 도어", "문틀 포함"], ["에넥스 피아블 안전 비대칭 3연동 중문", "에넥스 · 3연동 슬라이딩 오픈형, 폭 1000~1500 · 높이 ~2300, 알루미늄, 아쿠아 · 모루 · 브론즈 유리, 설치 포함(전국 무료시공), 철거 별도"], ["에넥스 에반 원슬라이딩 중문", "에넥스 · 원슬라이딩 디바이딩, 폭 800~1300, 알루미늄, 망입 · 아쿠아 · 브론즈 · 샤틴 유리, 설치 포함(전국 무료시공), 철거 별도"], ["에넥스 비바 우드랩핑 원슬라이딩 중문", "에넥스 · 원슬라이딩 오픈형, 폭 1000~1200, 알루미늄+우드랩핑, 설치 포함(서울 · 경기 무료시공, 그 밖은 별도 가능), 철거 별도"], ["에넥스 클라세 리얼아치 양개 스윙 중문", "에넥스 · 양개 스윙(비대칭 아치), 폭 1000~1600 · 높이 ~2300, 알루미늄, 아쿠아 · 모루 · 브론즈 유리, 설치 포함(전국 무료시공), 철거 별도"], ["한샘 라이트 3연동 중문 오픈 · 고시형", "한샘 · 3연동 슬라이딩 오픈형 · 고시형, 폭 1251~1500, 알루미늄 슬림프레임, 기본유리 5T, 설치 포함(전국 무료시공, 보양 · 폐기처리 포함) · 조사 판매처 2곳"], ["한샘 라이트 3연동 중문 디바이딩형", "한샘 · 3연동 슬라이딩 디바이딩(유리 분할), 폭 1251~1500, 알루미늄 슬림프레임, 기본유리, 설치 포함(전국 무료시공) · 조사 판매처 2곳"], ["한샘 유닛슬라이딩 기본형 중문", "한샘 · 원슬라이딩 기본형, 중형 폭 901~1300, 일반유리, 설치 포함(무료 1일 시공) · 조사 판매처 2곳"], ["영림 초슬림 3연동 중문 오픈형", "영림 · 3연동 슬라이딩 오픈형, 기본색(화이트 · 우드), 유리 5종, 설치 포함(영림 본사직영 맞춤시공), 기본 크기 확인 못 함 · 조사 판매처 2곳"], ["영림 초슬림 3연동 중문 유리고시형", "영림 · 3연동 슬라이딩 유리고시형, 기본색(화이트 · 우드), 유리 5종, 설치 포함(영림 본사직영 맞춤시공), 기본 크기 확인 못 함 · 조사 판매처 2곳"], ["영림 슬림슬라이딩 중문 오픈형", "영림 · 원슬라이딩 오픈형, 화이트 · 우드, 유리 6종, 설치 포함(영림 본사직영 맞춤시공), 기본 크기 확인 못 함 · 조사 판매처 2곳"], ["영림 슬림슬라이딩 중문 유리고시형", "영림 · 원슬라이딩 유리고시형, 화이트 · 우드, 유리 6종, 설치 포함(영림 본사직영 맞춤시공), 기본 크기 확인 못 함 · 조사 판매처 2곳"], ["예림 EZ 이지도어 민자 + 발포문틀 세트", "예림 · ABS 여닫이 문짝(EZ-001 민자)+PVC 발포문틀 110바, 기본 1000*2100 이하, 자재만, 경첩 · 손잡이 별도 · 조사 판매처 2곳"], ["예림 EZ 이지도어 민자 + 발포슬림문틀 세트", "예림 · ABS 여닫이 문짝(EZ 민자)+발포슬림문틀 110mm(슬림문선), 기본 1000*2100 이하, 자재만, 경첩 · 손잡이 별도 · 조사 판매처 2곳"], ["영림 ABS 민자 YA-07 + 발포문틀 세트", "영림 · ABS 여닫이 문짝(YA-07 민자)+영림 PVC 발포문틀 110바, 자재만, 경첩 · 손잡이 별도 · 조사 판매처 1곳"], ["영림 더도어 민자 TA-04 + 발포문틀 세트", "영림 · ABS 보급형 문짝(더도어 TA-04 민자)+영림 PVC 발포문틀 110바, 자재만, 경첩 · 손잡이 별도 · 조사 판매처 1곳"], ["우딘 내추럴 민자 + 발포문틀 세트", "우딘 · ABS 여닫이 문짝(내추럴 민자)+우딘 PVC 발포문틀 110바, 기본 1000*2100 이하, 자재만, 경첩 · 손잡이 별도 · 조사 판매처 1곳"], ["우딘 민자 + 목재슬림문틀 세트", "우딘 · ABS 여닫이 문짝(민자)+목재슬림문틀 110mm · 슬림문선 10mm, 기본 1000*2100 이하, 자재만, 경첩 · 손잡이 별도 · 조사 판매처 1곳"]],
+    "욕실": [["욕실 전체 리모델링 패키지", "3~5㎡ 1개소, 철거·타일·도기·수전"], ["양변기 교체", "자재+설치"], ["세면대 교체", "자재+설치"], ["CC-735 림리스 투피스 치마형 양변기", "대림바스 · 400*690*740mm, 투피스 치마형 림리스, 평균 5L, 바닥배수 305mm, 시트·양부속 포함"], ["CC-766 투피스 양변기", "대림바스 · 400*740*700mm, 투피스 수로노출형, 평균 6L, 바닥배수 305mm, 시트·양부속 포함"], ["CC-214 원피스 치마형 양변기", "대림바스 · 400*690*550mm, 원피스 치마형, 5L, 바닥배수 305mm, 시트·양부속 포함"], ["웨이브S 초절수 투피스 양변기 C319000A", "아메리칸스탠다드 · 380*680*700mm, 투피스 치마형 파워림, 바닥배수 305mm, 슬로우시트·양부속 포함"], ["휴스턴 투피스 양변기 C338900A", "아메리칸스탠다드 · 380*700*720mm, 투피스 치마형, 6L 이하, 바닥배수 305mm, 시트·부속 포함"], ["보스톤 원피스 양변기 C209300C", "아메리칸스탠다드 · 390*700*510mm, 원피스 치마형, 6L 이하, 바닥배수 305mm, 시트·부속 포함"], ["아르노 라운드 반다리 세면기 CL-384", "대림바스 · 505*445*380mm, 반다리 일체형, 1홀, 도기만(수전·폽업·트랩 별도)"], ["사각 반다리 세면기 CL-370", "대림바스 · 505*445*760mm, 반다리 일체형, 1홀, 도기만(수전·폽업·트랩 별도)"], ["슬림 탑볼 세면기 CL-826", "대림바스 · 480*370*135mm, 탑볼형, 도기만(수전·폽업 별도)"], ["플랫 반다리 세면기 CCASF516", "아메리칸스탠다드 · 545*455*410mm, 반다리 일체형, 1홀, 도기만(수전·폽업·트랩 별도)"], ["웨이브R 반다리 세면기 C151500L", "아메리칸스탠다드 · 540*460*410mm, 반다리 일체형, 1홀, 도기만(수전·폽업·트랩 별도)"], ["시그니처 탑볼 세면기 CCAS0628", "아메리칸스탠다드 · 551*399*100mm, 탑볼형, 도기만(수전·폽업 별도)"], ["컨셉큐브 언더카운터 세면기 CCAS0451", "아메리칸스탠다드 · 560*470*200mm, 언더카운터형, 수전 구멍 없음(상판 설치), 도기만"], ["원홀 세면수전 DL-YL6A10", "대림바스 · 원홀 대붙이, 냉온수 혼합, 크롬, 폽업 별도"], ["세면·샤워 겸용 수전 DL-YB6A15", "대림바스 · 4인치(102mm) 2홀 대붙이, 3홀 세면기 겸용, 냉온수 혼합"], ["샤워욕조 수전 DL-YB6A13", "대림바스 · 벽붙이, 샤워헤드·호스 1.5m·행거 포함"], ["바트라 수납형 레인샤워 BFB-720", "대림바스 · 벽붙이 선반형, 해바라기 헤드+핸드샤워 2WAY"], ["큐브P 원홀 세면수전 FA1611", "아메리칸스탠다드 · 원홀 대붙이, 크롬, 폽업 별도"], ["리비어 원홀 세면수전 FA1614", "아메리칸스탠다드 · 원홀 대붙이, 크롬 유광, 황동"], ["큐브P 샤워욕조 수전 FB2811", "아메리칸스탠다드 · 벽붙이 샤워욕조, 크롬, 냉온수 혼합"], ["모닝 샤워수전 HY-119", "한양수전 · 벽붙이 샤워욕조, 냉온수 혼합, 호스 포함"], ["모닝 4인치 세면수전 HY-319", "한양수전 · 4인치(102mm) 2홀 대붙이, 냉온수 혼합"]],
+    "전기·조명": [["LED 등기구 교체", "자재+설치"], ["콘센트·스위치 증설·교체", "1개소 기준"], ["오스람 LED 원형 프레임 방등 60W", "오스람(레드밴스) · LED 60W, 원형 프레임 Ø500mm, 주광색 6500K, 방등"], ["레드밴스 스마트 와이파이 원형 방등 60W", "오스람(레드밴스) · LED 60W, 500*500*75mm, 2700~6500K 색변환 · 밝기조절, WiFi+리모컨, 방등"], ["레드밴스 스마트 와이파이 직사각 방등 70W", "오스람(레드밴스) · LED 70W, 705*500*65mm, 2700~6500K 색변환 · 밝기조절, WiFi+리모컨, 방등 · 작은 거실등"], ["번개표 LED 원형 방등 50W", "번개표(금호전기) · LED 50W, 450*450*95mm, 주광색 6500K, 원형 아크릴, 방등(Q5065-R45YO)"], ["번개표 LED 기쁨 사각 방등 50W", "번개표(금호전기) · LED 50W, 520*520*65mm, 주광색 6500K, 아크릴 사각, 방등(MX3013-C5065)"], ["번개표 LED 행복 시스템 거실등 100W", "번개표(금호전기) · LED 100W, 720*700*80mm, 주광색 6500K, 직사각 시스템 거실등(Q10065-L72TO)"], ["장수램프 LED 퓨어스마트 사각 방등 60W", "장수램프 · LED 60W, 520*520*65mm, 2700~6500K 색변환 · 밝기조절 · 타이머, 리모컨, 방등"], ["장수램프 LED 퓨어스마트 거실등 180W", "장수램프 · LED 180W, 1235*705*70mm, 2700~6500K 색변환 · 밝기조절 · 타이머, 리모컨, 거실등"], ["장수램프 LED 다운라이트 3인치 5W", "장수램프 · LED 5W, 3인치 타공 75mm, 주광 · 주백 · 전구 선택, 확산형 매입등"], ["장수램프 LED 다운라이트 6인치 15W 국산형", "장수램프 · LED 15W, 6인치, 주광 · 전구 선택, 확산형 매입등, 국산"], ["더쎈 LED 3인치 다운라이트 5W 직회전 COB", "더쎈(동성조명) · LED 5W, 3인치 타공 75mm, 주광 · 주백 · 전구 선택, 직회전 COB 집중형"], ["더쎈 LED 에코 라늄 6인치 다운라이트 15W", "더쎈(동성조명) · LED 15W, 6인치 타공 150mm, 3000 · 3500 · 4000 · 6500K 선택, 플리커프리 매입등"], ["번개표 LED 3인치 회전 매입등 5W", "번개표(금호전기) · LED 5W, 3인치 타공 75mm, 주광 · 전구 선택, 회전형 일체형(MR16 할로겐 대체)"], ["번개표 LED 방습 6인치 다운라이트 15W", "번개표(금호전기) · LED 15W, 6인치 타공 150mm, 주광, 방습 · 욕실 겸용"], ["르그랑 아펠라 1구 스위치", "르그랑 · 1구 1로(단로), 16A 250V, 화이트, 플레이트 포함"], ["르그랑 아펠라 2구 스위치", "르그랑 · 2구 1로(단로), 16A 250V, 화이트, 플레이트 포함"], ["르그랑 아펠라 3구 스위치", "르그랑 · 3구 1로(단로), 16A 250V, 화이트, 플레이트 포함"], ["르그랑 아펠라 2구 콘센트", "르그랑 · 2구 접지 매입 콘센트(세로), 16A 250V, 화이트, 플레이트 포함"], ["나노 오딧세이 1구 스위치", "나노전기 · 1구 1로, 무램프, 16A 250V, 화이트, 플레이트 포함"], ["나노 오딧세이 2구 스위치", "나노전기 · 2구 1로, 무램프, 16A 250V, 화이트, 플레이트 포함"], ["나노 오딧세이 2구 콘센트", "나노전기 · 2구 접지 매입 콘센트(세로), 16A 250V, 화이트, 플레이트 포함"], ["제일 디아트 1구 스위치", "제일전기 · 1구 1로(단로), 16A 250V, 화이트, 76*123mm 플레이트 포함"], ["제일 디아트 2구 스위치", "제일전기 · 2구 1로(단로), 16A 250V, 화이트, 76*123mm 플레이트 포함"], ["제일 디아트 2구 콘센트", "제일전기 · 2구 접지 매입 콘센트(세로), 16A 250V, 화이트, 플레이트 포함"]],
+    "제작가구": [["주방가구 일체 (상·하부장+상판)", "실측 길이 1m 기준"], ["붙박이장·시스템장", "높이 2.4m 기준, 1자=0.303m"]],
+    "창호": [["샤시 교체(이중창)", "침실 기준"], ["발코니 샤시 교체", "발코니/베란다 기준"], ["아파트 전체 창호 교체 (30평대)", "PVC 이중창, 전체 교체"], ["방충망 교체", "창 1짝 기준"]],
+    "철거·청소": [["실내 전체 철거 (폐기물 포함)", "마감재 전체 철거"], ["입주청소", "준공·입주청소"]],
+    "타일": [["주방 벽타일 시공", "주방 기준"], ["욕실 벽/바닥 타일 시공", "욕실 기준"], ["타일 시공비 - 벽 (자재 별도)", "압착·떠발이 공임"], ["타일 시공비 - 바닥 (자재 별도)", "압착 공임"], ["포세린 타일 자재 600×600", "600각 포세린(자재만)"], ["줄눈(에폭시) 시공", "욕실 1개소 기준"], ["ARE 36001 크림 벽타일 (300×600)", "벳센타일 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["ARE 36002 아몬드 벽타일 (300×600)", "벳센타일 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["ARE 36003 비앙코 벽타일 (300×600)", "벳센타일 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["ARE 36004 그리지오 벽타일 (300×600)", "벳센타일 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["WT3606 백색 마블 벽타일 (300×600)", "베리굿타일앤스톤 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["WT36M06 아이보리 벽타일 (300×600)", "베리굿타일앤스톤 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["WT3604 라이트베이지 벽타일 (300×600)", "베리굿타일앤스톤 · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["CW 7001 화이트 유광 서브웨이 벽타일 (300×600)", "CW·WM(수입) · 300*600, 8장/박스(1.44㎡), 도기질 유광"], ["CW 7003 진그레이 유광 서브웨이 벽타일 (300×600)", "CW·WM(수입) · 300*600, 8장/박스(1.44㎡), 도기질 유광"], ["WM 38000M 백색 무광 벽타일 (300×600)", "CW·WM(수입) · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["WM 37109M 우드스틱 라이트그레이 벽타일 (300×600)", "CW·WM(수입) · 300*600, 8장/박스(1.44㎡), 도기질 무광"], ["비바 베이지 포세린 (600×600)", "화신세라믹 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["비바 블랑코 포세린 (600×600)", "화신세라믹 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["66508 화이트 테라조 포세린 (600×600)", "화신세라믹 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["테라조 컬러스 포세린 (600×600)", "화신세라믹 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["PER6008 블랙 테라조 포세린 (600×600)", "베리굿타일앤스톤 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["PER6003 그레이 테라조 포세린 (600×600)", "베리굿타일앤스톤 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["LECCE 01 라이트그레이 포세린 (600×600)", "베리굿타일앤스톤 · 600*600, 4장/박스(1.44㎡), 포세린 무광"], ["VG3309 욕실 바닥 자기질 (300×300)", "베리굿타일앤스톤 · 300*300, 16장/박스(1.44㎡), 자기질 무광"], ["GGK9394 욕실 바닥 논슬립 (300×300)", "이누스(아이에스동서) · 300*300, 16장/박스(1.44㎡), 국산 자기질 무광 논슬립"], ["GGK8394 욕실 바닥 논슬립 (300×300)", "이누스(아이에스동서) · 300*300, 16장/박스(1.44㎡), 국산 자기질 무광 논슬립"], ["비바 그레이 포세린 (600×1200)", "화신세라믹 · 600*1200, 2장/박스(1.44㎡), 포세린 무광 9.5T"], ["NOVA 포세린 (600×1200)", "베리굿타일앤스톤 · 600*1200, 2장/박스(1.44㎡), 포세린 무광"], ["LC 스톤챗 화이트 포세린 (600×1200)", "화신세라믹 라우체 · 600*1200, 2장/박스(1.44㎡), 포세린 무광 컬러바디"]],
+    "필름": [["방문+문틀 필름 시공", "문짝+문틀 1틀"], ["현관문 필름 시공", "실내측 1짝"], ["베니프 우드 EW 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염(방염판 CW), 예: EW609 월넛"], ["베니프 우드 EGM 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염(방염판 RGM), 페인티드 우드, 예: EGM05"], ["베니프 프리미엄우드 NE 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염(방염판 NW), 예: NE041 화이트오크"], ["베니프 솔리드 ES 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염(방염판 RS), 예: ES130 화이트"], ["베니프 미스티 저광 솔리드 SM 시리즈", "LX Z:IN · 1220mm*50m 롤, 비방염, 저광 솔리드, 예: SM016"], ["베니프 솔리드 방염 RS 시리즈", "LX Z:IN · 1220mm*50m 롤, 방염, 예: RS130 화이트"], ["보닥 스탠다드우드 W 시리즈", "현대L&C · 1220mm*50m 롤, 비방염, 예: W933"], ["보닥 오리진우드 SPW 시리즈", "현대L&C · 1220mm*50m 롤, 비방염, 프리미엄 우드, 예: SPW45"], ["보닥 솔리드 S 시리즈", "현대L&C · 1220mm*50m 롤, 비방염, 예: S244 코튼화이트"], ["보닥 솔리드 방염 S 시리즈", "현대L&C · 1220mm*50m 롤, 방염, 예: S244"], ["보닥 슈퍼매트 SMT 시리즈", "현대L&C · 1220mm*50m 롤, 비방염, 프리미엄 무광, 예: SMT16"], ["영림 우드 PW 시리즈", "영림 · 1220mm*25m 롤, 비방염, 예: PW957"], ["영림 우드 방염 FPW 시리즈", "영림 · 1220mm*25m 롤, 방염, 예: FPW835"], ["영림 솔리드 PS 시리즈", "영림 · 1220mm*25m 롤, 비방염, 예: PS010 중백색"], ["영림 소프트매트 PSM 시리즈", "영림 · 1220mm*25m 롤, 비방염, 프리미엄 무광, 예: PSM190 포슬린"]],
+  },
+  // 단일 선택 공종(앱 '공종 설정' 5301, 2026-10-09) — 한 공간에 상품 1개만. 나머지는 중복 선택(여러 개).
+  single: ["도배", "마루"],
+  // 지금 규칙: 도배 · 마루는 공용(전체)에서만 — 앱 4107에서 정해 반영하면 그 값으로 바뀐다.
+  categories: [
+    { name: "거실", excluded: ["도배", "마루"] },
+    { name: "주방", excluded: ["도배", "마루"] },
+    { name: "침실", excluded: ["도배", "마루"] },
+    { name: "욕실", excluded: ["도배", "마루"] },
+    { name: "현관", excluded: ["도배", "마루"] },
+    { name: "발코니/베란다", excluded: ["도배", "마루"] },
+    { name: "공용(전체)", excluded: [] },
+  ],
+};
+/* ════════════════════════════════════════════════════════════════════ */
+
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const DRAFT_KEY = "estimate-request-draft-v1";
+/* 요청사항 초안 — 탭을 닫으면 사라지는 저장소(F-20). 평형 · 희망일 · 고른 공간은 7일 초안(DRAFT_KEY)에 그대로. */
+const NOTE_KEY = "estimate-request-note-v1";
+
+/* 다른 사이트 틀(iframe) 안에서는 보내지 않는다(F-14) — 속인 화면 위에 이 페이지를 투명하게 얹어 누르게 하는 수법(클릭재킹) 막기.
+   GitHub Pages는 frame-ancestors 머리를 달 수 없어 페이지가 스스로 본다. 같은 사이트 틀은 그대로. */
+const framedByOther = (() => {
+  try { return window.top !== window.self && window.top.location.origin !== location.origin; }
+  catch { return true; }   // 다른 사이트 틀이면 top.location을 읽지 못한다
+})();
+
+/* 기기 구분 번호 — 이 브라우저에 한 번 만든 무작위 값(이름 · 연락처와 무관). 같은 기기에서 오는 반복 · 허위 접수를
+   Apps Script가 세고, 업체가 앱에서 차단할 때 쓴다(2026-10-07). 처리방침 시행(NEXT_POLICY.from) 전에는 만들지도 보내지도 않는다.
+   ⚠️ 초안 지우기(clearDraft) · 새 요청 작성에서 지우지 않는다 — 같은 기기를 알아보는 값이다. */
+const DEVICE_KEY = "estimate-device-v1";
+let memoryDeviceId = "";
+const policyNextActive = () => Date.now() >= Date.parse(CONFIG.NEXT_POLICY.from);
+const policyVersion = () => policyNextActive() ? CONFIG.NEXT_POLICY.version : CONFIG.POLICY_VERSION;
+function newDeviceId() {
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  return btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function deviceId() {
+  if (!policyNextActive()) return "";
+  try {
+    let v = localStorage.getItem(DEVICE_KEY) || "";
+    if (!/^[A-Za-z0-9_-]{22}$/.test(v)) { v = newDeviceId(); localStorage.setItem(DEVICE_KEY, v); }
+    return v;
+  } catch {
+    // 저장소를 못 쓰는 브라우저(사생활 보호 모드 등) — 이 페이지를 연 동안만 같은 값
+    return memoryDeviceId || (memoryDeviceId = newDeviceId());
+  }
+}
+const DRAFT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const openedAt = Date.now();
+/** Apps Script가 설정과 함께 준 서명된 발급 시각(P3) — 접수 때 그대로 돌려보낸다. 브라우저에 저장하지 않는다. */
+let issuedStamp = "";
+/** 발급 표를 받은 이 브라우저 시각 — 서버는 받은 뒤 3초 ~ 24시간 사이의 표만 인정한다(웹문의.gs ISSUE_MIN_MS · ISSUE_MAX_MS). */
+let issuedAt = 0;
+
+const state = {
+  scope: "전체",
+  rooms: new Map(),   // room -> { trades:Set, pyeong:"", items:Map(trade -> Set(상품명)), size:"작음|보통|큼", len:Map(trade -> "3.2") }
+  photos: [],         // { name, dataUrl }
+};
+
+// ── 공간 · 공종 설정 (앱 4008 → Apps Script → 여기) ─────────────────────
+const WEB_CACHE_KEY = "estimate-web-config-v1";
+// 설정을 못 주는 스크립트(옛 버전)에 매번 묻지 않도록 쉬는 시각 — 옛 스크립트는 이 요청을 틀린 키로 세어 앱 동기화를 막는다.
+const WEB_PAUSE_KEY = "estimate-web-config-pause-until-v2";   // v2(2026-09-30): 새 스크립트는 발급 표를 주므로 옛 멈춤 기록은 무시
+const WEB_PAUSE_MS = 6 * 60 * 60 * 1000;
+// 길이 · 개수 상한 — Apps Script(웹문의.gs WEBCFG)와 같게. 접수 때 서버가 공간 20자 · 공종 20자 · 상품명 60자로 자른다.
+const WEB_LIMITS = { rooms: 30, room: 20, trades: 60, trade: 20, perTrade: 300, name: 60, sub: 200, categories: 60, category: 40 };
+
+// 공간 크기(2026-10-10 사용자 결정) — 작음 · 보통 · 큼. 크기 그룹(앱 물량 산출 탭 '공간 크기' 8031)이 설정의 sizeGroups로 온다:
+// 그룹마다 공간 분류(cats) · 바닥+벽 여부(wall) · 안내 치수(sizes — [가로, 세로(, 높이)] m).
+// 처음 치수는 없다(F-18 — 앱 2026-10-13 결정 '모두 사용자가 넣는다'와 같게): 설정에 그룹이 없으면 크기를 묻지 않고,
+// 세 크기 중 하나라도 틀린 그룹은 통째로 뺀다(앱도 세 크기를 다 넣은 그룹만 싣는다).
+const SIZE_TITLES = ["작음", "보통", "큼"];
+/** 크기 그룹 — 칸마다 검사(가로 · 세로 0.3~20m, 바닥+벽은 높이 1.5~5m), 한 분류는 앞 그룹만, 최대 8개. 순서는 설정 그대로(roomSizeGroups 번호). */
+function normalizeSizeGroups(raw) {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set(), out = [];
+  raw.slice(0, 8).forEach(g => {
+    if (!g || typeof g !== "object") { out.push(null); return; }
+    const cats = (Array.isArray(g.cats) ? g.cats : []).filter(c => typeof c === "string" && c.trim() && c.length <= 40 && !seen.has(c.trim()))
+      .map(c => c.trim());
+    const wall = g.wall !== false;
+    const sizes = [0, 1, 2].map(i => {
+      const v = Array.isArray(g.sizes) && Array.isArray(g.sizes[i]) ? g.sizes[i].map(Number) : [];
+      const ok = v.length >= 2 && v.slice(0, 2).every(n => n >= 0.3 && n <= 20) && (!wall || (v[2] >= 1.5 && v[2] <= 5));
+      return ok ? v.slice(0, wall ? 3 : 2) : null;
+    });
+    // 못 쓰는 그룹도 자리는 남긴다(null) — 앱이 정한 공간 → 그룹 번호(roomSizeGroups)가 어긋나지 않게.
+    if (!cats.length || sizes.some(v => !v)) { out.push(null); return; }
+    cats.forEach(c => seen.add(c));
+    out.push({ cats, wall, sizes });
+  });
+  return out;
+}
+
+/** 받은 설정을 검사해 쓰기 좋은 모양으로 — 모양이 틀렸거나 공간 · 공종이 비면 null(= 지금 설정 그대로). */
+function normalizeWebConfig(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const str = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+  const rooms = [...new Set((Array.isArray(raw.rooms) ? raw.rooms : []).map(r => str(r, WEB_LIMITS.room)).filter(Boolean))]
+    .slice(0, WEB_LIMITS.rooms);
+  const source = raw.products && typeof raw.products === "object" ? raw.products : {};
+  const trades = [], products = Object.create(null);   // 공종 이름이 "toString" 같은 기본 속성명이어도 안전하게
+  (Array.isArray(raw.trades) ? raw.trades : []).forEach(t => {
+    const trade = str(t, WEB_LIMITS.trade);
+    if (!trade || trade in products || trades.length >= WEB_LIMITS.trades) return;
+    const list = [], seen = new Set();
+    const given = Object.prototype.hasOwnProperty.call(source, t) && Array.isArray(source[t]) ? source[t] : [];
+    given.forEach(p => {
+      if (!Array.isArray(p) || list.length >= WEB_LIMITS.perTrade) return;
+      const name = str(p[0], WEB_LIMITS.name), sub = str(p[1], WEB_LIMITS.sub);
+      if (!name || seen.has(name)) return;
+      seen.add(name); list.push([name, sub]);
+    });
+    trades.push(trade); products[trade] = list;
+  });
+  const categories = [], seenCat = new Set();
+  (Array.isArray(raw.categories) ? raw.categories : []).forEach(c => {
+    if (!c || typeof c !== "object" || categories.length >= WEB_LIMITS.categories) return;
+    const name = str(c.name, WEB_LIMITS.category);
+    if (!name || seenCat.has(name)) return;
+    seenCat.add(name);
+    categories.push({ name, excluded: new Set((Array.isArray(c.excluded) ? c.excluded : []).map(x => str(x, 100)).filter(Boolean)) });
+  });
+  if (!rooms.length || !trades.length) return null;
+  // 단일 선택 공종 — 싣는 공종 안의 것만. 키가 없으면(옛 설정 · 옛 스크립트) 모두 중복 선택(예전 동작 그대로).
+  const single = new Set((Array.isArray(raw.single) ? raw.single : [])
+    .map(t => str(t, WEB_LIMITS.trade)).filter(t => t && t in products));
+  // 공간 크기를 묻는 공종(앱 물량 산출 규칙이 있는 공종, 2026-10-10) — 키가 없거나 빈 목록이면 묻지 않음(F-18 — '타일' 가정 없음).
+  const sized = new Set((Array.isArray(raw.sized) ? raw.sized : [])
+    .map(t => str(t, WEB_LIMITS.trade)).filter(t => t && t in products));
+  const sizeGroups = normalizeSizeGroups(raw.sizeGroups);
+  // 공간 카드 → 공간 분류 · 크기 그룹(S13, 2026-10-14) — 앱이 정한 표. 있으면 이 표만 본다(없는 공간 = 분류 없음 · 크기 안 물음).
+  // 없으면(옛 앱이 올린 설정 · 이 페이지 기본값) 아래 matchCategory 규칙으로.
+  const catNames = new Set(categories.map(c => c.name));
+  const plainMap = v => v && typeof v === "object" && !Array.isArray(v) ? v : null;
+  const rawCats = plainMap(raw.roomCategories), rawSizes = plainMap(raw.roomSizeGroups);
+  const roomCategories = rawCats ? new Map(rooms.filter(r => Object.prototype.hasOwnProperty.call(rawCats, r))
+    .map(r => [r, str(rawCats[r], WEB_LIMITS.category)]).filter(([, c]) => catNames.has(c))) : null;
+  const roomSizeGroups = rawSizes ? new Map(rooms.filter(r => Object.prototype.hasOwnProperty.call(rawSizes, r))
+    .map(r => [r, Number(rawSizes[r])]).filter(([, n]) => Number.isInteger(n) && sizeGroups[n])) : null;
+  return { rooms, trades, products, categories, single, sized, sizeGroups, roomCategories, roomSizeGroups };
+}
+/** 이 공종은 단일 선택인가(한 공간에 상품 1개) — 아니면 중복 선택(여러 개). */
+const isSingle = trade => !!(WEB.single && WEB.single.has(trade));
+/** 단일 선택 공종에 여러 개가 담겨 있으면(옛 초안 · 설정이 바뀐 뒤) 먼저 고른 1개만 남긴다. 줄였으면 true. */
+function keepFirstIfSingle(trade, set) {
+  if (!isSingle(trade) || set.size <= 1) return false;
+  const first = set.values().next().value;
+  set.clear(); set.add(first);
+  return true;
+}
+
+let WEB = normalizeWebConfig(DEFAULT_WEB);
+let webSource = "";   // 지금 쓰는 설정의 원문(JSON) — 같은 설정을 다시 받으면 다시 그리지 않는다
+
+// 공간 카드 → 공간 분류: 앱 EstimateCore RoomTradeScope.category와 같은 규칙(바꾸면 함께).
+// 2026-10-14(S13)부터 앱이 표(roomCategories · roomSizeGroups)를 올리므로 이 규칙은 표가 없는 옛 설정 · 기본값에만 쓴다.
+// ① 같은 이름 ② 뒤 번호 · 띄어쓰기를 뗀 이름, "발코니/베란다"처럼 / 로 나눈 한쪽 ③ 흔한 다른 이름.
+const ROOM_SYNONYMS = {
+  "침실": ["안방", "방", "작은방", "큰방", "아이방", "자녀방", "부부침실", "서재", "드레스룸", "옷방", "알파룸"],
+  "욕실": ["화장실", "공용욕실", "안방욕실", "부부욕실", "공용화장실", "안방화장실"],
+  "발코니": ["베란다", "앞베란다", "뒷베란다", "다용도실", "세탁실"],
+  "주방": ["부엌", "키친"],
+  "거실": ["리빙룸"],
+  "공용(전체)": ["전체", "공용", "집전체"],
+};
+const squeeze = s => String(s).replace(/\s+/g, "");
+function baseName(s) {
+  let t = String(s).trim();
+  while (t && /[\p{N}\s\-_#]/u.test(t.slice(-1))) t = t.slice(0, -1);
+  return t;
+}
+function nameParts(category) {
+  const whole = squeeze(category);
+  return [whole, baseName(whole), ...whole.split(/[\/·,]/).map(baseName).filter(Boolean)];
+}
+function matchCategory(raw, names) {
+  const text = String(raw).trim();
+  if (!text) return null;
+  const exact = names.find(n => n.trim() === text);
+  if (exact) return exact;
+  const base = squeeze(baseName(text));
+  if (!base) return null;
+  return names.find(n => nameParts(n).includes(base))
+    || names.find(n => nameParts(n).some(p => Object.prototype.hasOwnProperty.call(ROOM_SYNONYMS, p) && ROOM_SYNONYMS[p].includes(base)))
+    || null;
+}
+/** 이 공간에서 안 쓰는 공종 — 분류를 못 찾으면 빈 집합(= 모든 공종). */
+function roomExcluded(room) {
+  const name = WEB.roomCategories ? (WEB.roomCategories.get(room) || null) : matchCategory(room, WEB.categories.map(c => c.name));
+  const category = name && WEB.categories.find(c => c.name === name);
+  return category ? category.excluded : new Set();
+}
+function roomTrades(room) {
+  const excluded = roomExcluded(room);
+  return WEB.trades.filter(t => !excluded.has(t));
+}
+function tradeAllowed(room, trade) {
+  return WEB.trades.includes(trade) && !roomExcluded(room).has(trade);
+}
+
+/** 3번 안내 — 공용(전체)에서만 고를 수 있는 공종이 있으면 그 이름을 알린다. */
+function renderRoomsDesc() {
+  let text = "다음 화면부터 고른 공간마다 한 페이지씩 상품을 고릅니다.";
+  const whole = CONFIG.WHOLE_HOUSE_ROOM;
+  const others = WEB.rooms.filter(r => r !== whole);
+  if (WEB.rooms.includes(whole) && others.length) {
+    const onlyWhole = roomTrades(whole).filter(t => others.every(r => !tradeAllowed(r, t)));
+    if (onlyWhole.length) {
+      const particle = hasBatchim(onlyWhole[onlyWhole.length - 1]) ? "은" : "는";
+      text += ` ${onlyWhole.join("·")}${particle} 집 전체 기준이라 '${whole}'에서 골라 주세요.`;
+    }
+  }
+  $("#roomsDesc").textContent = text;
+}
+function hasBatchim(word) {
+  const code = word.charCodeAt(word.length - 1) - 0xAC00;
+  return code >= 0 && code <= 11171 && code % 28 !== 0;
+}
+
+/** 새 설정으로 바꾼다 — 이제 안 보이는 공간 · 공종 · 상품은 고른 것에서 뺀다(숨긴 공종이 전송에 섞이지 않게).
+    공간 평형 칸에 입력하는 중이면 끝난 뒤에 바꾼다(다시 그리면 입력 중인 칸이 사라진다). */
+let pendingWebConfig = null, waitingFocusOut = false;
+function applyWebConfig(next, source) {
+  const area = $("#roomStep"), active = document.activeElement;
+  const typing = !!active && active.tagName === "INPUT" && area.contains(active);
+  if (typing) {
+    pendingWebConfig = [next, source];   // 공간 평형 칸에 입력하는 중이면 칸을 떠날 때 반영
+    if (!waitingFocusOut) {
+      waitingFocusOut = true;
+      area.addEventListener("focusout", () => { waitingFocusOut = false; flushWebConfig(); }, { once: true });
+    }
+    return;
+  }
+  pendingWebConfig = null;
+  WEB = next; webSource = source;
+  let changed = false;
+  [...state.rooms.keys()].forEach(room => {
+    if (!WEB.rooms.includes(room)) { state.rooms.delete(room); changed = true; return; }
+    const data = state.rooms.get(room);
+    [...data.trades].forEach(t => {
+      if (!tradeAllowed(room, t)) { data.trades.delete(t); data.items.delete(t); changed = true; }
+    });
+    [...data.items].forEach(([t, set]) => {
+      [...set].forEach(n => { if (!(WEB.products[t] || []).some(([pn]) => pn === n)) { set.delete(n); changed = true; } });
+      if (keepFirstIfSingle(t, set)) changed = true;   // 중복 → 단일 선택으로 바뀐 공종
+      if (!set.size) data.items.delete(t);
+    });
+  });
+  renderRoomsDesc();
+  const focusTrade = (active && active.closest && active.closest("#tradeList [data-trade]") || {}).dataset;
+  if (!steps().includes(current)) goTo("rooms", { push: false, focus: false });
+  else {
+    renderStep();
+    const t = focusTrade && focusTrade.trade, again = t && $$("#tradeList .trade").find(b => b.dataset.trade === t);
+    if (again) $(".trade-head", again).focus({ preventScroll: true });   // 다시 그린 공종 줄로 키보드 위치를 돌려놓기
+  }
+  if (changed) { saveDraft(); toast("공사 항목 목록이 바뀌어 고르신 것 중 일부를 정리했어요."); }
+}
+
+function flushWebConfig() {
+  setTimeout(() => { if (pendingWebConfig) applyWebConfig(...pendingWebConfig); }, 0);
+}
+
+function readCachedWebConfig() {
+  try {
+    const source = localStorage.getItem(WEB_CACHE_KEY) || "";
+    const next = source ? normalizeWebConfig(JSON.parse(source)) : null;
+    if (next) { WEB = next; webSource = source; }
+  } catch {}
+}
+
+/** Apps Script에 설정을 묻는다(발급 표도 함께 온다). 실패하면 null. 발급 표는 여기서 받아 둔다. */
+async function requestWebConfig(timeoutMs) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(CONFIG.SCRIPT_URL, {
+      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "webConfig" }), signal: ctrl.signal, redirect: "follow",
+    });
+    const json = await res.json().catch(() => null);
+    if (json && typeof json.issued === "string" && json.issued) { issuedStamp = json.issued.slice(0, 200); issuedAt = Date.now(); }
+    return json;
+  } catch { return null; }
+  finally { clearTimeout(timer); }
+}
+
+/** Apps Script에서 앱이 반영한 설정을 읽는다. 못 읽거나 아직 반영한 적이 없으면 지금 설정(기본값 · 지난번 것) 그대로.
+    못 읽으면(서버가 늦거나 잠깐 실패) 15초 · 1분 뒤 두 번 더 묻는다 — 발급 표 없이 접수되지 않게(2026-10-09). */
+let webConfigTries = 0;
+async function fetchWebConfig() {
+  if (!CONFIG.SCRIPT_URL) return;
+  try { if (Date.now() < Number(localStorage.getItem(WEB_PAUSE_KEY) || 0)) return; } catch {}
+  webConfigTries++;
+  const json = await requestWebConfig(10000);
+  if (!json && webConfigTries < 3) { setTimeout(fetchWebConfig, webConfigTries === 1 ? 15000 : 60000); return; }
+  if (json && json.error) {   // 설정 기능이 없는 옛 스크립트 — 한동안 묻지 않는다
+    try { localStorage.setItem(WEB_PAUSE_KEY, String(Date.now() + WEB_PAUSE_MS)); } catch {}
+    return;
+  }
+  if (!json || !json.ok || !json.config) return;
+  try {
+    const source = JSON.stringify(json.config);
+    if (source === webSource) return;
+    const next = normalizeWebConfig(json.config);
+    if (!next) return;
+    try { localStorage.setItem(WEB_CACHE_KEY, source); } catch {}
+    applyWebConfig(next, source);
+  } catch {}
+}
+
+/** 보내기 직전 — 발급 표가 없거나(설정을 못 읽음) 오래됐으면(창을 하루 가까이 열어 둠) 표만 새로 받는다.
+    설정은 바꾸지 않는다(고객이 고른 내용이 보내는 도중 바뀌지 않게). 받은 지 3초가 안 됐으면 채울 때까지 기다린다.
+    끝내 못 받아도 보낸다 — 서버가 '확인 필요'로 받는다(접수 자체를 잃지 않게). */
+async function ensureIssued() {
+  if (!CONFIG.SCRIPT_URL) return;
+  const fresh = issuedStamp && Date.now() - issuedAt < 23 * 3600 * 1000;
+  if (!fresh) {
+    for (let i = 0; i < 2 && !(issuedStamp && Date.now() - issuedAt < 60000); i++) await requestWebConfig(12000);
+  }
+  const wait = issuedStamp ? 3500 - (Date.now() - issuedAt) : 0;
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+}
+// 오래 열어 둔 창으로 돌아오면 표를 미리 새로 받는다(보낼 때 기다리지 않게).
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && CONFIG.SCRIPT_URL && (!issuedStamp || Date.now() - issuedAt > 20 * 3600 * 1000)) requestWebConfig(10000);
+});
+
+// ── 머리·꼬리 채우기 ─────────────────────────────────────────────
+$("#companyName").textContent = CONFIG.COMPANY_NAME;
+document.title = `온라인 견적 요청 · ${CONFIG.COMPANY_NAME}`;
+// 전화번호는 접수 완료 화면에서만(머리 · 바닥글에는 상호만). 보내기 실패 안내에는 남긴다 — 요청을 보내려다 막힌 고객의 연락 길.
+$("#footerText").textContent = CONFIG.COMPANY_NAME;
+if (CONFIG.PRIVACY_URL) { $("#footerPrivacy").href = CONFIG.PRIVACY_URL; $("#footerPrivacy").hidden = false; $("#footerSep").hidden = false; }
+$("#donePhone").href = "tel:" + CONFIG.COMPANY_PHONE.replace(/[^\d+]/g, "");
+$("#donePhoneText").textContent = `전화하기 ${CONFIG.COMPANY_PHONE}`;
+$("#donePhone").setAttribute("aria-label", `전화하기 ${CONFIG.COMPANY_PHONE}`);
+$("#maxPhotosLabel").textContent = CONFIG.MAX_PHOTOS;
+$("#retentionText").textContent = CONFIG.RETENTION;
+if (CONFIG.PRIVACY_URL) { $("#privacyLink").href = CONFIG.PRIVACY_URL; $("#privacyLinkWrap").hidden = false; }
+
+// ── 토스트 ───────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  // 긴 안내(접수 실패 · 연결 끊김)는 읽을 만큼 오래 — 글자 수에 맞춰 2.6~7초(2026-10-09).
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("on"), Math.min(7000, Math.max(2600, msg.length * 90)));
+}
+
+// ── 연락처 자동 하이픈 ─────────────────────────────────────────────
+function formatPhone(v) {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.startsWith("02")) {
+    if (d.length <= 2) return d;
+    if (d.length <= 5) return `${d.slice(0,2)}-${d.slice(2)}`;
+    if (d.length <= 9) return `${d.slice(0,2)}-${d.slice(2,5)}-${d.slice(5)}`;
+    return `${d.slice(0,2)}-${d.slice(2,6)}-${d.slice(6,10)}`;
+  }
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0,3)}-${d.slice(3)}`;
+  if (d.length <= 10) return `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}`;
+  return `${d.slice(0,3)}-${d.slice(3,7)}-${d.slice(7)}`;
+}
+$("#phone").addEventListener("input", e => { e.target.value = formatPhone(e.target.value); });
+$("#zip").addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, "").slice(0, 5); });
+$("#pyeong").addEventListener("input", e => {
+  let v = e.target.value.replace(/[^\d.]/g, "");
+  const i = v.indexOf("."); if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, "").slice(0, 1);
+  e.target.value = v;
+  const n = parseFloat(v);
+  $("#pyeongHint").textContent = n > 0 ? `약 ${(n * 3.305785).toFixed(1)}㎡ · 공급면적 기준` : "공급면적 기준으로 적어 주세요.";
+  updateBar();
+});
+
+// ── 공사 희망 기간 — 빈 칸은 흐린 글자, 완공일 달력은 시작일부터 ─────────────────
+function syncDates() {
+  const s = $("#startDate"), e = $("#endDate");
+  s.classList.toggle("has-value", !!s.value); e.classList.toggle("has-value", !!e.value);
+  e.min = s.value || "";
+}
+["startDate", "endDate"].forEach(id => ["input", "change"].forEach(t => $("#" + id).addEventListener(t, syncDates)));
+
+// ── 시공 범위 (전체 / 부분) ─────────────────────────────────────────
+$$("[data-scope]").forEach(b => b.addEventListener("click", () => setScope(b.dataset.scope)));
+/** 전체 시공이면 '공용(전체)' 열을 처음부터 둔다(빼기 가능) — 집 전체 기준 공사(도배 · 마루 등)를 바로 체크하게. */
+function ensureWholeRoom() {
+  const whole = CONFIG.WHOLE_HOUSE_ROOM;
+  if (state.scope !== "전체" || !WEB.rooms.includes(whole) || state.rooms.has(whole)) return false;
+  state.rooms.set(whole, newRoom());
+  clearInvalid("rooms");
+  return true;
+}
+function setScope(scope) {
+  const changed = state.scope !== scope;
+  state.scope = scope;
+  $$("[data-scope]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.scope === scope)));
+  $("#scopeHint").textContent = scope === "전체"
+    ? "집 전체를 공사합니다."
+    : "공간마다 대략의 평형은 공간 페이지에서 적어 주세요. 모르면 비워 두셔도 됩니다.";
+  if (changed) ensureWholeRoom();
+  renderRoomToggles(); updateBar();
+  saveDraft();
+}
+
+// ── 공간 고르기 ──────────────────────────────────────────────────────
+// 공간 칩은 가나다순(방1 < 방2 < 방10). 전송 순서는 앱 공간 순서(WEB.rooms) 그대로.
+const koSort = (a, b) => a.localeCompare(b, "ko", { numeric: true });
+const newRoom = () => ({ trades: new Set(), pyeong: "", items: new Map(), size: "", len: new Map() });
+const productNames = trade => (WEB.products[trade] || []).map(([n]) => n);
+const pickedNames = (data, trade) => { const set = data.items.get(trade); return set ? productNames(trade).filter(n => set.has(n)) : []; };
+
+function renderRoomToggles() {
+  const wrap = $("#roomToggles"), was = wrap.contains(document.activeElement) ? document.activeElement.dataset.room : null;
+  wrap.innerHTML = "";
+  [...WEB.rooms].sort(koSort).forEach(room => {
+    const on = state.rooms.has(room);
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "room-toggle"; b.dataset.room = room;
+    b.setAttribute("aria-pressed", String(on));
+    const n = on ? state.rooms.get(room).trades.size : 0;
+    b.innerHTML = `<span></span><span class="cnt"></span><span class="dot" aria-hidden="true"></span>`;
+    b.firstChild.textContent = room;
+    b.children[1].textContent = n ? `${n}` : "";
+    b.addEventListener("click", () => toggleRoom(room));
+    wrap.appendChild(b);
+    if (room === was) b.focus({ preventScroll: true });
+  });
+}
+function toggleRoom(room) {
+  if (state.rooms.has(room)) state.rooms.delete(room);
+  else state.rooms.set(room, newRoom());
+  afterChange();
+}
+/** 고른 것이 바뀐 뒤 — 오류 표시 지우기 · 지금 화면 숫자 · 초안 · 아래 바 · 3D 도면. */
+function afterChange() {
+  clearInvalid("rooms"); clearInvalid("room");
+  // 크기를 묻는 상품을 모두 빼면 고른 크기도 지운다 — 다시 고르면 크기는 미선택부터(사용자 결정 2026-10-10).
+  state.rooms.forEach((v, r) => { if (v.size && !needsSize(r)) v.size = ""; });
+  if (current === "rooms") renderRoomToggles();
+  if (stepRoom(current) !== null) { renderRoomChips(); renderRoomSize(); }
+  saveDraft(); updateBar();
+}
+
+// ── 단계 화면 (사용자 결정 2026-10-09) ─────────────────────────────────
+// 단계 이름: "info"(기본 정보 · 평형 · 일정) → "rooms"(공간 고르기) → "room:<공간>"(공간마다) → "finish"(사진 · 요청사항 · 동의).
+// 고른 공간이 바뀌면 단계 목록도 바뀐다. 기기의 '뒤로'는 앞 단계로(history).
+let current = "info";
+let openTrade = null;   // 공간 페이지에서 펼친 공종(하나만)
+const wideScreen = () => matchMedia("(min-width: 1024px)").matches;
+const stepRoom = id => (id && id.startsWith("room:") ? id.slice(5) : null);
+const stepKind = id => (stepRoom(id) !== null ? "room" : id);
+/** 공간 페이지 순서 — 공용(전체)를 먼저(집 전체 기준 공사), 나머지는 가나다순. */
+function roomOrder() {
+  const whole = CONFIG.WHOLE_HOUSE_ROOM;
+  return [...state.rooms.keys()].sort((a, b) => (b === whole) - (a === whole) || koSort(a, b));
+}
+const steps = () => ["info", "rooms", ...roomOrder().map(r => "room:" + r), "finish"];
+
+let navIdx = 0, rewinding = false, stepAt = 0;
+function goTo(id, opts = {}) {
+  const list = steps();
+  if (!list.includes(id)) id = stepRoom(id) !== null ? "rooms" : "info";
+  const changed = id !== current;
+  if (changed) { current = id; openTrade = null; stepAt = performance.now(); }
+  renderStep();
+  if (opts.push === false) { try { history.replaceState({ step: id, idx: navIdx }, ""); } catch {} }   // 없어진 공간으로 돌아온 경우 기록도 바로잡기
+  else if (changed) { navIdx++; try { history.pushState({ step: id, idx: navIdx }, ""); } catch {} }
+  if (changed && pendingWebConfig) flushWebConfig();   // 입력 중이라 미뤄 둔 새 설정 — 화면을 옮겼으면 반영
+  if (changed) {
+    window.scrollTo({ top: 0 });
+    const h = $(`[data-step="${stepKind(id)}"] .step-title`);
+    if (h && opts.focus !== false) h.focus({ preventScroll: true });
+  }
+}
+function renderStep() {
+  const kind = stepKind(current);
+  $$("[data-step]").forEach(s => { s.hidden = s.dataset.step !== kind; });
+  $("#hero").hidden = kind !== "info";
+  if (kind === "rooms") { renderRoomsDesc(); renderRoomToggles(); }
+  if (kind === "room") renderRoomPage();
+  if (kind === "finish") renderSummary();
+  updateBar();
+}
+/** 이 페이지에서 쌓은 단계 기록을 첫 자리로 되감는다 — 접수 뒤 · 새로 고침 뒤 '뒤로'가 헛돌거나 거꾸로 가지 않게. */
+function rewindHistory() {
+  const n = (history.state && history.state.idx) || 0;
+  navIdx = 0;
+  if (n > 0) { rewinding = true; try { history.go(-n); } catch { rewinding = false; } }
+}
+addEventListener("popstate", e => {
+  const s = e.state || {};
+  navIdx = s.idx || 0;
+  if (rewinding) { rewinding = false; try { history.replaceState({ step: current, idx: 0 }, ""); } catch {} return; }
+  if (s.step && !$("#form").hidden && !sending) goTo(s.step, { push: false });
+});
+
+/** 아래 바 — 이전 · 다음(다음 화면 이름) · 마지막은 보내기. 위 진행 막대. 3D 도면은 폰이면 공간 고르기부터, 넓은 화면은 처음부터. */
+function updateNav() {
+  const list = steps(), i = Math.max(0, list.indexOf(current));
+  $("#progressBar").style.width = `${Math.round((i + 1) / list.length * 100)}%`;
+  $("#prevBtn").hidden = i === 0;
+  const last = current === "finish";
+  $("#nextBtn").hidden = last; $("#submitBtn").hidden = !last;
+  const next = list[i + 1], nextRoom = stepRoom(next);
+  $("#nextBtn span").textContent = nextRoom !== null ? `다음 · ${nextRoom}` : next === "finish" ? "다음 · 마무리" : "다음";
+  const showDock = wideScreen() || current !== "info";
+  $("#room3d").hidden = !showDock;
+  // 펼쳐 둔 도면이 처음 보일 때 3D 파일을 불러온다(F-21) — 접어 두었으면 펼칠 때(setDockCollapsed).
+  if (showDock && !$("#room3d").classList.contains("collapsed")) loadPreview();
+  syncSideHeight();
+}
+const navBusy = () => sending || performance.now() - stepAt < 350;   // 두 번 눌러 한 화면을 건너뛰지 않게
+$("#nextBtn").addEventListener("click", () => {
+  if (navBusy() || !stepReady(current)) return;
+  const list = steps(); goTo(list[list.indexOf(current) + 1]);
+});
+$("#prevBtn").addEventListener("click", () => {
+  if (navBusy()) return;
+  const list = steps(), i = list.indexOf(current);
+  if (i > 0) goTo(list[i - 1]);
+});
+
+/** 다음으로 가기 전 검사 — 문제가 있으면 그 자리에 빨간 안내를 띄우고 false. */
+function stepReady(id) {
+  if (id === "info") {
+    const bad = infoBad();
+    if (bad.length) { showBad(bad); return false; }
+    ["name", "phone", "address", "zip", "pyeong", "endDate"].forEach(clearInvalid);   // 지난번 빨간 표시가 남지 않게
+  } else if (id === "rooms") {
+    if (!state.rooms.size) { showRoomsErr("공사할 공간을 하나 이상 골라 주세요."); return false; }
+  } else if (stepRoom(id) !== null) {
+    const issue = roomIssue(stepRoom(id));
+    if (issue) { showRoomIssue(issue); return false; }
+  }
+  return true;
+}
+function showRoomsErr(text) {
+  $("#roomsErr").textContent = text; setInvalid("rooms");
+  reveal($("#roomsErr"));
+}
+/** 그 칸이 위 바와 아래 도면(폰) 사이 가운데 오게 화면을 옮긴다 — scrollIntoView는 아래 고정 묶음을 모른다. */
+function reveal(el) {
+  if (!el) return;
+  const top = 64, bottom = wideScreen() ? 0 : $("#side").getBoundingClientRect().height;
+  const r = el.getBoundingClientRect(), room = innerHeight - top - bottom;
+  const y = scrollY + r.top - top - Math.max(0, (room - r.height) / 2);
+  window.scrollTo({ top: Math.max(0, y), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+
+// ── 공간 페이지 ───────────────────────────────────────────────────────
+function renderRoomChips() {
+  const room = stepRoom(current), wrap = $("#roomChips");
+  wrap.textContent = "";
+  let mine = null;
+  roomOrder().forEach(r => {
+    const c = document.createElement("button");
+    c.type = "button"; c.className = "chip";
+    c.setAttribute("aria-pressed", String(r === room));
+    if (roomHasWork(r)) { const dot = document.createElement("i"); dot.className = "ok"; dot.setAttribute("aria-hidden", "true"); c.appendChild(dot); }
+    c.append(r);
+    c.setAttribute("aria-label", `${r}${roomHasWork(r) ? " — 상품 고름" : ""}`);
+    c.addEventListener("click", () => goTo("room:" + r));
+    if (r === room) mine = c;
+    wrap.appendChild(c);
+  });
+  const edit = document.createElement("button");
+  edit.type = "button"; edit.className = "chip edit"; edit.textContent = "공간 바꾸기";
+  edit.addEventListener("click", () => goTo("rooms"));
+  wrap.appendChild(edit);
+  if (mine) wrap.scrollLeft = Math.max(0, mine.offsetLeft - wrap.clientWidth / 2 + mine.offsetWidth / 2);
+}
+function renderRoomPage() {
+  const room = stepRoom(current), data = state.rooms.get(room);
+  if (!data) return;
+  const order = roomOrder();
+  renderRoomChips();
+  const title = $("#roomTitle"); title.textContent = `${room}. `;
+  const sub = document.createElement("span");
+  sub.textContent = `${order.indexOf(room) + 1} / ${order.length} · 필요한 공사의 상품을 골라 주세요.`;
+  title.appendChild(sub);
+  // 부분 시공 — 공간 평형(공용(전체)는 앱이 전체 평형을 그대로 쓰므로 칸이 없다)
+  const showPy = state.scope === "부분" && room !== CONFIG.WHOLE_HOUSE_ROOM;
+  $("#roomPyWrap").hidden = !showPy;
+  if (showPy) $("#roomPy").value = data.pyeong;
+  clearInvalid("room");
+  $("#roomSizeWrap").classList.remove("need");
+  renderTradeList();
+  renderRoomSize();
+}
+$("#roomPy").addEventListener("input", e => {
+  const data = state.rooms.get(stepRoom(current));
+  let v = e.target.value.replace(/[^\d.]/g, "");
+  const i = v.indexOf("."); if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, "").slice(0, 1);
+  e.target.value = v;
+  if (data) { data.pyeong = v; saveDraft(); }
+});
+
+// ── 공간 크기 · 가구 길이 (사용자 결정 2026-10-10) ─────────────────────
+// 크기 그룹에 든 공간은 크기(작음 · 보통 · 큼)만, 주방가구 · 빌트인장은 길이(m)만 받는다 — 앱이 공간 치수 · 줄 수량으로 바꾼다.
+const LEN_RANGE = [0.3, 20];
+const FURN_LEN = /싱크대|주방\s*가구|상부장|하부장|빌트인|붙박이|옷장|드레스장|시스템장|신발장/;
+/** 이 공간의 크기 그룹 — 공간 카드 → 공간 분류는 안 쓰는 공종과 같은 규칙(matchCategory), 후보는 그룹에 든 분류만(앱 RoomSizeTable과 같게). */
+function sizeGroupOf(room) {
+  const groups = WEB.sizeGroups || [];
+  // 앱이 정한 표(S13)가 있으면 그것만 — 앱이 문의를 견적으로 바꿀 때 쓰는 그룹과 같다.
+  if (WEB.roomSizeGroups) { const n = WEB.roomSizeGroups.get(room); return n === undefined ? null : groups[n] || null; }
+  const live = groups.filter(Boolean);
+  const name = matchCategory(room, live.flatMap(g => g.cats));
+  return name ? live.find(g => g.cats.includes(name)) || null : null;
+}
+/** 이 공간에서 크기를 묻는가 — 크기 그룹 공간에서 크기를 묻는 공종(타일 등)의 상품을 골랐을 때. */
+function needsSize(room) {
+  const data = state.rooms.get(room);
+  if (!data || !sizeGroupOf(room)) return false;
+  return roomTrades(room).some(t => data.trades.has(t) && WEB.sized.has(t) && pickedNames(data, t).length > 0);
+}
+/** 이 공종에서 길이를 받는가 — 주방가구 · 빌트인장 상품을 골랐을 때. */
+const needsLen = (data, trade) => pickedNames(data, trade).some(n => FURN_LEN.test(n));
+/** 적은 길이 — 0.3~20m면 숫자(소수 둘째 자리), 비었으면 null, 틀리면 NaN. */
+function lenValue(text) {
+  if (!text) return null;
+  const v = parseFloat(text);
+  return v >= LEN_RANGE[0] && v <= LEN_RANGE[1] ? Math.round(v * 100) / 100 : NaN;
+}
+/** "가로 1.6 × 세로 2.2 × 높이 2.3m" — 어느 쪽이 가로 · 세로인지 보이게(사용자 결정). */
+const sizeText = (group, i) => {
+  const v = group.sizes[i] || [];
+  return `가로 ${v[0]} × 세로 ${v[1]}` + (group.wall && v[2] ? ` × 높이 ${v[2]}` : "") + "m";
+};
+/** 공간 크기 줄 — 크기를 물을 때만 보인다. 고르면 파란 테두리. */
+function renderRoomSize() {
+  const room = stepRoom(current), wrap = $("#roomSizeWrap");
+  const data = room !== null ? state.rooms.get(room) : null;
+  const show = !!data && needsSize(room);
+  wrap.hidden = !show;
+  if (!show) return;
+  const group = sizeGroupOf(room), tiles = $("#roomSizeTiles");
+  tiles.textContent = "";
+  SIZE_TITLES.forEach((title, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "tile";
+    b.setAttribute("aria-pressed", String(data.size === title));
+    const t = document.createElement("b"); t.textContent = title;
+    const s = document.createElement("span"); s.textContent = "약 " + sizeText(group, i);
+    b.append(t, s);
+    b.setAttribute("aria-label", `${room} 크기 ${title} — 약 ${sizeText(group, i)}`);
+    b.addEventListener("click", () => {
+      data.size = title;
+      $$(".tile", tiles).forEach((x, j) => x.setAttribute("aria-pressed", String(j === i)));
+      wrap.classList.remove("need"); clearInvalid("room");
+      saveDraft(); updateBar();
+    });
+    tiles.appendChild(b);
+  });
+  $("#roomSizeHint").textContent = group.wall
+    ? "가로 × 세로 × 천장 높이 — 바닥 · 벽 수량에 써요. 정확한 치수는 방문 실측으로 맞춰요."
+    : "가로 × 세로 — 바닥 수량에 써요. 정확한 치수는 방문 실측으로 맞춰요.";
+}
+
+let tradeSeq = 0, tradeCols = 0;
+/** 카드 열 수 — 칸 폭 520px부터 3열, 그보다 좁으면 2열. */
+const cardCols = el => ((el && el.clientWidth) || 0) >= 520 ? 3 : 2;
+/** 12칸 격자에서 카드마다 칸 수 — cols열로 채우고, 마지막 줄은 남은 카드가 줄 폭을 나눠 채운다(빈칸 없음). */
+function cardSpans(n, cols) {
+  const rest = n % cols, full = n - rest;
+  return Array.from({ length: n }, (_, i) => i < full ? 12 / cols : 12 / rest);
+}
+function renderTradeList() {
+  const room = stepRoom(current), wrap = $("#tradeList");
+  wrap.textContent = "";
+  const trades = roomTrades(room);
+  if (!trades.length) {
+    const e = document.createElement("div"); e.className = "empty";
+    e.textContent = "이 공간에서 고를 수 있는 공사가 없어요. 이 공간은 빼고 요청사항에 적어 주세요.";
+    wrap.appendChild(e); return;
+  }
+  const cols = tradeCols = cardCols(wrap), spans = cardSpans(trades.length, cols);
+  const items = trades.map(trade => tradeItem(room, trade, cols));
+  // 펼친 공종의 상품 칸은 그 카드 줄의 끝 카드 다음에(줄 폭 전체)
+  const oi = trades.indexOf(openTrade), full = trades.length - trades.length % cols;
+  const end = oi < 0 || !items[oi].panel ? -1 : oi < full ? (Math.floor(oi / cols) + 1) * cols - 1 : trades.length - 1;
+  items.forEach(({ card }, i) => {
+    card.style.gridColumn = `span ${spans[i]}`;
+    wrap.appendChild(card);
+    if (i === end) wrap.appendChild(items[oi].panel);
+  });
+}
+// 칸 폭이 바뀌어 열 수가 달라지면(화면 돌리기 · 창 크기) 다시 나눈다
+if (window.ResizeObserver) new ResizeObserver(() => {
+  if (stepRoom(current) !== null && tradeCols && cardCols($("#tradeList")) !== tradeCols) renderTradeList();
+}).observe($("#tradeList"));
+/** 공종 카드 — 이름 · 고른 상품(첫 이름 외 N개). 누르면 그 줄 아래에 상품 카드가 펼쳐지고, 고르면 담기 · 모두 빼면 빠진다(상품 필수).
+    돌려주는 값: { card, panel } — panel은 펼쳤을 때만(renderTradeList가 줄 끝에 넣는다). */
+function tradeItem(room, trade, cols) {
+  const data = state.rooms.get(room);
+  const hasProducts = productNames(trade).length > 0;
+  const box = document.createElement("div"); box.className = "trade"; box.dataset.trade = trade;
+  const head = document.createElement("button"); head.type = "button"; head.className = "trade-head";
+  const nm = document.createElement("span"); nm.className = "t-name"; nm.textContent = trade;
+  const sub = document.createElement("span"); sub.className = "t-sub";
+  const arrow = document.createElement("span"); arrow.className = "t-arrow"; arrow.setAttribute("aria-hidden", "true"); arrow.textContent = "›";
+  head.append(nm, sub);
+  const paint = () => {
+    const picked = pickedNames(data, trade), on = data.trades.has(trade);
+    const need = on && hasProducts && !picked.length;   // 예전 초안 · 설정 변경으로 상품 없이 담긴 공사
+    box.classList.toggle("on", on && !need); box.classList.toggle("need", need);
+    sub.textContent = picked.length ? (picked.length > 1 ? `${picked[0]} 외 ${picked.length - 1}개` : picked[0])
+      : need ? "상품을 골라 주세요" : on ? "선택함" : hasProducts ? `상품 ${productNames(trade).length}` : "필요하면 누르기";
+    head.setAttribute("aria-label", `${trade}: ${sub.textContent}`);
+  };
+  paint();
+  if (!hasProducts) {
+    // 상품이 없는 공종 — 눌러서 담기 / 빼기
+    head.setAttribute("aria-pressed", String(data.trades.has(trade)));
+    head.addEventListener("click", () => {
+      if (data.trades.has(trade)) data.trades.delete(trade); else data.trades.add(trade);
+      head.setAttribute("aria-pressed", String(data.trades.has(trade)));
+      paint(); afterChange();
+      if (data.trades.has(trade)) previewBlink(room, trade);
+    });
+    box.appendChild(head);
+    return { card: box, panel: null };
+  }
+  head.appendChild(arrow);
+  const open = openTrade === trade;
+  const bodyId = `trade-body-${++tradeSeq}`;
+  head.setAttribute("aria-expanded", String(open)); head.setAttribute("aria-controls", bodyId);
+  head.addEventListener("click", () => {
+    openTrade = openTrade === trade ? null : trade;
+    renderTradeList();
+    const again = $$("#tradeList .trade").find(b => b.dataset.trade === trade);
+    if (again) {
+      const h = $(".trade-head", again); h.focus({ preventScroll: true });
+      if (openTrade === trade) again.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    }
+  });
+  box.appendChild(head);
+  box.classList.toggle("open", open);
+  if (!open) return { card: box, panel: null };
+  const body = document.createElement("div"); body.className = "trade-panel"; body.id = bodyId; body.dataset.trade = trade;
+  body.setAttribute("role", "region"); body.setAttribute("aria-label", `${trade} 상품`);
+  const title = document.createElement("p"); title.className = "t-title"; title.textContent = `${trade} 상품`;
+  // 단일 선택(한 공간에 1개 — 다른 상품을 누르면 바뀜) · 중복 선택(여러 개) — 앱 '공종 설정'(5301)이 정한다(2026-10-09).
+  const single = isSingle(trade);
+  const hint = document.createElement("p"); hint.className = "t-hint";
+  const mode = document.createElement("span"); mode.className = "t-mode"; mode.textContent = single ? "단일 선택" : "중복 선택";
+  hint.append(mode, single
+    ? "1개만 고를 수 있어요. 다른 상품을 누르면 바뀌고, 아래 도면에 들어가는 자리가 깜빡여요."
+    : "여러 개 고를 수 있어요. 고르면 아래 도면에 들어가는 자리가 깜빡여요.");
+  const grid = document.createElement("div"); grid.className = "product-grid";
+  grid.setAttribute("role", "group"); grid.setAttribute("aria-label", `${room} ${trade} 상품 — ${single ? "단일 선택, 1개만" : "중복 선택, 여러 개"}`);
+  const plist = WEB.products[trade] || [], pspans = cardSpans(plist.length, cols || 2);
+  plist.forEach(([name, subText], pi) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "product-chip"; b.dataset.name = name;
+    b.style.gridColumn = `span ${pspans[pi]}`;
+    const set0 = data.items.get(trade);
+    b.setAttribute("aria-pressed", String(!!(set0 && set0.has(name))));
+    const n = document.createElement("span"); n.textContent = name;
+    b.append(n);
+    if (subText) { const s = document.createElement("small"); s.textContent = subText; b.append(s); b.title = `${name} — ${subText}`; }
+    b.addEventListener("click", () => {
+      let set = data.items.get(trade) || new Set();
+      const adding = !set.has(name);
+      if (adding) { if (single) set = new Set(); set.add(name); }   // 단일 선택은 고른 1개로 바꾼다
+      else set.delete(name);
+      // 상품이 있으면 담기, 마지막 상품을 빼면 빠진다(상품 필수 — 사용자 결정 2026-10-07)
+      if (set.size) { data.items.set(trade, set); data.trades.add(trade); }
+      else { data.items.delete(trade); data.trades.delete(trade); }
+      // 단일 선택에서 바뀐 옛 칩도 함께 끈다.
+      $$(".product-chip", grid).forEach(c => c.setAttribute("aria-pressed", String(set.has(c.dataset.name))));
+      paint(); syncLen(); afterChange();
+      if (adding) previewBlink(room, trade);
+      // 단일 선택은 1개를 고르면 잠깐 보여 주고 접는다 — 그 공종 카드로 화면을 돌린다(사용자 결정 2026-10-10)
+      if (adding && single) setTimeout(() => {
+        if (openTrade !== trade || stepRoom(current) !== room) return;
+        openTrade = null; renderTradeList();
+        const again = $$("#tradeList .trade").find(x => x.dataset.trade === trade);
+        if (again) { $(".trade-head", again).focus({ preventScroll: true }); reveal(again); }
+      }, 300);
+    });
+    grid.appendChild(b);
+  });
+  // 가구 길이(주방가구 · 빌트인장 — 2026-10-10) — 그 상품을 고르면 보인다(선택). 앱이 m · mm · 자 단위 줄 수량으로 바꾼다.
+  const lenWrap = document.createElement("label"); lenWrap.className = "fl with-sfx t-len";
+  const lenInput = document.createElement("input");
+  lenInput.className = "input"; lenInput.inputMode = "decimal"; lenInput.maxLength = 5; lenInput.placeholder = " ";
+  lenInput.value = data.len.get(trade) || "";
+  const lenLabel = document.createElement("span"); lenLabel.className = "fl-label"; lenLabel.textContent = "가구 길이 (모르면 비워 두세요)";
+  const lenSfx = document.createElement("span"); lenSfx.className = "sfx"; lenSfx.textContent = "m";
+  lenWrap.append(lenInput, lenLabel, lenSfx);
+  function syncLen() { lenWrap.hidden = !needsLen(data, trade); }
+  syncLen();
+  lenInput.addEventListener("input", e => {
+    let v = e.target.value.replace(/[^\d.]/g, "");
+    const i = v.indexOf("."); if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, "").slice(0, 2);
+    e.target.value = v;
+    if (v) data.len.set(trade, v); else data.len.delete(trade);
+    clearInvalid("room"); saveDraft();
+  });
+  body.append(title, hint, grid, lenWrap);
+  return { card: box, panel: body };
+}
+
+/** 공간 페이지 검사 — 상품 없이 담긴 공사 · 상품이 하나도 없는 공간. 문제가 없으면 null. */
+function roomIssue(room) {
+  const data = state.rooms.get(room);
+  if (!data) return null;
+  const need = roomTrades(room).filter(t => data.trades.has(t) && productNames(t).length && !pickedNames(data, t).length);
+  if (need.length) return { room, text: `${need.join(" · ")} 상품을 골라 주세요. 고르지 않으면 견적 요청을 보낼 수 없어요.`, trade: need[0] };
+  // 공간 크기(필수) · 가구 길이(선택 — 적었으면 0.3~20m), 2026-10-10.
+  if (needsSize(room) && !SIZE_TITLES.includes(data.size)) return { room, text: `${room} 크기를 골라 주세요. 수량 계산에 써요.`, size: true };
+  const badLen = roomTrades(room).find(t => data.trades.has(t) && needsLen(data, t) && Number.isNaN(lenValue(data.len.get(t))));
+  if (badLen) return { room, text: `${badLen} 가구 길이는 0.3 ~ 20m로 적어 주세요. 모르면 비워 두세요.`, trade: badLen };
+  if (!roomHasWork(room)) return { room, text: `${room}에 고른 상품이 없어요. 상품을 고르거나 이 공간을 빼 주세요.`, empty: true };
+  return null;
+}
+function showRoomIssue(issue) {
+  if (issue.trade && openTrade !== issue.trade) { openTrade = issue.trade; renderTradeList(); }
+  $("#roomErrText").textContent = issue.text;
+  $("#roomRemoveBtn").hidden = !issue.empty;
+  setInvalid("room");
+  if (issue.size) $("#roomSizeWrap").classList.add("need");
+  const target = issue.size ? $("#roomSizeWrap")
+    : issue.trade ? $$("#tradeList .trade").find(b => b.dataset.trade === issue.trade) : $("#roomErr");
+  reveal(target);
+}
+$("#roomRemoveBtn").addEventListener("click", () => {
+  const room = stepRoom(current);
+  if (room === null) return;
+  const list = steps(), i = list.indexOf(current);
+  state.rooms.delete(room);
+  afterChange();
+  toast(`${room} — 공간에서 뺐어요.`);
+  const after = steps();
+  goTo(state.rooms.size ? after[Math.min(i, after.length - 1)] : "rooms");   // 마지막 공간을 뺐으면 공간 고르기로
+});
+
+// ── 마무리 — 요청 내용 확인(고치기 = 그 화면으로) ───────────────────────
+// 공간 · 공종 · 상품 이름은 설정에서 오므로 글자로만 넣는다(innerHTML 금지).
+function renderSummary() {
+  const box = $("#summary");
+  box.textContent = "";
+  const row = (title, lines, step, bad) => {
+    const d = document.createElement("div"); d.className = "sum-row";
+    const left = document.createElement("div");
+    const k = document.createElement("div"); k.className = "k"; k.textContent = title;
+    left.appendChild(k);
+    lines.forEach(t => { const v = document.createElement("div"); v.className = "v" + (bad ? " bad" : ""); v.textContent = t; left.appendChild(v); });
+    const b = document.createElement("button"); b.type = "button"; b.className = "link-btn"; b.textContent = "고치기";
+    b.setAttribute("aria-label", `${title} 고치기`);
+    b.addEventListener("click", () => goTo(step));
+    d.append(left, b); box.appendChild(d);
+  };
+  // 이름 · 연락처 · 주소도 보이게 — 보내기 전에 오타를 볼 수 있게(2026-10-09). 글자로만 넣는다.
+  const who = [$("#name").value.trim() || "이름 미입력", $("#phone").value.trim() || "연락처 미입력"].join(" · ");
+  const addr = [$("#address").value.trim(), $("#addressDetail").value.trim()].filter(Boolean).join(" ") || "주소 미입력";
+  row("이름 · 연락처 · 주소", [who, addr], "info", infoBad().some(k => ["name", "phone", "address"].includes(k)));
+  const py = parseFloat($("#pyeong").value);
+  const s = $("#startDate").value, e = $("#endDate").value;
+  const basics = [`${py > 0 ? py + "평" : "평형 미입력"} · ${state.scope === "부분" ? "부분 시공" : "전체 시공"}`];
+  if (s || e) basics.push(`희망 기간 ${s || "?"} ~ ${e || "?"}`);
+  row("평형 · 일정", basics, "info");
+  const order = roomOrder();
+  if (!order.length) { row("공사할 공간", ["아직 고른 공간이 없어요."], "rooms", true); return; }
+  order.forEach(room => {
+    const data = state.rooms.get(room);
+    const lines = roomTrades(room).filter(t => data.trades.has(t)).map(t => {
+      const picked = pickedNames(data, t);
+      const len = needsLen(data, t) ? lenValue(data.len.get(t)) : null;
+      return picked.length ? `${t}: ${picked.join(", ")}${len > 0 ? ` · 가구 길이 ${len}m` : ""}` : `${t}: 상품을 골라 주세요`;
+    });
+    if (needsSize(room)) lines.unshift(`공간 크기: ${SIZE_TITLES.includes(data.size) ? data.size : "골라 주세요"}`);
+    const issue = roomIssue(room);
+    const py2 = state.scope === "부분" && room !== CONFIG.WHOLE_HOUSE_ROOM && parseFloat(data.pyeong) > 0 ? ` · ${data.pyeong}평` : "";
+    row(room + py2, lines.length ? lines : ["아직 고른 상품이 없어요."], "room:" + room, !!issue);
+  });
+}
+
+// 폰에서 입력칸을 누르면(키보드) 아래 도면을 잠깐 숨긴다 — 칸이 가리지 않게.
+$("#form").addEventListener("focusin", e => {
+  if (!wideScreen() && e.target.matches("input:not([type=checkbox]):not([type=file]), textarea")) $("#side").classList.add("typing");
+});
+$("#form").addEventListener("focusout", () => {
+  setTimeout(() => { if (!$("#form").contains(document.activeElement) || !document.activeElement.matches("input, textarea")) { $("#side").classList.remove("typing"); syncSideHeight(); } }, 60);
+});
+/** 아래 고정 묶음의 높이 → 본문 아래 여백(--side-h). 넓은 화면은 오른쪽이라 0. */
+function syncSideHeight() {
+  const h = wideScreen() ? 0 : Math.ceil($("#side").getBoundingClientRect().height);
+  document.documentElement.style.setProperty("--side-h", `${h}px`);
+}
+if (window.ResizeObserver) new ResizeObserver(syncSideHeight).observe($("#side"));
+addEventListener("resize", () => { updateNav(); });
+
+// ── 사진 (브라우저에서 줄여서 보낸다: 긴 변 1600px, JPEG) ────────────────
+$("#phAdd").addEventListener("click", () => $("#photoInput").click());
+$("#photoInput").addEventListener("change", async e => {
+  const files = [...e.target.files];
+  e.target.value = "";
+  for (const f of files) {
+    if (state.photos.length >= CONFIG.MAX_PHOTOS) { toast(`사진은 최대 ${CONFIG.MAX_PHOTOS}장까지 올릴 수 있어요.`); break; }
+    if (!f.type.startsWith("image/")) continue;
+    try {
+      const dataUrl = await shrinkImage(f, 1600, 0.82);
+      state.photos.push({ name: f.name.replace(/\.[^.]+$/, "") + ".jpg", dataUrl });
+    } catch (err) {
+      toast("이 사진은 열 수 없어요. JPG나 PNG로 올려 주세요.");
+    }
+  }
+  renderPhotos();
+});
+function shrinkImage(file, maxSide, quality) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+      const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+      const ctx = cv.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(cv.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("decode")); };
+    img.src = url;
+  });
+}
+function renderPhotos() {
+  const wrap = $("#photos");
+  $$(".ph", wrap).forEach(n => n.remove());
+  state.photos.forEach((p, i) => {
+    const d = document.createElement("div"); d.className = "ph";
+    const img = document.createElement("img"); img.src = p.dataUrl; img.alt = `현장 사진 ${i + 1}`;
+    const x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label", `사진 ${i + 1} 빼기`);
+    x.addEventListener("click", () => { state.photos.splice(i, 1); renderPhotos(); });
+    d.append(img, x);
+    wrap.insertBefore(d, $("#phAdd"));
+  });
+  $("#phAdd").hidden = state.photos.length >= CONFIG.MAX_PHOTOS;
+  updateBar();
+}
+
+// ── 주소 검색 (카카오 우편번호 서비스, 무료·키 불필요) ────────────────────
+let postcodeLoading;
+function loadPostcode() {
+  if (window.daum && window.daum.Postcode) return Promise.resolve();
+  if (!postcodeLoading) postcodeLoading = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+    s.onload = res; s.onerror = () => { postcodeLoading = null; rej(); };
+    document.head.appendChild(s);
+  });
+  return postcodeLoading;
+}
+async function openAddressSearch() {
+  try { await loadPostcode(); }
+  catch {
+    // 검색을 못 불러오면 직접 입력으로 전환 — 우편번호 · 상세 주소 칸도 보인다
+    const a = $("#address"); a.readOnly = false; a.focus();
+    $("#detailWrap").hidden = false; $("#zipWrap").hidden = false;
+    toast("주소 검색을 불러오지 못했어요. 직접 입력해 주세요."); return;
+  }
+  const layer = $("#addrLayer"), wrap = $("#postcodeWrap");
+  wrap.innerHTML = "";
+  new daum.Postcode({
+    width: "100%", height: "100%",
+    oncomplete(data) {
+      const base = data.roadAddress || data.jibunAddress || data.address;
+      const extra = data.buildingName && data.apartment === "Y" ? ` (${data.buildingName})` : "";
+      $("#address").value = base + extra;
+      $("#zip").value = data.zonecode || "";
+      clearInvalid("address"); clearInvalid("zip");
+      layer.classList.remove("on");
+      $("#detailWrap").hidden = false;
+      $("#addressDetail").focus();
+      saveDraft();
+    },
+  }).embed(wrap);
+  layer.classList.add("on");
+}
+$("#addrBtn").addEventListener("click", openAddressSearch);
+// 주소 칸을 눌러도 검색 — 직접 입력으로 바뀐 뒤(readOnly 아님)에는 보통 입력칸
+$("#address").addEventListener("click", () => { if ($("#address").readOnly) openAddressSearch(); });
+$("#address").addEventListener("keydown", e => { if ($("#address").readOnly && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openAddressSearch(); } });
+$("#addrClose").addEventListener("click", () => $("#addrLayer").classList.remove("on"));
+document.addEventListener("keydown", e => { if (e.key === "Escape") $("#addrLayer").classList.remove("on"); });
+$("#addrLayer").addEventListener("click", e => { if (e.target.id === "addrLayer") e.currentTarget.classList.remove("on"); });
+
+// ── 완성 모습 미리보기 (3D 도면) ─────────────────────────────────────
+// 고른 공간 · 공종을 도면(베이별 대표 평면 2 · 3 · 4베이 × 비확장 · 확장형)의 방 벽 · 바닥 · 창 · 문 · 조명에 칠한다. 보는 것만 — 전송 · 초안과 무관.
+// 고른 내용은 페이지를 넘겨도 그대로 남고, 지금 공간은 이름표 강조 · 시점 이동, 상품을 고르면 들어가는 자리가 깜빡인다(사용자 결정 2026-10-09).
+// 3D 파일(three.min.js → room3d.js)은 도면이 처음 보일 때 한 번만 불러온다(같은 사이트 파일 — CSP 'self').
+const PREVIEW_FILES = ["three.min.js", "room3d.js?v=20261014"];
+// 공종 → 칠할 부위. 공종 이름은 설정과 글자까지 같아야 한다(다른 공종은 여기에 줄을 더한다).
+// whole = 공용(전체)일 때 칠할 방 종류(null = 모든 방), parts(방 종류) = 그 방에서 칠할 면.
+const PREVIEW_DRY = ["living", "kitchen", "hall", "master", "bed", "alpha", "dress", "pantry", "entry", "powder"];
+const PREVIEW_TRADES = {
+  "도배": { color: "#0071E3", whole: PREVIEW_DRY, parts: () => ["wall"] },
+  "도장": { color: "#2FA84F", whole: PREVIEW_DRY, parts: () => ["wall"] },
+  "마루": { color: "#C2782F", whole: ["living", "kitchen", "hall", "master", "bed", "alpha", "dress"], parts: () => ["floor"] },
+  "타일": { color: "#6E5BD8", whole: ["bath", "entry", "utility", "balcony"], parts: k => k === "bath" ? ["wall", "floor"] : k === "kitchen" ? ["wall"] : ["floor"] },
+  "욕실": { color: "#1C9DB8", whole: ["bath"], parts: () => ["wall", "floor"] },
+  "창호": { color: "#F08A00", whole: null, parts: () => ["window"] },
+  "문·문틀": { color: "#D6457A", whole: null, parts: () => ["door"] },
+  "필름": { color: "#3A3A3C", whole: null, parts: () => ["door"] },
+  "전기·조명": { color: "#F2C200", whole: ["living", "kitchen", "hall", "master", "bed", "alpha", "dress", "pantry", "entry", "bath", "powder"], parts: () => ["light"] },
+  "제작가구": { color: "#9A6B3F", whole: ["kitchen", "master", "bed", "alpha", "dress", "entry"], parts: () => [] },   // 면은 칠하지 않고 가구만
+};
+// 가구 — 욕실 · 제작가구 상품 이름 → 도면에 놓을 가구(사용자 결정 2026-10-09: 도면의 기본 가구는 지우고 고른 상품만).
+const PREVIEW_FURN_NAME = { wc: "양변기", bas: "세면대", tub: "욕조", shw: "샤워 칸막이", mirror: "거울장", sink: "싱크대", upper: "상부장", hood: "후드", wardrobe: "붙박이장", shoe: "신발장" };
+const PREVIEW_FURN_FIX = new Set(["wc", "bas", "tub", "shw", "mirror"]);   // 욕실 기구(fixture) — 나머지는 가구(cabinet)
+const PREVIEW_FURN_PLACE = { bath: ["wc", "bas", "tub", "shw", "mirror"], kitchen: ["sink", "upper", "hood"], master: ["wardrobe"], bed: ["wardrobe"], alpha: ["wardrobe"], dress: ["wardrobe"], entry: ["shoe"] };
+/** 고른 상품 이름 → 가구 종류 · 싱크대 길이(m). */
+function furnKinds(trade, names) {
+  const ks = new Set();
+  let len = 0;
+  if (trade === "욕실") {
+    let noTub = false;
+    names.forEach(n => {
+      if (/추가금|수전/.test(n)) return;   // 수전 · 추가 비용은 도면에 놓을 기구가 아님
+      const pkg = /패키지|리모델링|기본\s*공사|기본\s*덧방|욕실\s*시공|거실\s*욕실|소형\s*욕실|바스|욕실\s*덧방/.test(n);   // 바스 = 이지바스 · 이누스바스 · 클린바스
+      const off = /욕조\s*철거|욕조\s*없는|샤워형/.test(n);
+      if (off) noTub = true;
+      if (pkg) { ["wc", "bas", "mirror"].forEach(k => ks.add(k)); ks.add(/욕조/.test(n) && !off ? "tub" : "shw"); }   // 욕실 한 세트
+      if (/양변기|변기/.test(n)) ks.add("wc");
+      if (/세면기|세면대/.test(n)) ks.add("bas");
+      if (/욕조/.test(n) && !off) ks.add("tub");
+      if (/샤워\s*부스|파티션/.test(n)) ks.add("shw");
+      if (/욕실장|거울|슬라이딩장/.test(n)) ks.add("mirror");
+    });
+    if (noTub) ks.delete("tub");
+  } else if (trade === "제작가구") {
+    names.forEach(n => {
+      if (/빌트인|붙박이|옷장|드레스장|수납장/.test(n)) ks.add("wardrobe");
+      if (/신발장/.test(n)) ks.add("shoe");
+      if (/상부장/.test(n)) ks.add("upper");
+      if (/후드/.test(n)) ks.add("hood");
+      if (/싱크|상판|수전|하부장|\d+\s*평형/.test(n)) { ks.add("sink"); if (!/하부장/.test(n)) ks.add("upper"); }   // 싱크대 기본 구성 = 상 · 하부장
+      const m = n.match(/(?:길이|미터\s*단위)\s*([\d.]+)/);
+      if (m) len = Math.max(len, parseFloat(m[1]) || 0);
+    });
+  }
+  return { ks, len };
+}
+// 조명 상품 이름 → 도면에 그릴 등 모양(사용자 결정 2026-10-09). 위에서부터 먼저 맞는 줄.
+// none = 스위치 · 콘센트처럼 천장 등이 아닌 것(도면에 안 그림), auto = 종류를 알 수 없음(방 종류별 기본 모양 — room3d.js).
+const PREVIEW_LIGHT_RULES = [
+  [/스위치|콘센트|분전반|누전|차단기|점검|출장비/, "none"],
+  [/간접|T5|라인\s*조명|코브/, "cove"],
+  [/다운\s*라이트|매입등|매립|포인트\s*조명|스포트/, "down"],
+  [/펜던트|\bPD\b|식탁등/, "pendant"],
+  [/세트|설치비|판매\s*단가|설치\s*및\s*판매|등기구\s*교체/, "auto"],
+  [/직사각|거실등|거실\s*\d\s*등|시스템|주방등|주방\s*LED/, "rect"],
+  [/사각/, "square"],
+  [/원형|욕실등|센서|직부/, "round"],
+];
+const PREVIEW_LIGHT_NAME = { down: "다운라이트", cove: "간접조명", pendant: "펜던트", rect: "직사각 등", square: "사각 방등", round: "원형 방등" };
+const PREVIEW_COVE = /간접\s*(등|조명)|T5/;   // 다른 공종(예: 욕실 '천장 간접등(T5)')에 든 간접조명도 그 방에 그린다
+const PREVIEW_LIGHT_COLOR = "#F2C200";
+const lightKind = name => { const hit = PREVIEW_LIGHT_RULES.find(([re]) => re.test(name)); return hit ? hit[1] : "auto"; };
+const PREVIEW_PART_NAME = { wall: "벽", floor: "바닥", window: "창", door: "문", light: "조명", fixture: "욕실 기구", cabinet: "가구" };
+// 공간 이름 → 도면의 방(띄어쓰기 없이 비교). 그 밖의 침실 · 욕실은 번호대로(방1 · 화장실1 …), 발코니 이름은 발코니 · 다용도실.
+const PREVIEW_FIXED = {
+  "거실": "living", "리빙룸": "living", "주방": "kitchen", "부엌": "kitchen", "키친": "kitchen", "현관": "entry",
+  "안방": "master", "부부침실": "master", "큰방": "master", "드레스룸": "dress", "옷방": "dress", "팬트리": "pantry",
+  "알파룸": "alpha", "다용도실": "utility", "세탁실": "utility", "복도": "hall",
+  "파우더룸": "powder", "파우더": "powder", "대피공간": "refuge", "실외기실": "outdoor",
+  "안방욕실": "bath2", "안방화장실": "bath2", "부부욕실": "bath2", "공용욕실": "bath1", "공용화장실": "bath1",
+};
+let preview = null;          // Room3D 화면(불러온 뒤)
+let previewLoad = null;      // 불러오는 중 · 끝(Promise)
+let previewInfo = null;      // 마지막으로 칠한 내용(깜빡일 자리 찾기)
+let previewPlan = "3bay", previewMode = "b", previewPlanManual = false;
+
+/** 처음 도면 — 평형으로 고르지 않고 늘 3베이(사용자 결정 2026-10-10: 면적별이 아닌 베이별). 고객이 칩으로 바꾼다. */
+function previewAutoPlan() { return "3bay"; }
+/** 엔진 평면 키 — 비확장은 그대로, 확장형은 끝에 "-e". */
+const previewKey = () => previewPlan + (previewMode === "e" ? "-e" : "");
+/** 공간 이름 → 방 id 목록(공용(전체)는 "ALL"). 설정의 공간과 고른 공간 모두 같은 규칙이라 고른 것을 바꿔도 자리가 그대로다.
+    names: 방 id → 라벨로 쓸 공간 이름(한 방에 딱 맞는 이름만 — 발코니 이름은 다용도실 라벨을 바꾸지 않는다). */
+function previewSlots(plan) {
+  const ids = new Set(Room3D.rooms(plan).map(r => r.id));
+  const groups = { bed: Room3D.PLANS[plan].bedrooms.filter(id => ids.has(id)), bath: ["bath1", "bath2"].filter(id => ids.has(id)) };
+  const taken = { bed: new Set(), bath: new Set() };
+  const slots = new Map(), names = {}, waiting = [];
+  const put = (name, ids, label) => { slots.set(name, ids); if (label && !(ids[0] in names)) names[ids[0]] = name; };
+  [...new Set([...WEB.rooms, ...state.rooms.keys()])].forEach(name => {
+    if (name === CONFIG.WHOLE_HOUSE_ROOM) { slots.set(name, "ALL"); return; }
+    const key = squeeze(name), fixed = PREVIEW_FIXED[key] || PREVIEW_FIXED[baseName(key)];
+    if (fixed) {
+      if (ids.has(fixed)) { put(name, [fixed], true); ["bed", "bath"].forEach(g => { if (groups[g].includes(fixed)) taken[g].add(fixed); }); }
+      return;
+    }
+    const cat = matchCategory(name, ["침실", "욕실", "발코니", "주방", "거실", "현관"]);
+    if (cat === "침실" || cat === "욕실") {
+      const g = cat === "침실" ? "bed" : "bath", m = String(name).match(/(\d+)\s*$/);
+      if (!m) { waiting.push([name, g]); return; }
+      const id = groups[g][Number(m[1]) - 1];
+      if (id) { put(name, [id], true); taken[g].add(id); }
+    } else if (cat === "발코니") {
+      // 발코니가 여러 곳인 실제 도면(balcony · balcony2 …)은 번호대로, 아니면 발코니 · 다용도실
+      const balc = [...ids].filter(id => /^balcony\d*$/.test(id)).sort(), m = String(name).match(/(\d+)\s*$/);
+      if (balc.length > 1) put(name, m && balc[Number(m[1]) - 1] ? [balc[Number(m[1]) - 1]] : balc, true);
+      else { const rear = m && Number(m[1]) > 1; put(name, [rear ? "utility" : "balcony"].filter(id => ids.has(id)), !rear); }
+    }
+    else if (cat) put(name, [{ "주방": "kitchen", "거실": "living", "현관": "entry" }[cat]], true);
+  });
+  waiting.forEach(([name, g]) => {
+    const id = groups[g].find(x => !taken[g].has(x));
+    if (id) { put(name, [id], true); taken[g].add(id); }
+  });
+  return { slots, names };
+}
+/** 고른 것 → 칠할 면 목록 · 방 이름 · 범례 거리. 공용(전체)를 먼저 칠하고 개별 공간이 그 위에(같은 면이면 개별 공간 색).
+    byRoom: 공간 → 공종 → 칠한 면들(깜빡이기 · 지금 공간 범례). */
+function previewPaint(plan) {
+  const rooms = Room3D.rooms(plan), kindOf = new Map(rooms.map(r => [r.id, r.kind]));
+  const partsOf = new Map(rooms.map(r => [r.id, new Set(r.parts)]));   // 그 방에 있는 면(문이 없는 방 · 창이 없는 방)
+  const { slots, names: labels } = previewSlots(plan), whole = CONFIG.WHOLE_HOUSE_ROOM;
+  const list = [], legend = new Map(), byRoom = new Map(), skipTrades = new Set(), skipRooms = new Set(), noSpot = new Set();
+  // 방 id → 가구(종류 · 싱크대 길이). 조명처럼 개별 공간이 공용(전체)보다 우선.
+  const furn = new Map(), ownFurn = new Set();
+  const addFurn = (id, kinds, len, fromWhole) => {
+    if (!fromWhole && !ownFurn.has(id)) { ownFurn.add(id); furn.set(id, { kinds: new Set(), len: 0 }); }
+    if (!furn.has(id)) furn.set(id, { kinds: new Set(), len: 0 });
+    const f = furn.get(id); kinds.forEach(k => f.kinds.add(k)); if (len) f.len = Math.max(f.len, len);
+  };
+  // 방 id → 등 종류. 개별 공간에서 고른 조명이 공용(전체) 것보다 우선(공용(전체)를 먼저 넣고 개별 공간이 덮는다).
+  const lights = new Map(), ownLight = new Set();
+  const addLight = (id, kinds, fromWhole) => {
+    if (!fromWhole && !ownLight.has(id)) { ownLight.add(id); lights.set(id, new Set()); }
+    if (!lights.has(id)) lights.set(id, new Set());
+    kinds.forEach(k => lights.get(id).add(k));
+  };
+  const order = Object.keys(PREVIEW_TRADES), rank = t => order.indexOf(t);
+  const entries = [...state.rooms].sort((a, b) => (b[0] === whole) - (a[0] === whole));
+  entries.forEach(([room, data]) => {
+    const target = slots.get(room), mine = new Map();
+    byRoom.set(room, mine);
+    // 같은 방 같은 면이면 순서 뒤쪽 공종이 이긴다(예: 화장실은 타일보다 욕실 색).
+    [...data.trades].filter(t => tradeAllowed(room, t)).sort((a, b) => rank(a) - rank(b)).forEach(trade => {
+      const rule = PREVIEW_TRADES[trade];
+      const names = pickedNames(data, trade);
+      // 조명 종류 — 전기·조명은 고른 상품마다(상품 없이 담긴 경우 기본 모양), 다른 공종은 간접조명 상품이 있을 때만
+      let kinds = null;
+      if (trade === "전기·조명") kinds = names.length ? names.map(lightKind).filter(k => k !== "none") : ["auto"];
+      else if (names.some(n => PREVIEW_COVE.test(n))) kinds = ["cove"];
+      const fk = trade === "욕실" || trade === "제작가구" ? furnKinds(trade, names) : null;
+      if (!rule && !kinds) { skipTrades.add(trade); return; }
+      if (!target || !target.length) { skipRooms.add(room); return; }
+      const ids = target === "ALL" ? rooms.filter(r => !rule || !rule.whole || rule.whole.includes(r.kind)).map(r => r.id) : target;
+      const hits = [];
+      ids.forEach(id => {
+        if (rule) rule.parts(kindOf.get(id)).forEach(part => { if (part !== "light" && partsOf.get(id).has(part)) hits.push({ id, part, color: rule.color }); });
+        if (kinds && kinds.length) {
+          // 종류를 알 수 없는 등은 방 종류별 기본 모양으로(범례에도 그 이름)
+          const ks = [...new Set(kinds.map(k => k === "auto" ? ((Room3D.DEFAULT_LIGHT || {})[kindOf.get(id)] || "auto") : k))];
+          hits.push({ id, part: "light", color: PREVIEW_LIGHT_COLOR, kinds: ks }); addLight(id, ks, target === "ALL");
+        }
+        if (fk && fk.ks.size && rule) {
+          // 그 방 종류에 놓을 수 있는 가구만(싱크대는 주방, 붙박이장은 침실 · 드레스룸, 신발장은 현관, 욕실 기구는 욕실)
+          const can = PREVIEW_FURN_PLACE[kindOf.get(id)] || [];
+          const ks = [...fk.ks].filter(k => can.includes(k));
+          const fixes = ks.filter(k => PREVIEW_FURN_FIX.has(k)), cabs = ks.filter(k => !PREVIEW_FURN_FIX.has(k));
+          if (fixes.length) hits.push({ id, part: "fixture", color: rule.color, furn: fixes });
+          if (cabs.length) hits.push({ id, part: "cabinet", color: rule.color, furn: cabs });
+          if (ks.length) addFurn(id, ks, fk.len, target === "ALL");
+        }
+      });
+      if (!hits.length) { noSpot.add(`${room} ${trade}`); return; }   // 예: 문이 없는 거실의 문·문틀, 스위치 · 콘센트만 고른 전기·조명
+      mine.set(trade, hits);
+      if (!legend.has(trade)) legend.set(trade, { color: rule ? rule.color : PREVIEW_LIGHT_COLOR, parts: new Set(), kinds: new Set(), furn: new Set(), rooms: [] });
+      const lg = legend.get(trade);
+      if (!lg.rooms.includes(room)) lg.rooms.push(room);
+      hits.forEach(h => { list.push(h); lg.parts.add(h.part); (h.kinds || []).forEach(k => lg.kinds.add(k)); (h.furn || []).forEach(k => lg.furn.add(k)); });
+    });
+  });
+  // 이름표는 고른 공간에만(안 고른 방은 모양만) — 작은 도면에서 글자가 방을 가리지 않게(사용자 결정 2026-10-09).
+  const chosen = new Set();
+  state.rooms.forEach((_, name) => { const t = slots.get(name); if (Array.isArray(t)) t.forEach(id => chosen.add(id)); });
+  const shown = {};
+  rooms.forEach(r => { shown[r.id] = chosen.has(r.id) ? (labels[r.id] || Room3D.LABELS[r.id] || "") : ""; });
+  const lightMap = {}, furnMap = {};
+  lights.forEach((ks, id) => { if (ks.size) lightMap[id] = [...ks]; });
+  furn.forEach((f, id) => { if (f.kinds.size) furnMap[id] = { kinds: [...f.kinds], len: f.len }; });
+  return { list, labels: shown, lights: lightMap, furn: furnMap, legend, byRoom, slots, skipTrades, skipRooms, noSpot };
+}
+/** 등 종류 이름(종류를 알 수 없으면 '조명'). */
+const lightText = kinds => {
+  const named = Object.keys(PREVIEW_LIGHT_NAME).filter(k => kinds.has(k)).map(k => PREVIEW_LIGHT_NAME[k]);   // 정해진 순서(눈에 띄는 것부터)
+  if (!named.length) return PREVIEW_PART_NAME.light;
+  return named.length > 3 ? `${named.slice(0, 3).join(" · ")} 외 ${named.length - 3}` : named.join(" · ");   // 범례가 길어져 다른 줄을 밀어내지 않게
+};
+/** 가구 이름(정해진 순서). */
+const furnText = (furn, fix) => Object.keys(PREVIEW_FURN_NAME).filter(k => furn.has(k) && PREVIEW_FURN_FIX.has(k) === fix).map(k => PREVIEW_FURN_NAME[k]).join(" · ");
+const partsText = (parts, kinds, furn) => ["wall", "floor", "window", "door", "light", "fixture", "cabinet"].filter(p => parts.has(p))
+  .map(p => p === "light" && kinds && kinds.size ? lightText(kinds)
+    : (p === "fixture" || p === "cabinet") ? furnText(furn || new Set(), p === "fixture") : PREVIEW_PART_NAME[p])
+  .filter(Boolean).join(" · ");
+/** 범례 — 공간 페이지면 그 공간 것만, 다른 화면이면 모두. 공종 · 공간 이름은 글자로만 넣는다(innerHTML 금지). */
+function renderPreviewLegend(info, room) {
+  const box = $("#room3dLegend");
+  box.textContent = "";
+  const muted = text => { const e = document.createElement("span"); e.className = "muted"; e.textContent = text; box.appendChild(e); };
+  const item = (trade, color, parts, where, kinds, furn) => {
+    const it = document.createElement("span");
+    const dot = document.createElement("i"); dot.className = "room3d-dot"; dot.style.backgroundColor = color;
+    it.append(dot, `${trade} → ${partsText(parts, kinds, furn)}`);
+    if (where) { const s = document.createElement("span"); s.className = "muted"; s.textContent = ` · ${where}`; it.appendChild(s); }
+    box.appendChild(it);
+  };
+  const said = [];
+  if (room !== null) {
+    const data = state.rooms.get(room), mine = info.byRoom.get(room) || new Map();
+    mine.forEach((hits, trade) => {
+      item(trade, (PREVIEW_TRADES[trade] || { color: PREVIEW_LIGHT_COLOR }).color, new Set(hits.map(h => h.part)), "", new Set(hits.flatMap(h => h.kinds || [])), new Set(hits.flatMap(h => h.furn || [])));
+      said.push(trade);
+    });
+    const others = data ? [...data.trades].filter(t => tradeAllowed(room, t) && !mine.has(t)) : [];
+    // 스위치 · 콘센트만 고른 전기·조명은 이유를 함께
+    const switchOnly = t => t === "전기·조명" && pickedNames(data, t).length && pickedNames(data, t).every(n => lightKind(n) === "none");
+    if (info.skipRooms.has(room)) muted("이 도면에 없는 공간이에요. 고른 공사는 그대로 접수돼요.");
+    else if (others.length) muted(`도면에 표시하지 않는 공사: ${others.map(t => switchOnly(t) ? `${t}(스위치 · 콘센트)` : t).join(" · ")}`);
+    if (!mine.size && !others.length) muted("상품을 고르면 들어가는 자리가 도면에서 깜빡여요.");
+  } else {
+    if (!info.legend.size) muted(current === "info" ? "공간마다 상품을 고르면 도면에 색으로 표시돼요." : "고른 공사가 도면에 색으로 표시돼요.");
+    info.legend.forEach((lg, trade) => {
+      item(trade, lg.color, lg.parts, lg.rooms.slice(0, 3).join(", ") + (lg.rooms.length > 3 ? ` 외 ${lg.rooms.length - 3}` : ""), lg.kinds, lg.furn);
+      said.push(`${trade}: ${lg.rooms.join(", ")}`);
+    });
+    if (info.skipTrades.size) muted(`도면에 표시하지 않는 공사: ${[...info.skipTrades].join(" · ")}`);
+    if (info.skipRooms.size) muted(`이 도면에 없는 공간: ${[...info.skipRooms].join(" · ")}`);
+  }
+  $("#room3dStage").setAttribute("aria-label", `완성 모습 미리보기 — ${Room3D.PLANS[previewPlan].label} ${previewMode === "e" ? "확장형" : "비확장"} 도면` +
+    (room !== null ? `, ${room}` : "") + (said.length ? `, ${said.join(" / ")}` : ", 아직 칠한 공사 없음"));
+}
+function updateRoomPreview() {
+  if (!previewPlanManual) previewPlan = previewAutoPlan();
+  $$("#room3dPlans [data-plan]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.plan === previewPlan)));
+  $$("#room3dModes [data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === previewMode)));
+  const room = stepRoom(current);
+  $("#dockRoom").textContent = room !== null ? room : current === "rooms" ? (state.rooms.size ? `고른 공간 ${state.rooms.size}곳` : "공간을 골라 주세요") : current === "finish" ? "고른 공사 모두" : "";
+  if (!window.Room3D) return;
+  $("#dockPlanBtn").textContent = `${Room3D.PLANS[previewPlan].label} · ${previewMode === "e" ? "확장형" : "비확장"}`;
+  const info = previewInfo = previewPaint(previewKey());
+  renderPreviewLegend(info, room);
+  if (!preview) return;
+  preview.setPlan(previewKey());
+  preview.setLabels(info.labels);
+  if (preview.setLights) preview.setLights(info.lights);   // 등 종류 먼저 — 칠할 목록이 오면 그 방에 그린다
+  if (preview.setFurniture) preview.setFurniture(info.furn);   // 가구도 같은 방식
+  preview.setHighlights(info.list);
+  // 지금 공간 — 이름표 강조 + 그 방 쪽으로 시점 이동(공용(전체) · 평면에 없는 공간이면 집 전체)
+  const target = room !== null ? info.slots.get(room) : null;
+  const ids = Array.isArray(target) && target.length ? target : null;
+  preview.setActive(ids || []);
+  preview.focus(ids);
+}
+/** 방금 고른 공사가 들어가는 자리를 깜빡인다. */
+function previewBlink(room, trade) {
+  if (!preview || !previewInfo) return;
+  const mine = previewInfo.byRoom.get(room);
+  const hits = mine && mine.get(trade);
+  if (hits) preview.blink(hits);
+}
+function loadPreview() {
+  if (previewLoad) return previewLoad;
+  const msg = $("#room3dMsg");
+  const add = src => new Promise((ok, fail) => {
+    const s = document.createElement("script"); s.src = src; s.async = false;
+    s.onload = ok; s.onerror = () => fail(new Error(src));
+    document.head.appendChild(s);
+  });
+  // 그래픽이 끊기면(F-21 — 메모리가 모자란 폰 · 탭을 오래 뒤에 두었을 때) 안내하고, 브라우저가 돌려주면 다시 그린다.
+  const onContextLost = () => { msg.textContent = "그래픽이 잠시 멈췄어요. 돌아오면 다시 그립니다."; msg.hidden = false; };
+  const onContextRestored = () => { msg.hidden = true; };
+  previewLoad = PREVIEW_FILES.reduce((p, src) => p.then(() => add(src)), Promise.resolve()).then(() => {
+    try { preview = Room3D.create($("#room3dStage"), { plan: previewKey(), onContextLost, onContextRestored }); msg.hidden = true; }
+    catch (_) { preview = null; msg.textContent = "이 기기에서는 3D 미리보기를 볼 수 없어요. 아래 목록으로 확인해 주세요."; }
+    updateRoomPreview();
+  }, () => { msg.textContent = "미리보기를 불러오지 못했어요. 새로 고침하면 다시 시도합니다."; });
+  return previewLoad;
+}
+// 칩 — 도면 크기 · 발코니(보는 것만 바뀐다)
+$$("#room3dPlans [data-plan]").forEach(b => b.addEventListener("click", () => { previewPlanManual = true; previewPlan = b.dataset.plan; updateRoomPreview(); }));
+$$("#room3dModes [data-mode]").forEach(b => b.addEventListener("click", () => { previewMode = b.dataset.mode; updateRoomPreview(); }));
+// 폰: 도면 칩은 '3베이 · 비확장'을 눌러 펼친다 · 도면 접기(이 브라우저에 기억)
+$("#dockPlanBtn").addEventListener("click", () => {
+  const open = $("#room3d").classList.toggle("opts-open");
+  $("#dockPlanBtn").setAttribute("aria-expanded", String(open));
+  if (open) setDockCollapsed(false);
+});
+const DOCK_KEY = "estimate-dock-collapsed";
+function setDockCollapsed(on) {
+  $("#room3d").classList.toggle("collapsed", on);
+  $("#dockToggle").textContent = on ? "펼치기" : "접기";
+  $("#dockToggle").setAttribute("aria-expanded", String(!on));
+  try { localStorage.setItem(DOCK_KEY, on ? "1" : ""); } catch {}
+  if (!on && !$("#room3d").hidden) loadPreview();   // 접어 둔 채 시작했으면 처음 펼칠 때 불러온다(F-21)
+  syncSideHeight();
+}
+$("#dockToggle").addEventListener("click", () => setDockCollapsed(!$("#room3d").classList.contains("collapsed")));
+try { if (localStorage.getItem(DOCK_KEY) === "1") setDockCollapsed(true); } catch {}
+
+// ── 아래 바 · 도면 · 마무리 요약 다시 그리기 ────────────────────────────
+function updateBar() {
+  updateNav();
+  if (current === "finish") renderSummary();
+  updateRoomPreview();
+}
+
+// ── 초안 저장 (이 브라우저에만, 사진 · 개인정보 제외) ──────────────────────────
+// 이름 · 연락처 · 주소는 브라우저에 남기지 않는다(P7 — 처리방침과 같게). 평형 · 희망일 · 고른 공간은 7일 초안,
+// 요청사항은 이 탭에만(F-20 — 자유 글에 개인 사정 · 연락처가 들어갈 수 있어 탭을 닫으면 사라지게).
+const draftFields = ["pyeong", "startDate", "endDate"];
+function saveDraft() {
+  try {
+    const d = { scope: state.scope, rooms: [...state.rooms].map(([k, v]) => [k, [...v.trades], v.pyeong, [...v.items].map(([t, s]) => [t, [...s]]), v.size, [...v.len]]) };
+    draftFields.forEach(f => d[f] = $("#" + f).value);
+    d.savedAt = Date.now();
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  } catch {}
+  try {
+    const note = $("#note").value;
+    if (note) sessionStorage.setItem(NOTE_KEY, note); else sessionStorage.removeItem(NOTE_KEY);
+  } catch {}
+}
+function loadDraft() {
+  try { const note = sessionStorage.getItem(NOTE_KEY); if (note) $("#note").value = note; } catch {}
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch {}
+  if (!d) return;
+  // 이름 · 연락처 · 주소가 든 초안을 이 브라우저에 오래 두지 않는다 — 7일이 지났으면(또는 시각이
+  // 없는 예전 초안이면) 지운다.
+  if (!(Date.now() - Number(d.savedAt) < DRAFT_MAX_AGE_MS)) { clearDraft(); return; }
+  draftFields.forEach(f => { if (typeof d[f] === "string") $("#" + f).value = d[f]; });
+  if (!Array.isArray(d.rooms)) d.rooms = [];
+  d.rooms.forEach(entry => {
+    if (!Array.isArray(entry)) return;
+    const [k, t, p, it, sz, ln] = entry;
+    if (!WEB.rooms.includes(k)) return;
+    // 지금 설정에서 이 공간에 안 보이는 공종(예전 초안 · 설정이 바뀐 뒤)은 버린다.
+    const trades = new Set((Array.isArray(t) ? t : []).filter(x => tradeAllowed(k, x)));
+    const items = new Map();
+    (Array.isArray(it) ? it : []).forEach(([tr, names]) => {
+      if (!trades.has(tr) || !Array.isArray(names)) return;
+      const valid = new Set(names.filter(n => (WEB.products[tr] || []).some(([pn]) => pn === n)));
+      keepFirstIfSingle(tr, valid);   // 예전 초안에 단일 선택 공종이 여러 개 담겼으면 먼저 고른 1개만
+      if (valid.size) items.set(tr, valid);
+    });
+    const len = new Map((Array.isArray(ln) ? ln : []).filter(x => Array.isArray(x) && trades.has(x[0]) && typeof x[1] === "string")
+      .map(([tr, v]) => [tr, v.slice(0, 5)]));
+    state.rooms.set(k, { trades, pyeong: typeof p === "string" ? p : "", items, size: SIZE_TITLES.includes(sz) ? sz : "", len });
+  });
+  if (d.scope === "부분") state.scope = "부분";
+  $("#pyeong").dispatchEvent(new Event("input"));
+  // 예전 초안에 남은 이름 · 연락처 · 주소 · 요청사항(F-20 전 판)은 바로 지운다 — 다시 저장한 초안에는 없다.
+  // 요청사항은 이 탭에서만 이어 쓴다(옛 초안의 글은 되살리지 않는다).
+  if (["name", "phone", "address", "addressDetail", "zip", "note"].some(k => k in d)) saveDraft();
+}
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch {}
+  try { sessionStorage.removeItem(NOTE_KEY); } catch {}
+}
+$("#form").addEventListener("input", e => { if (e.target.closest("[data-field]")) clearInvalid(e.target.closest("[data-field]").dataset.field); saveDraft(); });
+
+// ── 검사 ─────────────────────────────────────────────────────────────
+function setInvalid(field) { const el = $(`[data-field="${field}"]`); if (el) el.classList.add("invalid"); return el; }
+function clearInvalid(field) { const el = $(`[data-field="${field}"]`); if (el) el.classList.remove("invalid"); }
+$("#consent").addEventListener("change", () => clearInvalid("consent"));
+$("#infoConfirm").addEventListener("change", () => clearInvalid("truth"));
+
+/** 이 공간에 담긴 공사가 있는가(이 공간에서 고를 수 있는 공종만 — 전송과 같은 기준). */
+function roomHasWork(room) {
+  const data = state.rooms.get(room);
+  return !!data && WEB.trades.some(t => data.trades.has(t) && tradeAllowed(room, t));
+}
+/** 기본 정보 · 평형 · 일정 검사 — 틀린 칸 이름 목록. */
+function infoBad() {
+  const bad = [];
+  if (!$("#name").value.trim()) bad.push("name");
+  const phoneDigits = $("#phone").value.replace(/\D/g, "");
+  // 010 휴대폰은 11자리만(10자리 010 번호는 없다, 2026-10-09). 그 밖(지역 번호 · 070)은 9~11자리.
+  if (phoneDigits.length < 9 || phoneDigits.length > 11 || !phoneDigits.startsWith("0")
+      || (phoneDigits.startsWith("010") && phoneDigits.length !== 11)) bad.push("phone");
+  if (!$("#address").value.trim()) bad.push("address");
+  const zip = $("#zip").value.trim();
+  if (zip && !/^\d{5}$/.test(zip)) bad.push("zip");
+  const py = parseFloat($("#pyeong").value);
+  if (!(py >= 1 && py <= 500)) bad.push("pyeong");
+  const s = $("#startDate").value, e = $("#endDate").value;
+  if (s && e && e < s) bad.push("endDate");
+  return bad;
+}
+/** 틀린 칸을 빨갛게 · 첫 칸으로 화면을 옮기고 알림. */
+function showBad(bad) {
+  bad.forEach(setInvalid);
+  const first = $(`[data-field="${bad[0]}"]`);
+  reveal(first);
+  const focusable = $("input, textarea", first);
+  if (focusable && !focusable.readOnly && focusable.type !== "checkbox") setTimeout(() => focusable.focus({ preventScroll: true }), 300);
+  toast("빠진 항목을 확인해 주세요.");
+}
+/** 보내기 전 전체 검사 — 문제가 있는 첫 화면으로 옮겨 그 자리를 알려 준다. */
+function validate() {
+  const bad = infoBad();
+  if (bad.length) { goTo("info"); showBad(bad); return false; }
+  if (!state.rooms.size) { goTo("rooms"); showRoomsErr("공사할 공간을 하나 이상 골라 주세요."); return false; }
+  for (const room of roomOrder()) {
+    const issue = roomIssue(room);
+    if (issue) { goTo("room:" + room); showRoomIssue(issue); return false; }
+  }
+  const fin = [];
+  if (!$("#infoConfirm").checked) fin.push("truth");
+  if (!$("#consent").checked) fin.push("consent");
+  if (fin.length) { goTo("finish"); showBad(fin); return false; }
+  return true;
+}
+
+// ── 제출 ─────────────────────────────────────────────────────────────
+function buildPayload() {
+  const rooms = WEB.rooms.filter(r => state.rooms.has(r)).map(r => {
+    const v = state.rooms.get(r);
+    const trades = WEB.trades.filter(t => v.trades.has(t) && tradeAllowed(r, t));
+    // 고른 상품만 — 공종별 { 공종: [상품명…] }. 안 고른 공종은 빠진다(앱이 공종 전체를 담는다).
+    const items = Object.create(null);
+    trades.forEach(t => { const set = v.items.get(t); if (set && set.size) items[t] = (WEB.products[t] || []).map(([n]) => n).filter(n => set.has(n)); });
+    // 공간 크기(물을 때만) · 가구 길이(0.3~20m로 적은 것만) — 2026-10-10. 앱이 공간 치수 · 줄 수량으로 바꾼다.
+    const size = needsSize(r) && SIZE_TITLES.includes(v.size) ? v.size : "";
+    const len = {};
+    trades.forEach(t => { if (needsLen(v, t)) { const m = lenValue(v.len.get(t)); if (m > 0) len[t] = m; } });
+    return { room: r, trades, items, pyeong: state.scope === "부분" ? v.pyeong : "", size, len };
+  });
+  return {
+    action: "webInquiry",
+    name: $("#name").value.trim(),
+    phone: $("#phone").value.trim(),
+    address: $("#address").value.trim(),
+    addressDetail: $("#addressDetail").value.trim(),
+    zip: $("#zip").value.trim(),
+    pyeong: $("#pyeong").value.trim(),
+    scope: state.scope,
+    startDate: $("#startDate").value,
+    endDate: $("#endDate").value,
+    rooms,
+    note: $("#note").value.trim(),
+    photos: state.photos.map(p => ({ name: p.name, data: p.dataUrl.split(",")[1] })),
+    // 동의 기록 — 동의 여부와 그때의 처리방침 판(Apps Script가 접수 시각과 함께 '개인정보 동의' 열에 남긴다).
+    consent: $("#consent").checked,
+    consentVersion: policyVersion(),
+    infoConfirmed: $("#infoConfirm").checked,   // '입력한 정보가 사실임을 확인합니다' — '개인정보 동의' 열에 함께 남는다
+    device: deviceId(),                         // 기기 구분 번호 — 처리방침 시행 전에는 ""(Apps Script가 비면 건너뛴다)
+    website: $("#website").value,          // 스팸 방지용 숨은 칸 — 사람은 비워 둔다
+    elapsed: Date.now() - openedAt,
+    issued: issuedStamp,                  // 서명된 발급 시각 — 없으면 접수는 되지만 '확인 필요'로 적힌다
+  };
+}
+
+let sending = false;
+$("#submitBtn").addEventListener("click", submit);
+$("#form").addEventListener("submit", e => { e.preventDefault(); submit(); });
+
+async function submit() {
+  if (sending) return;
+  if (framedByOther) { toast("다른 사이트 안에서는 보낼 수 없어요 — 위 '새 창에서 열기'로 열어 주세요."); return; }
+  if (!validate()) return;   // 안내 글은 validate가 띄운다
+  const btn = $("#submitBtn");
+  sending = true; btn.disabled = true; $("#prevBtn").disabled = true; btn.innerHTML = `<span class="spinner" aria-hidden="true"></span>보내는 중`;
+  try {
+    await ensureIssued();      // 발급 표 확인(없거나 오래되면 새로) — 그 뒤에 보낼 내용을 만든다
+    if (current !== "finish" || !validate()) return;   // 기다리는 사이 내용이 바뀌었으면 보내지 않는다
+    const payload = buildPayload();
+    let receipt, photoNote = "";
+    if (!CONFIG.SCRIPT_URL) {
+      console.log("[미리보기] 전송할 내용", { ...payload, photos: payload.photos.map(p => `${p.name} (${Math.round(p.data.length * 0.75 / 1024)}KB)`) });
+      await new Promise(r => setTimeout(r, 600));
+      const d = new Date();
+      receipt = "W" + String(d.getFullYear()).slice(2) + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0") + "-DEMO";
+      $("#demoNote").hidden = false;
+    } else {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 60000);
+      // text/plain = 사전 요청(preflight) 없이 Apps Script로 바로 보낼 수 있는 형식
+      const res = await fetch(CONFIG.SCRIPT_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload), signal: ctrl.signal, redirect: "follow",
+      });
+      clearTimeout(timer);
+      const json = await res.json().catch(() => null);
+      if (!json || !json.ok) throw new Error((json && json.error) || "전송에 실패했어요.");
+      receipt = json.receipt || "";
+      $("#demoNote").hidden = true;
+      // 사진을 다 저장하지 못했으면 알린다(F-15) — 옛 스크립트는 이 칸이 없다(안내 없음).
+      const sent = Number(json.photosSent), saved = Number(json.photosSaved);
+      if (Number.isFinite(sent) && Number.isFinite(saved) && sent > saved) {
+        photoNote = saved > 0
+          ? `사진 ${sent}장 중 ${sent - saved}장은 저장되지 않았어요. 상담 때 문자로 보내 주세요.`
+          : `사진은 저장되지 않았어요. 상담 때 문자로 보내 주세요.`;
+      }
+    }
+    $("#photoNote").textContent = photoNote;
+    $("#photoNote").hidden = !photoNote;
+    clearDraft();
+    $("#receipt").textContent = receipt ? `접수번호 ${receipt}` : "접수 완료";
+    $("#form").hidden = true; $("#bar").hidden = true; $("#side").hidden = true; $("#donePanel").hidden = false;
+    $(".layout").classList.add("is-done");
+    document.body.style.paddingBottom = "0";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    rewindHistory();           // 접수 뒤 '뒤로' 한 번이면 이 페이지를 떠나게
+  } catch (err) {
+    // 연결이 끊기거나(Safari "Load failed" · Chrome "Failed to fetch" — TypeError) 응답이 늦으면 서버에는 접수됐을 수 있다.
+    // 영어 원문을 보이지 않고, 같은 연락처를 곧바로 다시 보내지 않게 안내한다(2026-10-09).
+    const network = err.name === "AbortError" || err.name === "TypeError";
+    const msg = network
+      ? `${err.name === "AbortError" ? "응답이 늦어요." : "연결이 끊겼어요."} 접수됐을 수 있어요 — 10분 뒤 다시 보내거나`
+      : `${err.message || "전송에 실패했어요."} 계속 안 되면`;
+    toast(`${msg} ${CONFIG.COMPANY_PHONE}로 연락 주세요.`);
+  } finally {
+    sending = false; btn.disabled = false; $("#prevBtn").disabled = false; btn.textContent = "견적 요청 보내기";
+  }
+}
+
+$("#againBtn").addEventListener("click", () => {
+  $("#form").reset(); state.rooms.clear(); state.photos = []; setScope("전체"); ensureWholeRoom();
+  const a = $("#address"); a.readOnly = true;
+  $("#detailWrap").hidden = true; $("#zipWrap").hidden = true;
+  $("#pyeong").dispatchEvent(new Event("input")); syncDates();
+  renderRoomToggles(); renderPhotos(); saveDraft();
+  $("#form").hidden = false; $("#bar").hidden = false; $("#side").hidden = false; $("#donePanel").hidden = true;
+  $(".layout").classList.remove("is-done");
+  document.body.style.paddingBottom = "";
+  current = "info"; openTrade = null;
+  if ((history.state && history.state.idx) > 0) rewindHistory();
+  else { navIdx = 0; try { history.replaceState({ step: current, idx: 0 }, ""); } catch {} }
+  renderStep();
+  window.scrollTo({ top: 0 });
+});
+
+// ── 시작 ─────────────────────────────────────────────────────────────
+if (framedByOther) {   // 다른 사이트 틀 안(F-14) — 보내기는 submit이 막고, 새 창으로 여는 길을 보인다
+  $("#frameNote").hidden = false;
+  $("#frameOpen").href = location.href;
+}
+$("#deviceItem").hidden = !policyNextActive();
+readCachedWebConfig();   // 지난번에 받은 설정이 있으면 먼저 — 새 설정은 아래 fetchWebConfig가 받아 바꾼다
+renderRoomsDesc();
+loadDraft();
+if (!state.rooms.size) ensureWholeRoom();   // 처음(또는 공간을 다 뺀 초안) — 전체 시공의 '공용(전체)' 열
+setScope(state.scope);
+syncDates();
+renderRoomToggles();
+renderPhotos();
+if ((history.state && history.state.idx) > 0) rewindHistory();   // 단계 중간에 새로 고침 — 처음 화면부터(이름 · 연락처는 저장하지 않으므로)
+else { try { history.replaceState({ step: current, idx: 0 }, ""); } catch {} }
+renderStep();
+fetchWebConfig();

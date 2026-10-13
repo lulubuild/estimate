@@ -303,6 +303,17 @@
     canvas.className = "room3d-canvas";
     canvas.setAttribute("aria-hidden", "true");
     stage.appendChild(canvas);
+    // 그래픽이 끊겼다 돌아오면(F-21) 다시 그린다 — three.js가 자원을 다시 올리고, 여기서는 멈춘 그리기만 깨운다.
+    // 끊긴 동안은 그리지 않는다(그려도 three.js가 건너뛴다). 페이지에 알려 안내 글을 띄운다.
+    canvas.addEventListener("webglcontextlost", e => {
+      e.preventDefault();
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      if (opts && typeof opts.onContextLost === "function") opts.onContextLost();
+    });
+    canvas.addEventListener("webglcontextrestored", () => {
+      invalidate();
+      if (opts && typeof opts.onContextRestored === "function") opts.onContextRestored();
+    });
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 200);
