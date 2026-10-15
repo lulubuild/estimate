@@ -13,9 +13,11 @@ const CONFIG = {
   PRIVACY_URL: "https://lulubuild.github.io/estimate/privacy.html", // 개인정보처리방침 페이지 주소 (있으면 링크 표시)
   RETENTION: "문의일로부터 1년 (계약 시 관련 법령에 따른 기간)",
   // 동의 기록에 남기는 처리방침 판(시행일) — privacy.html 머리의 시행일과 같게 바꾼다.
-  POLICY_VERSION: "2026-10-07",
-  // 공지 중인 다음 처리방침(시행 7일 전 공지 — 처리방침 10항). 시행 시각부터 판이 바뀌고 기기 구분 번호를 보낸다(2026-10-07).
-  NEXT_POLICY: { version: "2026-10-14", from: "2026-10-14T00:00:00+09:00" },
+  POLICY_VERSION: "2026-10-14",
+  // 공지 중인 다음 처리방침(시행 7일 전 공지 — 처리방침 10항). 시행 시각부터 판이 바뀌고 이메일 칸(선택)이 보인다(2026-10-15).
+  NEXT_POLICY: { version: "2026-10-22", from: "2026-10-22T00:00:00+09:00" },
+  // 기기 구분 번호를 만들어 보내기 시작한 때 — 2026-10-14 처리방침부터(이미 시행 중).
+  DEVICE_FROM: "2026-10-14T00:00:00+09:00",
   MAX_PHOTOS: 5,
   // 전체 평형을 그대로 쓰는 공간 — 공간 평형 칸을 두지 않는다(앱 EstimateDraft.wholeHouseRoomName).
   WHOLE_HOUSE_ROOM: "공용(전체)",
@@ -76,19 +78,27 @@ const framedByOther = (() => {
 })();
 
 /* 기기 구분 번호 — 이 브라우저에 한 번 만든 무작위 값(이름 · 연락처와 무관). 같은 기기에서 오는 반복 · 허위 접수를
-   Apps Script가 세고, 업체가 앱에서 차단할 때 쓴다(2026-10-07). 처리방침 시행(NEXT_POLICY.from) 전에는 만들지도 보내지도 않는다.
+   Apps Script가 세고, 업체가 앱에서 차단할 때 쓴다(2026-10-07). 처리방침 시행(DEVICE_FROM) 전에는 만들지도 보내지도 않는다.
    ⚠️ 초안 지우기(clearDraft) · 새 요청 작성에서 지우지 않는다 — 같은 기기를 알아보는 값이다. */
 const DEVICE_KEY = "estimate-device-v1";
 let memoryDeviceId = "";
 const policyNextActive = () => Date.now() >= Date.parse(CONFIG.NEXT_POLICY.from);
 const policyVersion = () => policyNextActive() ? CONFIG.NEXT_POLICY.version : CONFIG.POLICY_VERSION;
+const deviceActive = () => Date.now() >= Date.parse(CONFIG.DEVICE_FROM);
+/* 이메일(선택, 2026-10-15) — 처리방침(2026-10-22) 시행부터 칸이 보이고 보낸다. 담당자가 확인한 견적서 PDF를 받는 곳.
+   형식은 Apps Script(emailOf_) · 앱(CustomerSend.isValidEmail)과 같은 규칙. 초안(브라우저)에는 저장하지 않는다(개인정보). */
+const emailActive = () => policyNextActive();
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/;
+function emailValue() { return emailActive() ? $("#email").value.replace(/\s+/g, "") : ""; }
+function emailOk(v) { return !v || (v.length <= 120 && EMAIL_RE.test(v) && !v.includes("..") && !v.startsWith(".") && !/\.@/.test(v)); }
+function syncEmailNote() { $("#emailEmptyNote").hidden = !!$("#email").value.trim(); }
 function newDeviceId() {
   const b = new Uint8Array(16);
   crypto.getRandomValues(b);
   return btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 function deviceId() {
-  if (!policyNextActive()) return "";
+  if (!deviceActive()) return "";
   try {
     let v = localStorage.getItem(DEVICE_KEY) || "";
     if (!/^[A-Za-z0-9_-]{22}$/.test(v)) { v = newDeviceId(); localStorage.setItem(DEVICE_KEY, v); }
@@ -1447,6 +1457,7 @@ function infoBad() {
   if (!(py >= 1 && py <= 500)) bad.push("pyeong");
   const s = $("#startDate").value, e = $("#endDate").value;
   if (s && e && e < s) bad.push("endDate");
+  if (!emailOk(emailValue())) bad.push("email");
   return bad;
 }
 /** 틀린 칸을 빨갛게 · 첫 칸으로 화면을 옮기고 알림. */
@@ -1492,6 +1503,7 @@ function buildPayload() {
     action: "webInquiry",
     name: $("#name").value.trim(),
     phone: $("#phone").value.trim(),
+    email: emailValue(),                       // 선택 — 비면 ""(처리방침 시행 전에도 "")
     address: $("#address").value.trim(),
     addressDetail: $("#addressDetail").value.trim(),
     zip: $("#zip").value.trim(),
@@ -1559,6 +1571,9 @@ async function submit() {
     $("#photoNote").hidden = !photoNote;
     clearDraft();
     $("#receipt").textContent = receipt ? `접수번호 ${receipt}` : "접수 완료";
+    $("#doneText").textContent = payload.email
+      ? "담당자가 내용을 확인한 뒤 견적서를 문자와 이메일로 보내 드립니다."
+      : "담당자가 내용을 확인한 뒤 견적서를 문자로 보내 드립니다.";
     $("#form").hidden = true; $("#bar").hidden = true; $("#side").hidden = true; $("#donePanel").hidden = false;
     $(".layout").classList.add("is-done");
     document.body.style.paddingBottom = "0";
@@ -1578,7 +1593,7 @@ async function submit() {
 }
 
 $("#againBtn").addEventListener("click", () => {
-  $("#form").reset(); state.rooms.clear(); state.photos = []; setScope("전체"); ensureWholeRoom();
+  $("#form").reset(); state.rooms.clear(); state.photos = []; setScope("전체"); ensureWholeRoom(); syncEmailNote();
   const a = $("#address"); a.readOnly = true;
   $("#detailWrap").hidden = true; $("#zipWrap").hidden = true;
   $("#pyeong").dispatchEvent(new Event("input")); syncDates();
@@ -1598,7 +1613,14 @@ if (framedByOther) {   // 다른 사이트 틀 안(F-14) — 보내기는 submit
   $("#frameNote").hidden = false;
   $("#frameOpen").href = location.href;
 }
-$("#deviceItem").hidden = !policyNextActive();
+$("#deviceItem").hidden = !deviceActive();
+// 이메일 칸 · 동의 표 줄 — 처리방침(2026-10-22) 시행부터.
+$("#emailWrap").hidden = !emailActive();
+$("#emailItem").hidden = !emailActive();
+$("#emailPurpose").hidden = !emailActive();
+$("#email").addEventListener("input", syncEmailNote);
+$("#email").addEventListener("blur", () => { const v = emailValue(); if (v) $("#email").value = v; if (!emailOk(v)) setInvalid("email"); });
+syncEmailNote();
 readCachedWebConfig();   // 지난번에 받은 설정이 있으면 먼저 — 새 설정은 아래 fetchWebConfig가 받아 바꾼다
 renderRoomsDesc();
 loadDraft();
