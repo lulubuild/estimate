@@ -49,6 +49,7 @@
   --brand: #FF0000;         /* 로고 전용 */
   --danger: #E30000;
   --danger-soft: #FFF2F4;
+  --warn: #A84F06;          /* 알림(오류 아님) — 이메일 비움 안내. 흰 바탕 4.5:1 이상 */
   --glass: rgba(255, 255, 255, .72);        /* 위 · 아래 반투명 바 */
   --page-margin: 20px;
   --r-tile: 12px;
@@ -62,6 +63,7 @@
     --accent: #0071E3; --accent-hover: #0077ED; --link: #2997FF;
     --accent-soft: rgba(41, 151, 255, .12); --focus-ring: rgba(41, 151, 255, .3);
     --danger: #FF453A; --danger-soft: rgba(255, 69, 58, .12); --glass: rgba(22, 22, 23, .72);
+    --warn: #FF9F45;
     color-scheme: dark;
   }
 }
@@ -71,6 +73,7 @@
   --accent: #0071E3; --accent-hover: #0077ED; --link: #2997FF;
   --accent-soft: rgba(41, 151, 255, .12); --focus-ring: rgba(41, 151, 255, .3);
   --danger: #FF453A; --danger-soft: rgba(255, 69, 58, .12); --glass: rgba(22, 22, 23, .72);
+  --warn: #FF9F45;
   color-scheme: dark;
 }
 /* 선택 테두리 · 체크 표시는 다크에서 한 단계 밝은 파랑 */
@@ -150,6 +153,8 @@ textarea.input { height: auto; min-height: 132px; padding-top: 28px; resize: ver
 .row { display: flex; gap: 8px; align-items: flex-start; }
 .row .fl { flex: 1; }
 .hint { font-size: 13px; color: var(--muted); margin-top: 8px; padding: 0 4px; }
+.hint.warn { color: var(--warn); margin-top: 4px; }
+.invalid .hint.warn { display: none; }
 .err { font-size: 13px; color: var(--danger); margin-top: 8px; padding: 0 4px; display: none; }
 .invalid .err { display: block; }
 .invalid .input { border-color: var(--danger); background: var(--danger-soft); }
@@ -446,6 +451,14 @@ footer .sep { color: var(--line); }
             <span class="fl-label">연락처<span class="req">*</span></span>
             <div class="err">연락 가능한 번호를 입력해 주세요.</div>
           </label>
+          <!-- 이메일(선택, 2026-10-15) — 담당자가 확인한 견적서 PDF를 보내는 곳. 처리방침 시행(NEXT_POLICY.from)부터 보인다 -->
+          <label class="fl full" data-field="email" id="emailWrap" hidden>
+            <input class="input" name="email" id="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" maxlength="120" placeholder=" ">
+            <span class="fl-label">이메일 (선택)</span>
+            <div class="hint">담당자가 내용을 확인한 뒤 견적서 PDF 원본을 이메일로 보내 드립니다. 문자로는 견적서를 사진으로 보내 드려요.</div>
+            <div class="hint warn" id="emailEmptyNote">이메일을 적지 않으시면 견적서 PDF를 이메일로 받아 보실 수 없습니다(문자로만 보내 드려요).</div>
+            <div class="err">이메일 주소를 확인해 주세요. 예: name@example.com</div>
+          </label>
           <div class="f full" data-field="address">
             <div class="row">
               <label class="fl"><input class="input" id="address" readonly placeholder=" " aria-label="현장 주소"><span class="fl-label">현장 주소<span class="req">*</span></span></label>
@@ -571,8 +584,8 @@ footer .sep { color: var(--line); }
           <details class="policy">
             <summary>수집 항목 자세히 보기</summary>
             <table>
-              <tr><th>수집 항목</th><td>이름, 연락처, 현장 주소·우편번호, 평형, 공간별 필요 공사, 공사·완공 희망일, 현장 사진, 요청사항<span id="deviceItem" hidden>, 기기 구분용 임의 번호(이 브라우저에 저장 · 이름·연락처와 무관한 무작위 값)</span></td></tr>
-              <tr><th>이용 목적</th><td>인테리어 견적 산출 및 상담 연락, 허위·반복 접수 방지 (Google 시트·드라이브에 보관 — 국외 이전 포함, 처리방침 참고)</td></tr>
+              <tr><th>수집 항목</th><td>이름, 연락처<span id="emailItem" hidden>, 이메일(선택 — 적은 경우에만)</span>, 현장 주소·우편번호, 평형, 공간별 필요 공사, 공사·완공 희망일, 현장 사진, 요청사항<span id="deviceItem" hidden>, 기기 구분용 임의 번호(이 브라우저에 저장 · 이름·연락처와 무관한 무작위 값)</span></td></tr>
+              <tr><th>이용 목적</th><td>인테리어 견적 산출 및 상담 연락<span id="emailPurpose" hidden>, 견적서 발송(문자 · 이메일)</span>, 허위·반복 접수 방지 (Google 시트·드라이브에 보관 — 국외 이전 포함, 처리방침 참고)</td></tr>
               <tr><th>보유 기간</th><td id="retentionText">문의일로부터 1년 (계약 시 관련 법령에 따른 기간)</td></tr>
               <tr><th>동의 거부</th><td>동의하지 않으실 수 있으며, 이 경우 온라인 견적 요청을 할 수 없습니다.</td></tr>
             </table>
@@ -589,7 +602,7 @@ footer .sep { color: var(--line); }
     <div class="done">
       <div class="ok" aria-hidden="true"></div>
       <h2>견적 요청이 접수되었습니다.</h2>
-      <p>담당자가 확인 후 연락드리겠습니다.</p>
+      <p id="doneText">담당자가 확인 후 연락드리겠습니다.</p>
       <div class="receipt" id="receipt">접수번호</div>
       <p class="demo-note" id="photoNote" hidden></p>
       <p class="demo-note" id="demoNote" hidden>미리보기 모드 — 연동 주소가 비어 있어 실제로 전송되지 않았습니다.</p>
@@ -651,6 +664,6 @@ footer .sep { color: var(--line); }
 </div>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="app.js?v=2026-10-14"></script>
+<script src="app.js?v=2026-10-15"></script>
 </body>
 </html>
