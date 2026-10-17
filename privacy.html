@@ -8,10 +8,11 @@
 :root { --bg:#F9F9F9; --surface:#FFFFFF; --ink:#0F0F0F; --muted:#606060; --line:#E5E5E5; --accent:#065FD4; color-scheme:light; }
 @media (prefers-color-scheme: dark) { :root { --bg:#0F0F0F; --surface:#1F1F1F; --ink:#F1F1F1; --muted:#AAAAAA; --line:#303030; --accent:#3EA6FF; color-scheme:dark; } }
 * { box-sizing:border-box; }
-body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; font-size:15px; line-height:1.7; }
+body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; font-size:16px; line-height:1.7; }
+/* 글자 단계(2026-10-17 인터페이스 통일 7단계) — 견적 요청 페이지와 같게: 14 보조 · 16 본문 · 18 소제목 · 24 제목 */
 main { max-width:760px; margin:0 auto; padding:24px 16px 48px; }
 h1 { font-size:24px; margin:8px 0 4px; }
-h2 { font-size:17px; margin:32px 0 8px; }
+h2 { font-size:18px; margin:32px 0 8px; }
 p, li { color:var(--ink); }
 .muted { color:var(--muted); font-size:14px; }
 .card { background:var(--surface); border-radius:12px; padding:4px 20px 20px; margin-top:16px; }
@@ -19,8 +20,10 @@ table { width:100%; border-collapse:collapse; font-size:14px; }
 th, td { text-align:left; vertical-align:top; padding:8px 6px; border-top:1px solid var(--line); }
 th { width:30%; font-weight:600; }
 a { color:var(--accent); }
+a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }   /* 키보드 포커스 */
+main > p:first-child a { display:inline-flex; align-items:center; min-height:44px; }   /* '← 온라인 견적 요청으로' 누르는 자리 44px */
 .notice { border:1px solid var(--line); padding:14px 20px; }
-.notice h2 { margin:0 0 6px; font-size:15px; }
+.notice h2 { margin:0 0 6px; font-size:16px; }
 .notice ul { margin:0; padding-left:20px; font-size:14px; }
 </style>
 </head>
