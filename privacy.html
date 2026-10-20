@@ -5,26 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>개인정보 처리방침 · 룰루타일</title>
 <style>
-:root { --bg:#F9F9F9; --surface:#FFFFFF; --ink:#0F0F0F; --muted:#606060; --line:#E5E5E5; --accent:#065FD4; color-scheme:light; }
-@media (prefers-color-scheme: dark) { :root { --bg:#0F0F0F; --surface:#1F1F1F; --ink:#F1F1F1; --muted:#AAAAAA; --line:#303030; --accent:#3EA6FF; color-scheme:dark; } }
+/* 색: 온라인 견적 요청 페이지(index.html)와 같은 값 — 흰 바탕 · 연회색 카드 · 짙은 글자 · 파란 링크(2026-10-18 인터페이스 통일 정리) */
+:root { --bg:#FFFFFF; --surface:#F5F5F7; --ink:#1D1D1F; --muted:#6E6E73; --line:#D2D2D7; --accent:#0066CC; --focus:#0071E3; color-scheme:light; }
+@media (prefers-color-scheme: dark) { :root { --bg:#000000; --surface:#161617; --ink:#F5F5F7; --muted:#86868B; --line:#424245; --accent:#2997FF; --focus:#2997FF; color-scheme:dark; } }
 * { box-sizing:border-box; }
-body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; font-size:16px; line-height:1.7; }
+body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard Variable",Pretendard,"Noto Sans KR",sans-serif; font-size:16px; line-height:1.7; letter-spacing:-0.01em; -webkit-font-smoothing:antialiased; }
 /* 글자 단계(2026-10-17 인터페이스 통일 7단계) — 견적 요청 페이지와 같게: 14 보조 · 16 본문 · 18 소제목 · 24 제목 */
 main { max-width:760px; margin:0 auto; padding:24px 16px 48px; }
-h1 { font-size:24px; margin:8px 0 4px; }
+h1 { font-size:24px; margin:8px 0 4px; font-weight:700; letter-spacing:-0.02em; }
 h2 { font-size:18px; margin:32px 0 8px; }
 p, li { color:var(--ink); }
 .muted { color:var(--muted); font-size:14px; }
-.card { background:var(--surface); border-radius:12px; padding:4px 20px 20px; margin-top:16px; }
+.card { background:var(--surface); border-radius:18px; padding:4px 20px 20px; margin-top:16px; }
 table { width:100%; border-collapse:collapse; font-size:14px; }
 th, td { text-align:left; vertical-align:top; padding:8px 6px; border-top:1px solid var(--line); }
 th { width:30%; font-weight:600; }
 a { color:var(--accent); }
-a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }   /* 키보드 포커스 */
+a:focus-visible { outline:2px solid var(--focus); outline-offset:2px; border-radius:4px; }   /* 키보드 포커스 */
 main > p:first-child a { display:inline-flex; align-items:center; min-height:44px; }   /* '← 온라인 견적 요청으로' 누르는 자리 44px */
 .notice { border:1px solid var(--line); padding:14px 20px; }
 .notice h2 { margin:0 0 6px; font-size:16px; }
 .notice ul { margin:0; padding-left:20px; font-size:14px; }
+/* 다음 판(2026-10-28)에서 더해지는 곳 표시 — 시행일은 app.js CONFIG.SNS_POLICY · Apps Script SNS게시.gs SNS.POLICY_VERSION과 같게 */
+.new { display:inline-block; margin-left:6px; padding:0 8px; border-radius:999px; border:1px solid currentColor; color:var(--accent); font-size:12px; font-weight:600; line-height:20px; vertical-align:1px; white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -32,6 +35,20 @@ main > p:first-child a { display:inline-flex; align-items:center; min-height:44p
 <p class="muted"><a href="./">← 온라인 견적 요청으로</a></p>
 <h1>개인정보 처리방침</h1>
 <p class="muted">룰루타일 · 시행일 2026년 10월 22일 (공지 2026년 10월 15일)</p>
+<p class="muted" style="margin-top:-8px">다음 판: 2026년 10월 28일 시행 (공지 2026년 10월 21일) — 문의 사례 공개(선택 동의)를 더합니다. <a href="#notice-1028">변경 안내</a> · 더해지는 곳은 <span class="new" style="margin-left:0">10.28부터</span> 표시</p>
+
+<div class="card notice" id="notice-1028">
+<h2>변경 안내 (2026년 10월 28일 시행)</h2>
+<p class="muted" style="margin:0 0 6px">2026년 10월 22일 시행본에서 아래가 더해지며, 2026년 10월 28일부터 적용됩니다. 공개는 동의하신 분만 해당하는 <b>선택</b> 사항입니다.</p>
+<ul>
+<li>1항 — 처리 목적에 '문의 사례 공개(선택)'를 더했습니다. 동의하신 경우에만 시 · 구, 평형대, 고르신 공사, 받으신 견적서(공종 · 금액)를 회사 홈페이지 · SNS(스레드 · 인스타그램)의 '최근 문의'로 공개합니다.</li>
+<li>2항 — 선택 항목에 '문의 사례 공개 동의 여부'를 더하고, 주소 검색 결과의 시 · 도와 시 · 군 · 구를 따로 적는다는 내용을 더했습니다(현장 주소의 일부 — 새로 묻는 항목은 없습니다).</li>
+<li>3항 — 공개 게시물의 보유 기간(철회하실 때까지, 최대 문의 접수일로부터 1년)을 더했습니다.</li>
+<li>4항 · 4의2항(새로) — 공개하는 정보와 가리는 정보, 공개 시기, 철회 방법, 개인을 알 수 없는 주간 문의 통계 게시를 더했습니다.</li>
+<li>5항 — 공개 게시물을 올리는 곳(Meta Platforms — 스레드 · 인스타그램, GitHub — 게시용 이미지 임시 보관)을 더했습니다.</li>
+<li>6항 · 8항 — 공개에 동의하신 정보는 '외부에 공유하지 않음'의 예외라는 점과 공개 동의 철회 방법을 더했습니다.</li>
+</ul>
+</div>
 
 <div class="card notice">
 <h2>변경 안내</h2>
@@ -53,12 +70,14 @@ main > p:first-child a { display:inline-flex; align-items:center; min-height:44p
 <tr><th>견적서 발송</th><td>회사가 내용을 확인한 견적서를 문자(사진)와 이메일(PDF — 이메일을 적은 경우)로 보내 드림</td></tr>
 <tr><th>시공 일정 관리</th><td>공사 희망일·완공 희망일 관리</td></tr>
 <tr><th>허위·반복 접수 방지</th><td>같은 기기·연락처에서 반복해 들어온 접수 확인, 회사가 차단한 연락처·기기에서 온 접수 걸러 내기</td></tr>
+<tr><th>문의 사례 공개(선택)<span class="new">10.28부터</span></th><td>동의하신 경우에만 — 비슷한 공사를 알아보시는 분들께 실제 문의 · 견적 사례를 알리기 위해 4의2항의 정보를 회사 홈페이지 · SNS에 공개</td></tr>
 </table>
 
 <h2>2. 처리하는 항목과 수집 방법</h2>
 <table>
 <tr><th>필수</th><td>성명, 연락처, 현장 주소, 전체 평형, 공사할 공간</td></tr>
 <tr><th>선택</th><td>이메일(견적서 PDF 발송용 — 적은 경우에만), 상세 주소, 우편번호, 시공 범위와 공간별 평형, 공간별 필요 공사, 공사·완공 희망일, 현장 사진, 요청사항</td></tr>
+<tr><th>선택(공개 동의)<span class="new">10.28부터</span></th><td>문의 사례 · 견적서 공개 동의 여부와 동의 일자. 주소 검색으로 주소를 고르신 경우 그 주소의 시 · 도와 시 · 군 · 구를 따로 적습니다(현장 주소의 일부로, 공개에 동의하신 경우 지역을 시 · 구까지만 보이는 데 씁니다).</td></tr>
 <tr><th>자동 생성</th><td>기기 구분용 임의 번호 — 페이지가 이 브라우저에 한 번 만들어 저장하는 무작위 값으로, 이름·연락처·기기 정보와 무관합니다. 브라우저의 사이트 데이터를 지우면 새로 만들어집니다.</td></tr>
 <tr><th>수집 방법</th><td>고객이 온라인 견적 요청 페이지에 직접 입력해 제출할 때, 수집·이용 동의를 받은 뒤 수집합니다. 동의 여부·동의한 처리방침의 시행일·접수 시각과 '입력한 정보가 사실임' 확인 여부를 문의 기록과 함께 남깁니다.</td></tr>
 </table>
@@ -71,6 +90,7 @@ main > p:first-child a { display:inline-flex; align-items:center; min-height:44p
 <tr><th>차단된 접수</th><td>차단된 연락처·기기에서 온 접수 기록(성명·연락처·평형): 접수일로부터 30일</td></tr>
 <!-- 보존 근거 변호사 확인 필요 — 현장 대면 계약에 전자상거래법(제6조)이 맞는지, 국세기본법 제85조의3 · 상법 제33조 등이 맞는지 (출시 점검 CMP-12) -->
 <tr><th>계약·시공 기록</th><td>계약 종료일로부터 5년(「전자상거래 등에서의 소비자보호에 관한 법률」)</td></tr>
+<tr><th>공개 게시물(선택)<span class="new">10.28부터</span></th><td>동의를 철회하실 때까지, 최대 문의 접수일로부터 1년. 기간이 지나면 회사가 내립니다. 게시 대기 · 게시 기록(4의2항의 공개 정보와 문의 구분 번호만)은 1년 뒤 지웁니다.</td></tr>
 </table>
 <p>기간이 지난 정보는 지체 없이 파기합니다. 전자 파일은 복구할 수 없도록 삭제하고, 출력물은 분쇄하거나 소각합니다.</p>
 <ul>
@@ -80,6 +100,19 @@ main > p:first-child a { display:inline-flex; align-items:center; min-height:44p
 
 <h2>4. 제3자 제공</h2>
 <p>회사는 개인정보를 제3자에게 제공하지 않습니다. 다만 법령에 따라 요구되는 경우는 예외로 합니다.</p>
+<p><span class="new" style="margin-left:0">10.28부터</span> 또한 문의 사례 공개에 동의하신 경우, 4의2항의 정보(이름 · 연락처 · 주소 · 견적 관리번호는 빼고)를 게시물을 보는 누구나 볼 수 있게 공개합니다.</p>
+
+<h2 id="public">4의2. 문의 사례 공개 (선택 동의)<span class="new">10.28부터</span></h2>
+<table>
+<tr><th>공개하는 정보</th><td>시 · 구(예: 서울 강남구 — 동 · 단지 · 층은 적지 않습니다), 평형대(예: 30평대), 고르신 공사(공종), 접수 주(예: 10월 3주), 받으신 견적서(공종 · 금액 — 회사가 영수증 모양으로 다시 그린 이미지)</td></tr>
+<tr><th>가리는 정보</th><td>이름, 연락처, 이메일, 주소(상세 주소 포함), 견적 관리번호, 요청사항 글, 현장 사진, 접수 시각</td></tr>
+<tr><th>공개하는 곳 · 보는 사람</th><td>회사 홈페이지와 회사 SNS(스레드 · 인스타그램)의 '최근 문의' — 게시물을 보는 누구나. 견적 금액 게시물에는 "실측 전 견적 · 실제 공사비는 달라질 수 있음", "결제 영수증이 아닙니다"를 함께 적습니다.</td></tr>
+<tr><th>공개 시기</th><td>접수 다음 날 이후(그사이 허위 · 중복 · 차단 · 삭제된 문의는 올리지 않습니다). 같은 지역 · 평형대 문의가 드물어 집을 짐작할 수 있는 경우(예: 큰 평형)에는 개별로 올리지 않습니다.</td></tr>
+<tr><th>기간</th><td>동의를 철회하실 때까지, 최대 문의 접수일로부터 1년</td></tr>
+<tr><th>철회</th><td>9항 연락처로 전화 · 문자 · 전자우편으로 말씀하시면 지체 없이 내립니다(스레드 게시물은 바로 삭제, 인스타그램 게시물은 회사가 직접 삭제). 올리기 전이면 올리지 않습니다.</td></tr>
+<tr><th>동의 거부</th><td>동의하지 않으셔도 견적 · 상담 · 실측은 똑같이 받으실 수 있습니다.</td></tr>
+</table>
+<p class="muted">동의와 관계없이, 회사는 지난주 유효 문의 수 · 공종별 문의 수 · 평형대 · 함께 문의한 공종 같은 <b>개인을 알 수 없는 주간 통계</b>를 SNS에 게시할 수 있습니다. 지역 · 이름 같은 정보는 넣지 않고, 문의가 적은 주에는 평형대 · 조합을 싣지 않으며, 허위 · 중복 접수는 빼고 셉니다.</p>
 
 <h2>5. 처리 위탁 및 국외 이전</h2>
 <table>
@@ -91,12 +124,22 @@ main > p:first-child a { display:inline-flex; align-items:center; min-height:44p
 <tr><th>보유 기간</th><td>3항의 기간이 지나 회사가 삭제할 때까지</td></tr>
 <tr><th>거부 방법·절차·효과</th><td>국외 이전을 원하지 않으시면 온라인 견적 요청 페이지의 수집·이용 동의를 하지 않으시면 됩니다(동의하지 않으면 제출되지 않습니다). 이 경우 온라인 견적 요청은 할 수 없으며, 9항의 연락처로 전화·문자로 문의해 주시면 국외 이전 없이 상담해 드립니다.</td></tr>
 </table>
+<p style="margin:16px 0 6px"><b>문의 사례 공개에 동의하신 경우</b><span class="new">10.28부터</span></p>
+<table>
+<tr><th>이전받는 자</th><td>Meta Platforms, Inc.(스레드 · 인스타그램 운영 — 개인정보 문의: Meta 개인정보 센터), GitHub, Inc.(게시용 이미지 임시 보관 — 연락처: https://support.github.com)</td></tr>
+<tr><th>이전 국가</th><td>미국 등 각 회사가 데이터센터를 운영하는 국가</td></tr>
+<tr><th>이전 시기·방법</th><td>게시할 때(접수 다음 날 이후) 네트워크(HTTPS)로 전송</td></tr>
+<tr><th>이전 항목</th><td>4의2항의 공개하는 정보(이름 · 연락처 · 이메일 · 주소 · 견적 관리번호는 보내지 않습니다)</td></tr>
+<tr><th>이용 목적</th><td>회사 SNS 게시(Meta). 스레드 · 인스타그램이 게시용 이미지를 가져갈 수 있도록 공개 주소에 잠시 둠(GitHub — 게시가 끝나면 바로 지움)</td></tr>
+<tr><th>보유 기간</th><td>Meta: 4의2항의 기간(철회 때까지, 최대 1년)까지. GitHub: 게시가 끝나면 바로 삭제</td></tr>
+<tr><th>거부 방법·절차·효과</th><td>공개 동의를 하지 않으시면 이전되지 않습니다. 동의하지 않으셔도 견적 · 상담은 똑같습니다.</td></tr>
+</table>
 <p class="muted">견적서 문자는 회사 업무용 휴대전화에서 직접 보내며, 문자 발송 대행 업체에 연락처를 넘기지 않습니다. 주소 검색 기능은 카카오 우편번호 서비스를 사용하며, 검색창에 입력한 검색어가 카카오로 전송됩니다. 이 페이지 자체는 GitHub Pages에서 제공되며 입력 내용을 서버에 저장하지 않습니다. 다만 작성을 이어 할 수 있도록 평형·희망일·고른 공간은 이 브라우저에만 7일 동안, 요청사항은 창(탭)을 닫을 때까지 임시로 두고, 견적 요청을 보내면 지웁니다(이름·연락처·이메일·주소·사진은 브라우저에 두지 않습니다). 페이지가 열릴 때 공사 항목 목록(공간·공사 종류·상품 이름 — 개인정보 없음)을 Google Apps Script에서 불러옵니다.</p>
 
 <h2>6. 안전성 확보 조치</h2>
 <ul>
 <li>페이지·앱과 Google 사이의 통신은 모두 HTTPS로 암호화됩니다.</li>
-<li>문의 데이터와 현장 사진은 회사 계정에서만 볼 수 있으며 외부에 공유하지 않습니다.</li>
+<li>문의 데이터와 현장 사진은 회사 계정에서만 볼 수 있으며 외부에 공유하지 않습니다. <span class="new" style="margin-left:0">10.28부터</span> 다만 공개에 동의하신 4의2항의 정보는 예외이며, 게시 준비용 기록에는 공개 정보만 옮겨 적습니다.</li>
 <li>회사 앱이 내려받은 문의와 견적은 해당 기기 안에만 저장되고, 관리 기능은 기기별 관리자 비밀번호로 보호됩니다. 견적서 PDF와 백업 파일에는 기기 잠금 시 읽을 수 없는 파일 보호를 적용합니다.</li>
 <li>앱의 백업 파일(.json)은 관리자 인증을 거쳐야 만들 수 있고, 회사가 정한 비밀번호로 암호화(AES-256)되어 비밀번호 없이는 열 수 없습니다. 회사는 백업 파일과 비밀번호를 안전하게 보관하고 불필요해지면 삭제합니다.</li>
 </ul>
@@ -110,6 +153,7 @@ main > p:first-child a { display:inline-flex; align-items:center; min-height:44p
 
 <h2>8. 정보주체의 권리와 행사 방법</h2>
 <p>정보주체는 언제든 개인정보 열람·정정·삭제·처리정지를 요구할 수 있습니다. 아래 연락처로 전화·문자·전자우편으로 요청하시면 지체 없이(10일 이내) 조치하며, 삭제 요청 시 앱에 저장된 정보와 Google에 저장된 원본(시트·사진)을 함께 삭제합니다.</p>
+<p><span class="new" style="margin-left:0">10.28부터</span> 문의 사례 공개 동의도 언제든 같은 방법으로 철회하실 수 있습니다. 철회하시면 올리기 전이면 올리지 않고, 올린 게시물은 지체 없이 내립니다(4의2항). 삭제를 요청하신 경우에도 공개 게시물을 함께 내립니다.</p>
 
 <h2>9. 개인정보 보호책임자</h2>
 <table>

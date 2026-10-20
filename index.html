@@ -338,6 +338,17 @@ details.policy[open] summary::after { transform: rotate(-90deg); }
 details.policy table { width: 100%; border-collapse: collapse; margin-top: 12px; }
 details.policy th, details.policy td { text-align: left; padding: 10px 6px; border-top: 1px solid var(--line); vertical-align: top; }
 details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
+/* [선택] 문의 사례 · 견적서 공개 동의(SNS 홍보, 2026-10-20) — 필수 카드와 같은 연회색 카드. 공개 · 가림 · 올리는 곳 세 칸은
+   폰 1단 · 태블릿 이상 3단(흰 타일). 처리방침 새 판 시행 전에는 카드 전체가 숨는다(app.js CONFIG.SNS_POLICY). */
+.opt-tag { display: inline-block; margin-right: 6px; padding: 0 8px; border-radius: 999px; border: 1px solid currentColor; font-size: 12px; font-weight: 600; line-height: 20px; color: var(--sel); vertical-align: 1px; }
+.share-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 14px 0 0 34px; }
+@media (min-width: 734px) { .share-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.share-box { background: var(--surface); border-radius: var(--r-tile); padding: 12px 14px; min-width: 0; word-break: keep-all; overflow-wrap: anywhere; }
+.share-box b { display: block; font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.share-box span { display: block; font-size: 14px; color: var(--muted); line-height: 1.4; }
+#publicConsentCard details.policy { margin-left: 34px; }
+#publicPolicyWrap a { display: inline-flex; align-items: center; min-height: 44px; }
+@media (max-width: 379px) { .share-grid, #publicConsentCard details.policy { margin-left: 0; } }
 
 .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
@@ -607,6 +618,31 @@ footer .sep { color: var(--line); }
           </details>
           <div class="err">개인정보 수집·이용에 동의해 주세요.</div>
         </div>
+        <!-- [선택] 문의 사례 · 견적서 공개 동의(SNS 홍보, 2026-10-20 사장님 결정) — 처리방침 새 판(CONFIG.SNS_POLICY) 시행부터 보인다.
+             숨어 있으면 publicConsent=false. 체크하지 않아도 보내기 · 견적 · 상담은 같다(필수 두 칸은 그대로). -->
+        <div class="consent-card" data-field="publicConsent" id="publicConsentCard" hidden>
+          <label class="consent">
+            <input type="checkbox" id="publicConsent">
+            <span><b><span class="opt-tag">선택</span>문의 사례 · 견적서 공개에 동의합니다.</b>
+            <small>동의하지 않으셔도 견적 · 상담은 똑같이 받으실 수 있어요.</small></span>
+          </label>
+          <div class="share-grid">
+            <div class="share-box"><b>공개하는 것</b><span>시 · 구, 평형대(예: 30평대), 고르신 공사, 받으신 견적서(공종 · 금액)</span></div>
+            <div class="share-box"><b>가리는 것</b><span>이름 · 연락처 · 주소(동 · 단지 · 층) · 견적 관리번호</span></div>
+            <div class="share-box"><b>올리는 곳</b><span>룰루타일 홈페이지 · SNS(스레드 · 인스타그램)의 '최근 문의'</span></div>
+          </div>
+          <details class="policy">
+            <summary>공개 방법 · 철회 자세히 보기</summary>
+            <table>
+              <tr><th>올리는 때</th><td>접수 다음 날 이후에 올리고, 날짜는 주 단위(예: 10월 3주)로만 적습니다.</td></tr>
+              <tr><th>보는 사람</th><td>게시물을 보는 누구나(공개). 스레드 · 인스타그램은 메타(Meta Platforms — 미국 등 해외 서버)가 운영합니다.</td></tr>
+              <tr><th>기간</th><td>철회하실 때까지(최대 문의일로부터 1년)</td></tr>
+              <tr><th>철회</th><td>언제든 전화 · 문자로 말씀하시면 바로 내립니다.</td></tr>
+              <tr><th>동의 거부</th><td>동의하지 않으셔도 견적 · 상담은 똑같습니다.</td></tr>
+            </table>
+            <p style="margin:10px 0 0" id="publicPolicyWrap"><a id="publicPolicyLink" href="privacy.html#public" target="_blank" rel="noopener">자세히 — 개인정보 처리방침</a></p>
+          </details>
+        </div>
       </section>
       </div>
     </div>
@@ -678,6 +714,6 @@ footer .sep { color: var(--line); }
 </div>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="app.js?v=2026-10-15"></script>
+<script src="app.js?v=2026-10-20"></script>
 </body>
 </html>

@@ -16,6 +16,9 @@ const CONFIG = {
   POLICY_VERSION: "2026-10-14",
   // 공지 중인 다음 처리방침(시행 7일 전 공지 — 처리방침 10항). 시행 시각부터 판이 바뀌고 이메일 칸(선택)이 보인다(2026-10-15).
   NEXT_POLICY: { version: "2026-10-22", from: "2026-10-22T00:00:00+09:00" },
+  // 그다음 처리방침 — [선택] 문의 사례 · 견적서 공개 동의(SNS 홍보, 2026-10-20 사장님 결정). 시행 시각부터 동의 카드가 보이고 판이 바뀐다.
+  // ⚠️ 시행일을 바꾸면 privacy.html(머리 · '4의2') · Apps Script SNS게시.gs SNS.POLICY_VERSION도 같은 날로(7일 전 공지 — 처리방침 10항).
+  SNS_POLICY: { version: "2026-10-28", from: "2026-10-28T00:00:00+09:00" },
   // 기기 구분 번호를 만들어 보내기 시작한 때 — 2026-10-14 처리방침부터(이미 시행 중).
   DEVICE_FROM: "2026-10-14T00:00:00+09:00",
   MAX_PHOTOS: 5,
@@ -83,7 +86,11 @@ const framedByOther = (() => {
 const DEVICE_KEY = "estimate-device-v1";
 let memoryDeviceId = "";
 const policyNextActive = () => Date.now() >= Date.parse(CONFIG.NEXT_POLICY.from);
-const policyVersion = () => policyNextActive() ? CONFIG.NEXT_POLICY.version : CONFIG.POLICY_VERSION;
+const snsPolicyActive = () => Date.now() >= Date.parse(CONFIG.SNS_POLICY.from);
+const policyVersion = () => snsPolicyActive() ? CONFIG.SNS_POLICY.version : policyNextActive() ? CONFIG.NEXT_POLICY.version : CONFIG.POLICY_VERSION;
+/* 공개용 지역(2026-10-20) — 주소 검색(카카오)이 준 시 · 도 · 시 · 군 · 구만. 직접 고쳐 적으면 비운다(Apps Script가 주소 글에서 다시 찾는다).
+   브라우저에 저장하지 않는다. */
+let addrRegion = { sido: "", sigungu: "" };
 const deviceActive = () => Date.now() >= Date.parse(CONFIG.DEVICE_FROM);
 /* 이메일(선택, 2026-10-15) — 처리방침(2026-10-22) 시행부터 칸이 보이고 보낸다. 담당자가 확인한 견적서 PDF를 받는 곳.
    형식은 Apps Script(emailOf_) · 앱(CustomerSend.isValidEmail)과 같은 규칙. 초안(브라우저)에는 저장하지 않는다(개인정보). */
@@ -1036,6 +1043,7 @@ async function openAddressSearch() {
       const extra = data.buildingName && data.apartment === "Y" ? ` (${data.buildingName})` : "";
       $("#address").value = base + extra;
       $("#zip").value = data.zonecode || "";
+      addrRegion = { sido: String(data.sido || ""), sigungu: String(data.sigungu || "") };   // SNS 공개는 시 · 구까지만(동 · 단지 없음)
       clearInvalid("address"); clearInvalid("zip");
       layer.classList.remove("on");
       $("#detailWrap").hidden = false;
@@ -1519,6 +1527,9 @@ function buildPayload() {
     consentVersion: policyVersion(),
     infoConfirmed: $("#infoConfirm").checked,   // '입력한 정보가 사실임을 확인합니다' — '개인정보 동의' 열에 함께 남는다
     device: deviceId(),                         // 기기 구분 번호 — 처리방침 시행 전에는 ""(Apps Script가 비면 건너뛴다)
+    sido: addrRegion.sido,                      // 주소 검색의 시 · 도 · 시 · 군 · 구(2026-10-20) — 직접 입력이면 ""
+    sigungu: addrRegion.sigungu,
+    publicConsent: snsPolicyActive() && $("#publicConsent").checked,   // [선택] 문의 사례 · 견적서 공개 — 카드가 안 보이는 동안은 false
     website: $("#website").value,          // 스팸 방지용 숨은 칸 — 사람은 비워 둔다
     elapsed: Date.now() - openedAt,
     issued: issuedStamp,                  // 서명된 발급 시각 — 없으면 접수는 되지만 '확인 필요'로 적힌다
@@ -1619,6 +1630,13 @@ $("#emailWrap").hidden = !emailActive();
 $("#emailItem").hidden = !emailActive();
 $("#emailPurpose").hidden = !emailActive();
 $("#email").addEventListener("input", syncEmailNote);
+// [선택] 문의 사례 · 견적서 공개 동의(SNS 홍보, 2026-10-20) — 처리방침(CONFIG.SNS_POLICY) 시행부터. 체크하지 않아도 보내기에는 영향 없음.
+$("#publicConsentCard").hidden = !snsPolicyActive();
+if (CONFIG.PRIVACY_URL) $("#publicPolicyLink").href = CONFIG.PRIVACY_URL + "#public";
+else $("#publicPolicyWrap").hidden = true;
+// 주소를 직접 고쳐 적으면 검색이 준 시 · 구를 버린다(다른 주소의 지역이 남지 않게). 새 요청 작성 때도.
+$("#address").addEventListener("input", () => { addrRegion = { sido: "", sigungu: "" }; });
+$("#againBtn").addEventListener("click", () => { addrRegion = { sido: "", sigungu: "" }; });
 $("#email").addEventListener("blur", () => { const v = emailValue(); if (v) $("#email").value = v; if (!emailOk(v)) setInvalid("email"); });
 syncEmailNote();
 readCachedWebConfig();   // 지난번에 받은 설정이 있으면 먼저 — 새 설정은 아래 fetchWebConfig가 받아 바꾼다
