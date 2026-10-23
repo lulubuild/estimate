@@ -1186,10 +1186,16 @@ function planWrap(g, text, width) {
 
 // ── 앱 저장 글 · 초안(이 브라우저에 7일 — 도형만, 개인정보 없음) · 설정 바뀜 · 새 요청 ───────────
 /** 앱 SavedEstimate.planLayoutJSON과 같은 글 — { v: 1, base, shapes: [{ id, name, nth, category, kind, c, r, w, h }] }.
-    지금은 초안에만 쓴다. 앱 · 서버를 고치면 이 글을 그대로 보내 앱 견적 작성 평면도에서 열 수 있다(지시서 1024-웹1 질문 답). */
+    초안과 보내기(planSendLayout)에 쓴다 — 서버 '평면' 열 → 앱 견적 작성 평면도(지시서 1024-05). */
 function planAppLayout() {
   return { v: 1, base: PLAN_APP_BASE[plan.base] || "blank",
     shapes: plan.shapes.map(s => ({ id: s.id, name: s.name, nth: s.nth, category: s.category, kind: s.kind, c: s.x, r: s.y, w: s.w, h: s.h })) };
+}
+/** 업체에 보낼 도형 자료(2026-10-24 지시서 1024-05) — 앱 평면도 저장 글 그대로. 앱이 '견적 작성' 때 평면도에 놓아
+    옮기기 · 크기 · 이름을 고친다. '그림 없이' · 도형 없음이면 ""(서버 · 앱이 빈칸으로 둔다). 도형 크기는 그림일 뿐 — 수량에 안 쓴다. */
+function planSendLayout() {
+  if (!plan.base || plan.base === "none" || !plan.shapes.length) return "";
+  return JSON.stringify(planAppLayout());
 }
 function planDraftOut() {
   return { web: plan.base, size: plan.size, mode: plan.mode, layout: planAppLayout() };

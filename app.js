@@ -876,7 +876,7 @@ function validate() {
 }
 
 // ── 제출 ─────────────────────────────────────────────────────────────
-/** 보낼 내용 — 형식은 예전 그대로. 집 구조는 요청 내용 맨 앞 한 줄 + 사진 칸 그림 1장(shot)으로만 간다. */
+/** 보낼 내용 — 형식은 예전 그대로. 집 구조는 요청 내용 맨 앞 한 줄 + 사진 칸 그림 1장(shot) + 도형 자료 한 칸(plan — 2026-10-24 지시서 1024-05). */
 function buildPayload(shot) {
   const rooms = WEB.rooms.filter(r => roomHasWork(r)).map(r => {
     const v = state.rooms.get(r);
@@ -905,6 +905,7 @@ function buildPayload(shot) {
     rooms,
     note: [planStructureText(), $("#note").value.trim()].filter(Boolean).join("\n"),
     photos: (shot ? [shot] : []).concat(state.photos).slice(0, CONFIG.MAX_PHOTOS).map(p => ({ name: p.name, data: p.dataUrl.split(",")[1] })),
+    plan: planSendLayout(),                     // 집 구조 도형 — 앱 평면도 형식 글(서버 '평면' 열 → 앱 견적 작성 평면도에서 옮기기 · 크기 수정). 옛 서버는 건너뛴다
     // 동의 기록 — 동의 여부와 그때의 처리방침 판(Apps Script가 접수 시각과 함께 '개인정보 동의' 열에 남긴다).
     consent: $("#consent").checked,
     consentVersion: policyVersion(),
