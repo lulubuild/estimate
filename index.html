@@ -7,7 +7,7 @@
 <meta name="description" content="평형과 공사할 공간만 알려주시면 담당자가 견적을 준비해 연락드립니다.">
 <!-- 보안 P10(2026-09-30): 불러올 수 있는 곳을 정해 둔다 — 글꼴(jsDelivr) · 주소 검색(다음/카카오) · 접수(Apps Script)만.
      주소 검색 창이 안 뜨면 이 줄의 다음/카카오 주소를 먼저 확인한다.
-     F-14(2026-10-14): 스크립트는 같은 사이트 파일(app.js · room3d.js · three.min.js)만 — 페이지 안 글 스크립트('unsafe-inline')는 막는다.
+     F-14(2026-10-14): 스크립트는 같은 사이트 파일(plan.js · app.js)만 — 페이지 안 글 스크립트('unsafe-inline')는 막는다.
      다른 사이트가 이 페이지를 틀(iframe)에 넣으면 app.js가 보내기를 막는다(GitHub Pages는 frame-ancestors 머리를 못 단다). -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://t1.daumcdn.net https://*.daumcdn.net https://*.daum.net https://*.kakao.com https://*.kakaocdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob: https://*.daumcdn.net https://*.daum.net https://*.kakaocdn.net; connect-src https://script.google.com https://script.googleusercontent.com; frame-src https://*.daum.net https://*.daumcdn.net https://*.kakao.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -195,70 +195,32 @@ input[type="date"].input:not(.has-value) { color: var(--muted); }
 .chip[aria-pressed="true"] { border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel); }   /* 선택 = 파란 테두리 2px */
 
 /* 타일 공통 — 애플 스토어 구성 선택처럼 흰 타일, 고르면 파란 테두리 2px(자리 밀림 없게 안쪽 그림자) */
-.tile, .room-toggle {
+.tile {
   background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-tile); cursor: pointer;
   -webkit-tap-highlight-color: transparent; transition: border-color .15s, box-shadow .15s; text-align: left;
 }
-.tile:hover, .room-toggle:hover { border-color: var(--muted); }
-.tile[aria-pressed="true"], .room-toggle[aria-pressed="true"] { border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel); }
+.tile:hover { border-color: var(--muted); }
+.tile[aria-pressed="true"] { border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel); }
 /* 시공 범위 두 타일 */
 .tiles2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .tile { min-height: 56px; padding: 8px 14px; display: flex; flex-direction: column; justify-content: center; gap: 1px; }
 .tile b { font-size: 16px; font-weight: 600; }
 .tile span { font-size: 12px; color: var(--muted); }
 
-/* 공간 고르기 타일 */
-.rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, calc(50% - 4px)), 1fr)); gap: 8px; }
-.room-toggle { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; padding: 0 14px; font-size: 16px; font-weight: 600; }
-.room-toggle .dot { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); flex: none; display: grid; place-items: center; transition: all .15s; }
-.room-toggle[aria-pressed="true"] .dot { border-color: var(--sel); background: var(--sel); }
-.room-toggle[aria-pressed="true"] .dot::after { content: ""; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: translate(0, -1px) rotate(45deg); }
-.room-toggle .cnt { font-size: 14px; font-weight: 600; color: var(--sel); margin-left: auto; margin-right: 2px; }
-
-/* ── 단계 화면(2026-10-09 사용자 결정) — 기본 정보 → 공간 고르기 → 공간마다 한 페이지 → 사진 · 요청사항 · 동의.
-   한 화면에 정보가 많지 않게 공간을 먼저 고르고, 공간마다 페이지를 넘기며 상품을 고른다. 3D 도면은 늘 아래(넓은 화면은 오른쪽). ── */
+/* ── 단계 화면(2026-10-09 → 2026-10-24 지시서 1024-웹1) — 기본 정보 → 공사할 곳(집 구조 평면도 · 공간마다 공종 · 상품) → 사진 · 요청사항 · 동의. ── */
 .progress { height: 3px; }
 .progress i { display: block; height: 100%; width: 0; background: var(--sel); transition: width .3s ease; }
 @media (prefers-reduced-motion: reduce) { .progress i { transition: none; } }
 .step-title:focus { outline: none; }
 
-/* 공간 페이지 — 위 공간 줄(옆으로 밀기) · 지금 공간 = 파란 테두리, 상품을 고른 공간 = 파란 점 */
-.room-chips { display: flex; gap: 8px; overflow-x: auto; margin: 0 calc(-1 * var(--page-margin)) 20px; padding: 4px var(--page-margin) 6px;   /* 위 4px = 포커스 테두리(2px 띄움 + 2px) 자리 */
-  scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
-.room-chips::-webkit-scrollbar { display: none; }
-.room-chips .chip { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; }
-.room-chips .chip .ok { width: 7px; height: 7px; border-radius: 50%; background: var(--sel); flex: none; }
-.room-chips .chip.edit { color: var(--link); border-style: dashed; }
-.room-py { max-width: 240px; margin: 0 0 20px; }
 /* 공간 크기(크기 그룹 공간, 2026-10-10 사용자 결정) — 작음 · 보통 · 큼 타일(필수). 고른 크기 = 파란 테두리, 빠졌으면 빨간 테두리 */
-.room-size { margin: 18px 0 0; }
+.room-size { margin: 4px 0 6px; }
+.room-size .group-label { font-size: 14px; margin-bottom: 8px; }
 .tiles3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .room-size.need .tile:not([aria-pressed="true"]) { border-color: var(--danger); }
 /* 가구 길이(주방가구 · 빌트인장, 2026-10-10) — 펼친 공종 안 상품 아래(선택) */
-.t-len { max-width: 260px; margin: 12px 4px 0; }
+.t-len { max-width: 260px; margin: 10px 4px 2px; }
 
-/* 공종 카드(2026-10-10 사용자 결정) — 12칸 격자에 폰 2열 · 넓은 칸 3열. 마지막 줄은 남은 카드가 줄 폭을 나눠 채워 빈칸이 없다.
-   카드를 누르면 그 카드 줄 바로 아래에 상품 카드 칸이 줄 폭 전체로 펼쳐진다(팝업 대신 — 아래 3D 도면을 가리지 않게).
-   단일 선택 공종은 상품 1개를 고르면 접힌다. 칸 수(grid-column)는 renderTradeList가 정한다. */
-.trades { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; }
-.trades > .empty { grid-column: 1 / -1; }
-.trade { grid-column: span 6; display: flex; min-width: 0; border: 1px solid var(--line); border-radius: var(--r-tile); background: var(--surface); scroll-margin-top: 64px; transition: border-color .15s, box-shadow .15s, background-color .15s; }
-.trade.on { border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel); }
-.trade.need { border-color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); }
-.trade.open { background: var(--accent-soft); }
-.trade-head { position: relative; width: 100%; min-width: 0; min-height: 76px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px;
-  padding: 12px 34px 12px 14px; border: 0; border-radius: var(--r-tile); background: transparent; color: var(--ink); cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent; }
-.trade-head .t-name { font-size: 16px; font-weight: 600; line-height: 1.25; word-break: keep-all; }
-.trade-head .t-sub { max-width: 100%; font-size: 14px; line-height: 1.3; color: var(--muted); overflow-wrap: anywhere; word-break: keep-all;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.trade.on .t-sub { color: var(--sel); font-weight: 500; }
-.trade.need .t-sub { color: var(--danger); font-weight: 500; }
-.trade-head .t-arrow { position: absolute; top: 50%; right: 10px; width: 20px; margin-top: -10px; text-align: center; font-size: 20px; line-height: 20px; color: var(--muted); transform: rotate(90deg); transition: transform .15s; }
-.trade-head[aria-expanded="true"] .t-arrow { transform: rotate(-90deg); }
-.trade-panel { grid-column: 1 / -1; min-width: 0; padding: 12px 10px 14px; border-radius: var(--r-tile); background: var(--bg-alt); scroll-margin-top: 64px; }
-.trade-panel .t-title { margin: 0 4px 6px; font-size: 16px; font-weight: 600; }
-.trade-panel .t-hint { margin: 0 4px 10px; font-size: 14px; color: var(--muted); }
-.trade-panel .t-hint .t-mode { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; font-size: 12px; font-weight: 600; color: var(--sel); }
 .step-err { display: none; margin-top: 16px; padding: 14px 16px; border-radius: var(--r-tile); background: var(--danger-soft); color: var(--danger); font-size: 16px; word-break: keep-all; }
 .invalid > .step-err { display: block; }
 .step-err .btn { margin-top: 10px; }
@@ -272,44 +234,7 @@ input[type="date"].input:not(.has-value) { color: var(--muted); }
 .sum-row .v.bad { color: var(--danger); }
 .link-btn { flex: none; min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--link); font-size: 16px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 
-/* 3D 도면 — 폰 · 태블릿 세로: 화면 아래 고정(이전 · 다음 바 위, 접기 가능) / 넓은 화면: 오른쪽에 붙어 따라온다.
-   3D 파일(three.min.js · room3d.js)은 이 사이트 안의 파일 — 보안 정책(CSP)의 'self'로 읽혀 정책은 그대로.
-   도면을 펼쳐 둔 채 처음 보일 때 불러온다(F-21 — 접어 두면 600KB를 받지 않는다). */
-.dock { background: var(--bg-alt); }
-.dock-in { max-width: 680px; margin: 0 auto; }
-.dock-head { display: flex; align-items: center; gap: 4px; min-height: 44px; }
-.dock-title { flex: 1; min-width: 0; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dock-title b { font-weight: 600; }
-.dock-title span { color: var(--muted); font-size: 14px; margin-left: 6px; }
-.dock-btn { flex: none; min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: var(--link); font-size: 14px; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
-.room3d-opts { display: none; flex-wrap: wrap; gap: 8px 16px; padding: 4px 0 8px; }
-.dock.opts-open .room3d-opts { display: flex; }
-.room3d-opts .chip { padding: 0 14px; font-size: 14px; }
-@media (max-width: 419px) { .room3d-opts .chip small { display: none; } }   /* 좁은 폰은 2베이 · 3베이 · 4베이만 — 한 줄에 */
-.room3d-stage { position: relative; height: clamp(140px, 24vh, 230px); border-radius: var(--r-tile); overflow: hidden;
-  touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }   /* 도면 위에서는 끄는 대로 상하좌우 돌리기(페이지는 도면 밖을 밀어서) */
-.room3d-stage.drag { cursor: grabbing; }
-.room3d-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.room3d-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 16px; text-align: center; font-size: 14px; color: var(--muted); }
-/* 범례 — 폰은 한 줄(옆으로 밀기), 넓은 화면은 여러 줄 */
-.room3d-legend { display: flex; gap: 6px 16px; padding: 6px 0 2px; font-size: 14px; line-height: 1.4; word-break: keep-all;
-  flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
-.room3d-legend::-webkit-scrollbar { display: none; }
-.room3d-legend .muted { color: var(--muted); }
-.room3d-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
-.room3d-note { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
-.dock .room3d-note { display: none; }
-.dock.collapsed .room3d-stage, .dock.collapsed .room3d-legend, .dock.collapsed .room3d-opts { display: none; }
 .empty { padding: 24px 18px; border-radius: var(--r-tile); background: var(--bg-alt); color: var(--muted); font-size: 16px; text-align: center; }
-
-/* 상품 카드 — 공종 카드를 누르면 보인다. 공종 카드처럼 12칸 격자 2 · 3열, 마지막 줄은 남은 카드가 채운다(빈칸 없음). */
-.product-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; }
-.product-chip { grid-column: span 6; height: 100%; width: 100%; min-width: 0; min-height: 64px; padding: 10px 12px; border-radius: var(--r-tile); border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; font-size: 14px; font-weight: 500; line-height: 1.25; display: flex; flex-direction: column; justify-content: center; -webkit-tap-highlight-color: transparent; transition: border-color .15s, box-shadow .15s; }
-.product-chip:hover { border-color: var(--muted); }
-.product-chip > span { word-break: keep-all; overflow-wrap: anywhere; }
-/* 규격이 긴 자재(욕실 도기 · 조명)는 두 줄까지만 — 전체는 마우스를 올리면(title) 보인다 */
-.product-chip small { font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.product-chip[aria-pressed="true"] { border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel); background: var(--accent-soft); }
 
 /* 사진 */
 .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
@@ -352,10 +277,8 @@ details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
 
 .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
-/* 아래 고정 묶음(폰 · 태블릿 세로) — 3D 도면 + 이전 · 다음 바. 높이는 JS가 재서 --side-h로(본문이 가리지 않게). */
+/* 아래 고정 묶음 — 이전 · 다음 바(공사할 곳은 위에 '고른 공간 · 공사' 한 줄). 높이는 JS가 재서 --side-h로(본문이 가리지 않게). */
 .side { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; }
-.dock { border-top: 1px solid var(--line-soft); padding: 0 var(--page-margin) 4px; }
-.side.typing .dock { display: none; }   /* 폰에서 글자를 입력하는 동안(키보드) — 도면은 잠깐 숨긴다 */
 .bar {
   background: var(--glass); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
   border-top: 1px solid var(--line-soft);
@@ -363,35 +286,191 @@ details.policy th { width: 30%; color: var(--ink); font-weight: 600; }
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .bar { background: var(--bg); } }
 .bar-in { max-width: 680px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+.bar-note { max-width: 680px; margin: 0 auto 8px; display: flex; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 600; }
+.bar-note .warn { color: var(--warn); }
 .bar .btn { min-height: 48px; font-size: 18px; }   /* 큰 단추(이전 · 다음 · 보내기 · 완료 화면) = 48 · 18 */
 #prevBtn { flex: none; min-width: 92px; }
 #nextBtn, #submitBtn { flex: 1; min-width: 0; }
 #nextBtn span { overflow: hidden; text-overflow: ellipsis; }
 body { padding-bottom: calc(var(--side-h, 76px) + 16px); }
 
-/* ── 태블릿 가로 · PC(1024~): 왼쪽 입력 · 오른쪽 3D 도면 + 이전 · 다음(따라온다) ── */
+/* ── 태블릿 가로 · PC(1024~) ──
+   공사할 곳: 왼쪽 평면도 · 오른쪽 공간 판 + 이전 · 다음(따라온다). 그 밖 단계: 한 열(입력하기 좋은 폭) + 아래 바. */
 @media (min-width: 1024px) {
-  body { padding-bottom: 0; }
-  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 48px; align-items: start; }
-  .layout.is-done { grid-template-columns: minmax(0, 1fr); }
-  .side { position: sticky; top: 76px; margin: 40px 0 0; left: auto; right: auto; bottom: auto; z-index: 1; }
-  .dock { border: 0; border-radius: var(--r-card); padding: 8px 16px 14px; }
-  .dock-in { max-width: none; }
-  #dockToggle { display: none; }
-  .dock .room3d-opts { display: flex; }
-  #dockPlanBtn { display: none; }
-  .room3d-stage { height: clamp(200px, calc(100vh - 500px), 340px); }   /* 노트북(768px 높이)에서도 맨 아래까지 내려도 제목 · 이전 · 다음이 화면 안에 */
-  .room3d-legend { flex-wrap: wrap; white-space: normal; overflow: auto; max-height: 7.5em; }   /* 네 줄까지(14px — 8단계 점검) */
-  .dock .room3d-note { display: block; }
-  .bar { position: static; padding: 0; margin-top: 14px; background: transparent; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
-  .bar-in { max-width: none; }
-  .bar .btn { min-height: 52px; }
+  .layout:not(.plan-on) .main { max-width: 760px; margin: 0 auto; }
+  .layout.plan-on { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 40px; align-items: start; }
+  .layout.is-done { display: block; }
+  .layout.plan-on .side { position: sticky; top: 76px; left: auto; right: auto; bottom: auto; z-index: 1; margin: 40px 0 0;
+    height: calc(100vh - 96px); display: flex; flex-direction: column; background: var(--bg-alt); border-radius: var(--r-card); overflow: hidden; }
+  .layout.plan-on .bar { position: static; padding: 12px 18px 18px; margin: 0; background: transparent; border-top: 1px solid var(--line-soft);
+    -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .layout.plan-on .bar-in, .layout.plan-on .bar-note { max-width: none; }
+  .layout.plan-on .bar .btn { min-height: 52px; }
 }
 
 /* ── 폰(~599) ── */
 @media (max-width: 599px) {
-  .product-chip { padding: 10px; }
+  .plan-tools .tools { margin-left: 0; }
+  .plan-cards { grid-template-columns: minmax(0, 1fr); }
+  .plan-card { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 14px; }
+  .plan-card .plan-mini { width: 120px; height: 84px; }
+  .pp-title h3 { font-size: 20px; }
 }
+
+/* ── 공사할 곳 — 집 구조 평면도(2026-10-24 지시서 1024-웹1 · 시안 89-1) ──
+   앱 '견적 작성 › 평면도'와 같은 모양: 격자 위 도형 · 고르면 파란 테두리 · 손잡이 8개 · 위 [90° · 지우기] · 끄는 동안 놓일 칸(겹치면 주황).
+   공사를 고른 공간 = 옅은 파랑, 확인할 곳(크기 · 상품) = 주황. 고객 도형은 대략의 구조(축척 없음). */
+.plan-step .sec-desc { margin-top: -12px; }
+.plan-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 6px; }
+.plan-tools .tools { display: flex; gap: 6px; margin-left: auto; }
+.seg { display: inline-flex; padding: 3px; border-radius: 12px; background: var(--bg-alt); gap: 2px; }
+.seg button { min-height: 40px; padding: 0 16px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: 16px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .14); }
+.tool-btn { min-height: 40px; padding: 0 14px; border: 0; border-radius: 980px; background: var(--fill); color: var(--link); font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+.tool-btn.icon { min-width: 44px; padding: 0; font-size: 18px; }
+.tool-btn.plain { background: transparent; color: var(--muted); }
+.tool-btn.warn { color: var(--warn); }
+.tool-btn[disabled] { opacity: .4; cursor: default; }
+.plan-ask { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 10px 12px; border-radius: var(--r-tile); background: var(--bg-alt); font-size: 14px; }
+.plan-ask span { color: var(--muted); flex: 1 1 160px; }
+.plan-note { min-height: 36px; display: flex; align-items: center; font-size: 14px; color: var(--muted); margin: 0 0 6px; }
+.plan-note .pill { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 4px 0 14px; border-radius: 980px; background: #2C2C2E; color: #F5F5F7; font-weight: 500; }   /* 밝기와 상관없이 짙은 판(앱 5초 되돌리기 줄과 같게) */
+.plan-note .pill button { min-height: 32px; padding: 0 10px; border: 0; background: transparent; color: #2997FF; font-weight: 600; font-size: 14px; cursor: pointer; }
+.plan-label { margin: 12px 0 8px; font-size: 14px; font-weight: 600; color: var(--muted); }
+.plan-label.inline { margin: 0 4px 0 0; }
+.plan-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.plan-chips .chip { min-height: 44px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; }
+.plan-chips .chip small { margin: 0; font-weight: 500; }
+.chip.unplaced { color: var(--sel); border-color: var(--sel); background: var(--accent-soft); }
+.chip.kind { border-radius: var(--r-tile); }
+.chip.work { border-color: var(--sel); background: var(--accent-soft); }
+.chip.work small { color: var(--sel); }
+.chip.warn { border-color: var(--warn); }
+.chip.warn small { color: var(--warn); }
+.plan-box { margin-bottom: 14px; }
+.plan-box .plan-label:first-child { margin-top: 0; }
+.plan-board { width: 100%; min-width: 0; }
+.plan-grid { position: relative; margin: 0 auto; border-radius: 8px; background-color: var(--bg-alt); touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.plan-grid.arrange { touch-action: none; outline: 1px solid var(--line-soft);
+  background-image: linear-gradient(var(--line-soft) 1px, transparent 1px), linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+  background-size: var(--cell) var(--cell); }
+.shape { position: absolute; margin: 0; padding: 5px 7px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; overflow: hidden; cursor: pointer; font: inherit;
+  -webkit-tap-highlight-color: transparent; transition: border-color .15s, background-color .15s, box-shadow .15s; }
+.shape .s-name { max-width: 100%; font-size: 14px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shape .s-tag { max-width: 100%; font-size: 12px; line-height: 1.25; color: var(--muted); overflow: hidden; word-break: keep-all; overflow-wrap: anywhere; }
+.shape.tiny { padding: 3px 4px; }
+.shape.tiny .s-name { font-size: 12px; }
+.shape.tiny .s-tag { display: none; }
+.shape.unlinked { border-style: dashed; background: transparent; color: var(--muted); }
+.shape.work { border-color: var(--sel); background: var(--accent-soft); }
+.shape.work .s-tag { color: var(--sel); font-weight: 500; }
+.shape.warn { border-color: var(--warn); }
+.shape.warn .s-tag { color: var(--warn); font-weight: 500; }
+.shape.sel { border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel), 0 0 0 4px var(--focus-ring); z-index: 2; }
+.plan-grid.arrange .shape { cursor: grab; touch-action: none; }
+.plan-grid.dragging .shape.lift { z-index: 3; cursor: grabbing; opacity: .92; box-shadow: 0 8px 24px rgba(0, 0, 0, .22); transition: none; }
+.plan-grid.dragging .plan-float { display: none; }
+.plan-ghost { position: absolute; z-index: 1; border-radius: 6px; border: 2px dashed var(--sel); background: var(--accent-soft); pointer-events: none; }
+.plan-ghost.bad { border-color: var(--warn); background: rgba(255, 159, 69, .18); }
+.plan-h { position: absolute; z-index: 4; width: 32px; height: 32px; margin: -16px 0 0 -16px; padding: 0; border: 0; background: transparent; touch-action: none; cursor: nwse-resize; }
+.plan-h::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: #FFFFFF; border: 2px solid var(--sel); box-shadow: 0 1px 3px rgba(0, 0, 0, .3); }
+.plan-h[data-h="n"], .plan-h[data-h="s"] { cursor: ns-resize; }
+.plan-h[data-h="e"], .plan-h[data-h="w"] { cursor: ew-resize; }
+.plan-h[data-h="ne"], .plan-h[data-h="sw"] { cursor: nesw-resize; }
+/* 고른 도형 위 [90° · 지우기] — 밝기와 상관없이 짙은 판(앱 1494와 같게) */
+.plan-float { position: absolute; z-index: 5; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 12px; background: #2C2C2E; color: #F5F5F7; box-shadow: 0 6px 20px rgba(0, 0, 0, .3); white-space: nowrap; }
+.plan-float button { min-height: 36px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.plan-float button.del { color: #FF9F45; }
+.plan-float button.del-go { background: #FF9F45; color: #1D1D1F; }
+.plan-float i { width: 1px; height: 18px; background: #48484A; }
+.plan-float .q { padding: 0 6px 0 8px; font-size: 14px; }
+.plan-extra { margin-top: 12px; }
+/* 공용(전체) 띠 — 앱 1484와 같게: 점선 테두리 · 고르면 실선. '공용(전체) · 바깥 테두리 · 집 전체' + 담긴 것 꼬리표 */
+.plan-band { width: 100%; min-height: 56px; display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 14px; border-radius: var(--r-tile);
+  border: 1.5px dashed var(--line); background: var(--bg-alt); color: var(--ink); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.band-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.band-top b { flex: none; font-size: 16px; font-weight: 700; }
+.band-top .t { flex: 1 1 auto; min-width: 0; font-size: 14px; color: var(--muted); }
+.band-top .r { flex: none; margin-left: auto; font-size: 14px; font-weight: 600; color: var(--sel); }
+.band-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.band-tags .tag { padding: 2px 8px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line-soft); font-size: 12px; color: var(--ink); }
+.plan-band.work { border-color: var(--sel); background: var(--accent-soft); }
+.plan-band.warn { border-color: var(--warn); }
+.plan-band.warn .band-top .r { color: var(--warn); }
+.plan-band.sel { border-style: solid; border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel), 0 0 0 4px var(--focus-ring); }
+.plan-step .step-err { margin-top: 14px; }
+/* 처음 — 집 크기 · 기본 평면 카드 */
+.plan-sizes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.plan-sizes .chip { min-height: 44px; font-size: 14px; }
+.plan-hint { margin: 0 0 12px; font-size: 14px; color: var(--muted); }
+.plan-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 8px; }
+.plan-card { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px; border-radius: var(--r-card); border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.plan-card:hover { border-color: var(--muted); }
+.plan-card b { font-size: 16px; font-weight: 600; margin-top: 6px; }
+.plan-card > span { font-size: 14px; color: var(--muted); }
+.plan-mini { position: relative; width: 176px; height: 120px; border-radius: 8px; background: var(--bg-alt); }
+.plan-mini i { position: absolute; border-radius: 2px; background: var(--surface); border: 1px solid var(--line); box-sizing: border-box; }
+.plan-mini.empty { background-image: linear-gradient(var(--line-soft) 1px, transparent 1px), linear-gradient(90deg, var(--line-soft) 1px, transparent 1px); background-size: 12px 12px; }
+.plan-skip { margin-top: 10px; }
+/* 공간 판 — 폰 · 태블릿 세로는 도면 아래 연회색 판, 넓은 화면은 오른쪽(이전 · 다음 위, 판 안에서 굴림) */
+.plan-panel { display: flex; flex-direction: column; gap: 8px; }
+.plan-panel > * { flex-shrink: 0; }   /* 판 안에서 굴릴 때 줄이 눌려 납작해지지 않게 */
+.plan-panel.inline { margin-top: 18px; padding: 16px; border-radius: var(--r-card); background: var(--bg-alt); scroll-margin-top: 64px; }
+.side > .plan-panel { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 18px 16px; overscroll-behavior: contain; }
+.pp-head { display: flex; align-items: flex-start; gap: 8px; }
+.pp-title { flex: 1; min-width: 0; }
+.pp-title h3 { margin: 0; font-size: 24px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; word-break: keep-all; }
+.pp-title p { margin: 4px 0 0; font-size: 14px; color: var(--muted); word-break: keep-all; }
+.pp-head .tool-btn { flex: none; margin-top: 2px; }
+.pp-text { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.55; word-break: keep-all; }
+.pp-text.small { font-size: 12px; }
+.pp-note { margin: 2px 0 0; padding: 10px 12px; border-radius: var(--r-tile); background: var(--surface); font-size: 14px; color: var(--muted); }
+.pp-err { padding: 12px 14px; border-radius: var(--r-tile); background: var(--danger-soft); color: var(--danger); font-size: 14px; word-break: keep-all; }
+.pp-go { align-self: flex-start; margin-top: 6px; }
+.pp-py { max-width: 240px; margin: 2px 0 4px; }
+.pp-steppers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.stepper { display: flex; align-items: center; gap: 4px; min-height: 52px; padding: 0 6px 0 12px; border-radius: var(--r-tile); background: var(--surface); }
+.stepper span { flex: 1; font-size: 14px; color: var(--muted); }
+.stepper b { width: 30px; text-align: center; font-size: 16px; }
+.stepper button { width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--fill); color: var(--ink); font-size: 18px; cursor: pointer; }
+.stepper button[disabled] { opacity: .35; cursor: default; }
+.pp-acts { display: flex; gap: 8px; margin-top: 4px; }
+.pp-acts .btn { flex: 1; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--link); }
+.pp-acts .btn.warn { color: var(--warn); }
+.pp-work { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 4px; padding: 12px 14px; border-radius: var(--r-tile); background: var(--surface); font-size: 14px; }
+.pp-work span { color: var(--muted); }
+.pp-work b { flex: 1 1 140px; color: var(--sel); font-weight: 500; }
+.pp-room { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 14px; border-radius: var(--r-tile); border: 1px solid var(--line-soft); background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; }
+.pp-room b { flex: none; font-size: 16px; }
+.pp-room span { flex: 1; min-width: 0; font-size: 14px; color: var(--sel); word-break: keep-all; }
+.pp-room.warn span { color: var(--warn); }
+.pp-room i { font-style: normal; color: var(--muted); }
+/* 공종 줄 — 누르면 그 아래 상품 목록(앱 1492 · 1496) */
+.tr { border-radius: var(--r-tile); border: 1px solid var(--line-soft); background: var(--surface); overflow: hidden; scroll-margin-top: 72px; }
+.tr.on { border-color: var(--sel); }
+.tr.need { border-color: var(--danger); }
+.tr-head { width: 100%; min-height: 56px; display: flex; align-items: center; gap: 10px; padding: 8px 14px; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.tr-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tr-txt b { font-size: 16px; font-weight: 600; }
+.tr-sub { font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr.on .tr-sub, .tr-right { color: var(--sel); }
+.tr.need .tr-sub { color: var(--danger); }
+.tr-right { flex: none; font-size: 14px; font-weight: 600; }
+.tr:not(.on) .tr-right { color: var(--muted); }
+.tr-body { display: flex; flex-direction: column; gap: 2px; padding: 0 8px 10px; }
+.tr-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 0 6px 6px; font-size: 14px; color: var(--muted); }
+.tr-top .tool-btn { margin-left: auto; min-height: 36px; }
+.t-mode { display: inline-block; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; font-size: 12px; font-weight: 600; color: var(--sel); }
+.pr { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 8px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pr:hover { background: var(--bg-alt); }
+.pr[aria-pressed="true"] { background: var(--accent-soft); }
+.pr .mark { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #FFFFFF; }
+.pr[aria-pressed="true"] .mark { border-color: var(--sel); background: var(--sel); }
+.pr-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pr-txt > span { font-size: 14px; font-weight: 500; line-height: 1.3; word-break: keep-all; overflow-wrap: anywhere; }
+.pr-txt small { font-size: 12px; color: var(--muted); line-height: 1.3; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+:where(.shape, .plan-band, .tr-head, .pr):focus-visible { outline: 2px solid var(--sel); outline-offset: 2px; }
 
 /* 완료 화면 */
 .done { text-align: center; padding: 72px 0 40px; }
@@ -419,9 +498,8 @@ body { padding-bottom: calc(var(--side-h, 76px) + 16px); }
 .chip small { margin-left: 6px; font-size: 12px; font-weight: 500; color: var(--muted); }
 
 .toast { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(12px); background: var(--ink); color: var(--bg); padding: 12px 20px; border-radius: 980px; font-size: 16px; opacity: 0; pointer-events: none; transition: all .2s; z-index: 40; max-width: calc(100% - 32px); text-align: center; }
-.toast { bottom: calc(var(--side-h, 76px) + 12px); }
+.toast { bottom: calc(var(--side-h, 76px) + 12px + env(safe-area-inset-bottom)); }
 .toast.on { opacity: 1; transform: translateX(-50%); }
-@media (min-width: 1024px) { .toast { bottom: calc(24px + env(safe-area-inset-bottom)); } }   /* 넓은 화면은 아래 바가 없다 */
 .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 footer { margin-top: 24px; background: var(--bg-alt); color: var(--muted); font-size: 12px; }
@@ -537,31 +615,19 @@ footer .sep { color: var(--line); }
 
       </div>
 
-      <!-- ③ 공간 고르기 — 고른 공간마다 다음 화면에서 한 페이지씩 상품을 고른다 -->
-      <section class="step section" data-step="rooms" data-field="rooms" hidden>
-        <div class="sec-head"><h2 class="sec-title step-title" tabindex="-1">공사할 공간. <span>필요한 공간을 모두 골라 주세요.</span></h2></div>
-        <p class="sec-desc" id="roomsDesc">다음 화면부터 고른 공간마다 한 페이지씩 상품을 고릅니다.</p>
-        <div class="rooms" id="roomToggles" role="group" aria-label="공간 선택"></div>
-        <div class="step-err" id="roomsErr" role="alert">공사할 공간을 하나 이상 골라 주세요.</div>
-      </section>
-
-      <!-- ③-1 공간 페이지(공간마다) — 공종을 누르면 그 자리에서 상품이 펼쳐진다. 고르면 아래 3D 도면의 그 자리가 깜빡인다 -->
-      <section class="step section" data-step="room" data-field="room" id="roomStep" hidden>
-        <div class="room-chips" id="roomChips" role="group" aria-label="고른 공간"></div>
-        <div class="sec-head"><h2 class="sec-title step-title" tabindex="-1" id="roomTitle"></h2></div>
-        <label class="fl with-sfx room-py" id="roomPyWrap" hidden>
-          <input class="input" id="roomPy" inputmode="decimal" maxlength="5" placeholder=" ">
-          <span class="fl-label">이 공간 평형 (모르면 비워 두세요)</span>
-          <span class="sfx">평</span>
-        </label>
-        <div class="trades" id="tradeList"></div>
-        <!-- 공간 크기(크기 그룹에 든 공간 — 타일 등 크기를 묻는 공종의 상품을 고르면 보인다, 필수). 앱이 공간 치수(물량 산출 탭 '공간 크기')로 바꾼다 -->
-        <div class="room-size" id="roomSizeWrap" hidden>
-          <span class="group-label" id="roomSizeLabel">공간 크기 <span class="opt">(필수 · 수량 계산에 써요)</span></span>
-          <div class="tiles3" id="roomSizeTiles" role="group" aria-labelledby="roomSizeLabel"></div>
-          <div class="hint" id="roomSizeHint"></div>
-        </div>
-        <div class="step-err" id="roomErr" role="alert"><span id="roomErrText"></span><div><button type="button" class="btn" id="roomRemoveBtn" hidden>이 공간 빼기</button></div></div>
+      <!-- ② 공사할 곳 — 집 구조 평면도(앱 '견적 작성 › 평면도'와 같은 도형 방식, 2026-10-24 지시서 1024-웹1 · 시안 89-1).
+           도형은 대략의 집 구조(업체 판단용) — 수량은 평형 · 공간 크기로 앱이 계산한다. 그리기 · 고르기는 plan.js -->
+      <section class="step section plan-step" data-step="plan" data-field="plan" id="planStep" hidden>
+        <div class="sec-head"><h2 class="sec-title step-title" tabindex="-1">공사할 곳. <span>집 구조를 대략 그리고, 공간마다 공사를 골라 주세요.</span></h2></div>
+        <p class="sec-desc" id="planDesc"></p>
+        <div class="plan-tools" id="planTools" hidden></div>
+        <div class="plan-note" id="planNote" aria-live="polite"></div>
+        <div class="plan-box" id="planBox" hidden></div>
+        <div class="plan-board" id="planBoard"></div>
+        <div class="plan-extra" id="planExtra" hidden></div>
+        <div class="step-err" id="planErr" role="alert"></div>
+        <!-- 공간 판 — 폰 · 태블릿 세로는 여기(도면 아래), 넓은 화면은 오른쪽(이전 · 다음 위)으로 옮겨진다 -->
+        <div id="planPanelSlot"><div class="plan-panel" id="planPanel" hidden></div></div>
       </section>
 
       <!-- 마지막 단계 — 사진 · 요청사항 · 요청 내용 확인 · 동의 · 보내기 -->
@@ -575,10 +641,10 @@ footer .sep { color: var(--line); }
             <button type="button" class="ph-add" id="phAdd"><span><b>+</b>사진 추가</span></button>
           </div>
           <input type="file" id="photoInput" accept="image/*" multiple hidden>
-          <div class="hint">평면도나 현재 모습 사진이 있으면 더 정확한 견적을 드릴 수 있어요.</div>
+          <div class="hint">현재 모습 사진이 있으면 더 정확한 견적을 드릴 수 있어요.<span id="planPhotoNote" hidden> 그리신 집 구조 그림 1장이 함께 보내져요.</span></div>
         </div>
         <label class="fl ta">
-          <textarea class="input" id="note" maxlength="1000" placeholder=" "></textarea>
+          <textarea class="input" id="note" maxlength="879" placeholder=" "></textarea>
           <span class="fl-label">요청사항 (선택)</span>
           <div class="hint">원하는 스타일, 거주 중 공사 여부, 꼭 바꾸고 싶은 부분 등을 자유롭게 적어 주세요.</div>
         </label>
@@ -609,7 +675,7 @@ footer .sep { color: var(--line); }
           <details class="policy">
             <summary>수집 항목 자세히 보기</summary>
             <table>
-              <tr><th>수집 항목</th><td>이름, 연락처<span id="emailItem" hidden>, 이메일(선택 — 적은 경우에만)</span>, 현장 주소·우편번호, 평형, 공간별 필요 공사, 공사·완공 희망일, 현장 사진, 요청사항<span id="deviceItem" hidden>, 기기 구분용 임의 번호(이 브라우저에 저장 · 이름·연락처와 무관한 무작위 값)</span></td></tr>
+              <tr><th>수집 항목</th><td>이름, 연락처<span id="emailItem" hidden>, 이메일(선택 — 적은 경우에만)</span>, 현장 주소·우편번호, 평형, 공간별 필요 공사, 집 구조 그림(대략), 공사·완공 희망일, 현장 사진, 요청사항<span id="deviceItem" hidden>, 기기 구분용 임의 번호(이 브라우저에 저장 · 이름·연락처와 무관한 무작위 값)</span></td></tr>
               <tr><th>이용 목적</th><td>인테리어 견적 산출 및 상담 연락<span id="emailPurpose" hidden>, 견적서 발송(문자 · 이메일)</span>, 허위·반복 접수 방지 (Google 시트·드라이브에 보관 — 국외 이전 포함, 처리방침 참고)</td></tr>
               <tr><th>보유 기간</th><td id="retentionText">문의일로부터 1년 (계약 시 관련 법령에 따른 기간)</td></tr>
               <tr><th>동의 거부</th><td>동의하지 않으실 수 있으며, 이 경우 온라인 견적 요청을 할 수 없습니다.</td></tr>
@@ -664,34 +730,10 @@ footer .sep { color: var(--line); }
   </div>
   </main>
 
-  <!-- 3D 도면(폰 · 태블릿 세로 = 화면 아래, 넓은 화면 = 오른쪽) + 이전 · 다음 -->
-  <aside class="side" id="side" aria-label="완성 모습 미리보기 · 이동">
-    <div class="dock" id="room3d" hidden>
-      <div class="dock-in">
-        <div class="dock-head">
-          <div class="dock-title"><b>완성 모습</b><span id="dockRoom"></span></div>
-          <button type="button" class="dock-btn" id="dockPlanBtn" aria-expanded="false">3베이 · 비확장</button>
-          <button type="button" class="dock-btn" id="dockToggle" aria-expanded="true">접기</button>
-        </div>
-        <div class="room3d-opts">
-          <div class="chips" role="group" aria-label="도면 구조" id="room3dPlans">
-            <button type="button" class="chip" data-plan="2bay" aria-pressed="false">2베이<small>24평형</small></button>
-            <button type="button" class="chip" data-plan="3bay" aria-pressed="true">3베이<small>32평형</small></button>
-            <button type="button" class="chip" data-plan="4bay" aria-pressed="false">4베이<small>42평형</small></button>
-          </div>
-          <div class="chips" role="group" aria-label="발코니" id="room3dModes">
-            <button type="button" class="chip" data-mode="b" aria-pressed="true">비확장</button>
-            <button type="button" class="chip" data-mode="e" aria-pressed="false">확장형</button>
-          </div>
-        </div>
-        <div class="room3d-stage" id="room3dStage" role="img" aria-label="완성 모습 미리보기">
-          <div class="room3d-msg" id="room3dMsg">미리보기를 준비하고 있어요.</div>
-        </div>
-        <div class="room3d-legend" id="room3dLegend"></div>
-        <p class="room3d-note">가까운 구조(베이)의 대표 도면으로 보여 드리는 그림이에요. 실제 구조와 시공 범위는 상담 때 확정합니다. 끌어서 위아래 · 좌우로 돌려 볼 수 있어요.</p>
-      </div>
-    </div>
+  <!-- 이전 · 다음(폰 · 태블릿 세로 · 넓은 화면의 기본 정보 · 마무리 = 화면 아래, 넓은 화면의 공사할 곳 = 오른쪽 — 공간 판 아래) -->
+  <aside class="side" id="side" aria-label="이동">
     <div class="bar" id="bar">
+      <div class="bar-note" id="barNote" hidden><span id="barNoteText"></span><span class="warn" id="barNoteWarn"></span></div>
       <div class="bar-in">
         <button type="button" class="btn" id="prevBtn" hidden>이전</button>
         <button type="button" class="btn primary" id="nextBtn"><span>다음</span></button>
@@ -714,6 +756,7 @@ footer .sep { color: var(--line); }
 </div>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="app.js?v=2026-10-20"></script>
+<script src="plan.js?v=2026-10-24"></script>
+<script src="app.js?v=2026-10-24"></script>
 </body>
 </html>
