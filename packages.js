@@ -5,10 +5,11 @@
      공종 이름이 다르면(예: 마루 → 바닥재) 그 이름을 가진 공종이 하나뿐일 때만 그 공종으로 본다.
    · 이름이 하나라도 안 맞거나 덧방 컨셉에 대형 타일(긴 변 600mm 넘음)이 있으면 그 컨셉은 웹에서 숨는다(pkg.js).
    · 가격 없음(웹 가격 없음 · 표시광고법). 사진 없음(색 칩만).
-   · 고칠 때 index.html의 packages.js?v= 값을 바꾼다. */
+   · 고칠 때 index.html의 packages.js?v= 값을 바꾼다.
+   · 2026-11-05(사장님 결정 추천 A): 화장실 4컨셉 '천장 돔 시공' 뺌(천장은 견적 때) · 주방 '기본 싱크대' = 실서버 '싱크대 기본 구성 (1mm 당)' 하나(벽타일은 견적 때). */
 const PACKAGES_V1 = {
   "v": 1,
-  "rev": "2026-11-04",
+  "rev": "2026-11-05",
   "tiers": [
     {
       "id": "basic",
@@ -27,10 +28,9 @@ const PACKAGES_V1 = {
             "items": [{ "trade": "마루", "name": "나투스강 7.5T 강마루", "qty": null }], "labor": null }
         ]},
         { "id": "kitchen", "name": "주방가구", "target": "주방", "method": null, "concepts": [
-          { "id": "common-kitchen-basic", "name": "기본 싱크대", "star": true, "desc": "상 · 하부장 + 상판 · 주방 벽타일",
+          { "id": "common-kitchen-basic", "name": "기본 싱크대", "star": true, "desc": "상 · 하부장 + 대리석 상판 · 후드 · 수전",
             "swatch": ["#F2F2F0", "#CFCFCB", "#8E8E8A"],
-            "items": [{ "trade": "제작가구", "name": "주방가구 일체 (상·하부장+상판)", "qty": null },
-                      { "trade": "타일", "name": "주방 벽타일 시공", "qty": null }], "labor": null }
+            "items": [{ "trade": "제작가구", "name": "싱크대 기본 구성 (1mm 당)", "qty": null }], "labor": null }
         ]},
         { "id": "bath", "name": "화장실", "target": "욕실", "method": "덧방", "concepts": [
           { "id": "basic-bath-white", "name": "화이트 클린", "star": true, "desc": "화이트 유광 벽 · 300×600",
@@ -40,16 +40,14 @@ const PACKAGES_V1 = {
                       { "trade": "욕실", "name": "사각 반다리 세면기 CL-370", "qty": null },
                       { "trade": "욕실", "name": "모닝 4인치 세면수전 HY-319", "qty": null },
                       { "trade": "욕실", "name": "모닝 샤워수전 HY-119", "qty": null },
-                      { "trade": "욕실", "name": "CC-766 투피스 양변기", "qty": null },
-                      { "trade": "목공", "name": "천장 돔 시공", "qty": null }], "labor": null },
+                      { "trade": "욕실", "name": "CC-766 투피스 양변기", "qty": null }], "labor": null },
           { "id": "basic-bath-gray", "name": "웜 그레이", "star": false, "desc": "진그레이 유광 벽 · 논슬립 바닥",
             "swatch": ["#8A8784", "#6B6966", "#3F3E3C"],
             "items": [{ "trade": "타일", "name": "CW 7003 진그레이 유광 서브웨이 벽타일 (300×600)", "qty": null },
                       { "trade": "타일", "name": "GGK9394 욕실 바닥 논슬립 (300×300)", "qty": null },
                       { "trade": "욕실", "name": "아르노 라운드 반다리 세면기 CL-384", "qty": null },
                       { "trade": "욕실", "name": "세면·샤워 겸용 수전 DL-YB6A15", "qty": null },
-                      { "trade": "욕실", "name": "CC-766 투피스 양변기", "qty": null },
-                      { "trade": "목공", "name": "천장 돔 시공", "qty": null }], "labor": null }
+                      { "trade": "욕실", "name": "CC-766 투피스 양변기", "qty": null }], "labor": null }
         ]}
       ]
     },
@@ -73,10 +71,9 @@ const PACKAGES_V1 = {
             "items": [{ "trade": "마루", "name": "에디톤 스톤 5T (450×900)", "qty": null }], "labor": null }
         ]},
         { "id": "kitchen", "name": "주방가구", "target": "주방", "method": null, "concepts": [
-          { "id": "common-kitchen-basic", "name": "기본 싱크대", "star": true, "desc": "상 · 하부장 + 상판 · 주방 벽타일",
+          { "id": "common-kitchen-basic", "name": "기본 싱크대", "star": true, "desc": "상 · 하부장 + 대리석 상판 · 후드 · 수전",
             "swatch": ["#F2F2F0", "#CFCFCB", "#8E8E8A"],
-            "items": [{ "trade": "제작가구", "name": "주방가구 일체 (상·하부장+상판)", "qty": null },
-                      { "trade": "타일", "name": "주방 벽타일 시공", "qty": null }], "labor": null }
+            "items": [{ "trade": "제작가구", "name": "싱크대 기본 구성 (1mm 당)", "qty": null }], "labor": null }
         ]},
         { "id": "bath", "name": "화장실", "target": "욕실", "method": "철거", "concepts": [
           { "id": "premium-bath-stone", "name": "스톤 샤워", "star": true, "desc": "포세린 600×1200 · 탑볼 세면기",
@@ -85,16 +82,14 @@ const PACKAGES_V1 = {
                       { "trade": "타일", "name": "LECCE 01 라이트그레이 포세린 (600×600)", "qty": null },
                       { "trade": "욕실", "name": "시그니처 탑볼 세면기 CCAS0628", "qty": null },
                       { "trade": "욕실", "name": "리비어 원홀 세면수전 FA1614", "qty": null },
-                      { "trade": "욕실", "name": "보스톤 원피스 양변기 C209300C", "qty": null },
-                      { "trade": "목공", "name": "천장 돔 시공", "qty": null }], "labor": null },
+                      { "trade": "욕실", "name": "보스톤 원피스 양변기 C209300C", "qty": null }], "labor": null },
           { "id": "premium-bath-beige", "name": "웜 베이지", "star": false, "desc": "베이지 포세린 600×600 · 슬림 탑볼",
             "swatch": ["#E8DCCB", "#CDB89C", "#9C8468"],
             "items": [{ "trade": "타일", "name": "비바 베이지 포세린 (600×600)", "qty": null },
                       { "trade": "타일", "name": "GGK8394 욕실 바닥 논슬립 (300×300)", "qty": null },
                       { "trade": "욕실", "name": "슬림 탑볼 세면기 CL-826", "qty": null },
                       { "trade": "욕실", "name": "세면·샤워 겸용 수전 DL-YB6A15", "qty": null },
-                      { "trade": "욕실", "name": "CC-214 원피스 치마형 양변기", "qty": null },
-                      { "trade": "목공", "name": "천장 돔 시공", "qty": null }], "labor": null }
+                      { "trade": "욕실", "name": "CC-214 원피스 치마형 양변기", "qty": null }], "labor": null }
         ]}
       ]
     }
