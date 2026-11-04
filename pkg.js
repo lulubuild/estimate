@@ -470,6 +470,22 @@ function pkgRenderStep() {
     }
   }
   $("#pkgThin").hidden = !d.tiers.some(t => t.cats.some(c => c.method === "덧방"));
+  pkgRenderHint(d);
+}
+/** 안내 한 줄 — 지금 보이는 카테고리만 말한다(이름이 안 맞아 숨은 컨셉이 있으면 그 공간은 빼고, 2026-11-04 게시 뒤 실서버 대조). */
+function pkgRenderHint(d) {
+  const hint = $("#pkgHint");
+  if (!hint) return;
+  const josa = w => { const c = String(w).charCodeAt(String(w).length - 1) - 0xAC00; return c >= 0 && c <= 11171 && c % 28 ? "은" : "는"; };
+  const whole = [], rooms = [];
+  d.tiers.forEach(t => t.cats.forEach(c => {
+    const list = c.target === "whole" ? whole : rooms, nm = c.target === "whole" ? c.name : c.target;
+    if (nm && !list.includes(nm)) list.push(nm);
+  }));
+  const w = whole.join(" · "), r = rooms.join(" · ");
+  if (whole.length && rooms.length) hint.textContent = `${w}${josa(w)} 집 전체에 바로 담기고, ${r}${josa(r)} 다음 화면에서 그 공간을 누를 때 담겨요. 공간마다 컨셉 · 상품을 바꿀 수 있어요.`;
+  else if (whole.length) hint.textContent = `${w}${josa(w)} 집 전체에 바로 담겨요. 그 밖의 공간은 다음 화면에서 직접 골라요.`;
+  else if (rooms.length) hint.textContent = `${r}${josa(r)} 다음 화면에서 그 공간을 누를 때 담겨요. 공간마다 컨셉 · 상품을 바꿀 수 있어요.`;
 }
 
 // ── 그리기 · ③ 공간 판 '패키지' 줄 ─────────────────────────────────────
