@@ -239,6 +239,8 @@ function planRoomTag(room) {
   if (issue) return { text: issue.size ? "크기 선택 필요" : "확인 필요", work: true, warn: true };
   const trades = roomTrades(room).filter(t => data.trades.has(t));
   const size = needsSize(room) && data.size ? data.size + " · " : "";
+  const pk = pkgRoomTagText(room);   // 패키지 컨셉이 있으면 컨셉 이름(2026-11-04)
+  if (pk) return { text: size + pk, work: true, warn: false };
   return { text: size + trades.slice(0, 2).join(" · ") + (trades.length > 2 ? ` 외 ${trades.length - 2}` : ""), work: true, warn: false };
 }
 /** 이 공간을 고르는 열쇠 — 도형이 있으면 도형, 없으면 "R:<공간>". */
@@ -270,11 +272,12 @@ function planRoomsIn(list) {
     trades: new Set(t), pyeong: p, items: new Map(it.map(([a, b]) => [a, new Set(b)])), size: sz, len: new Map(ln),
   }));
 }
-const planSnap = () => JSON.stringify({ base: plan.base, size: plan.size, shapes: plan.shapes, rooms: planRoomsOut() });
+const planSnap = () => JSON.stringify({ base: plan.base, size: plan.size, shapes: plan.shapes, rooms: planRoomsOut(), pkg: pkgSnapOut() });   // 패키지 표시도 함께 되돌린다(2026-11-04)
 function planApplySnap(text) {
   const s = JSON.parse(text);
   plan.base = s.base; plan.size = s.size; plan.shapes = s.shapes;
   planRoomsIn(s.rooms);
+  pkgSnapIn(s.pkg);
   planRefresh();
   if (plan.sel && !plan.sel.startsWith("R:") && !planShape(plan.sel)) plan.sel = null;
   if (!plan.base) plan.sel = null;
@@ -378,7 +381,7 @@ function planDelete(id, sure, fromPanel) {
   if (s.room && roomHasWork(s.room) && !sure) { plan.sel = id; plan.ask = fromPanel ? "del-panel" : "del"; planRender(); return; }
   planDo(`${planShapeLabel(s)} 지움`, () => {
     plan.shapes = plan.shapes.filter(x => x.id !== id);
-    if (s.room) state.rooms.delete(s.room);
+    if (s.room) { state.rooms.delete(s.room); pkgForget(s.room); }
     plan.sel = null; plan.ask = "";
   });
 }
@@ -403,6 +406,7 @@ function planSelect(key) {
   const changed = plan.sel !== key;
   plan.sel = key; plan.ask = "";
   if (changed) { plan.open = null; plan.err = null; }
+  if (changed && plan.mode === "pick") pkgAutoFill(planSelRoom());   // 패키지를 골랐으면 빈 공간에 대표 컨셉(한 번 · 5초 되돌리기 — 2026-11-04)
   planRender();
   if (changed && key && !planPanelInSide()) planRevealPanel();
 }
@@ -446,7 +450,7 @@ function planToggleTrade(room, trade) {
   });
 }
 function planClearRoom(room) {
-  planDo(`${room} 비움`, () => { state.rooms.delete(room); plan.open = null; });
+  planDo(`${room} 비움`, () => { state.rooms.delete(room); pkgForget(room); plan.open = null; });
 }
 function planSetSize(room, title) {
   const data = state.rooms.get(room);
@@ -841,11 +845,20 @@ function planRenderNote() {
 function planRenderBarNote() {
   const n = $("#barNote");
   if (!n) return;
+  // ② 패키지 단계(2026-11-04) — 고른 패키지 이름만
+  if (current === "pkg") {
+    const name = pkg.tier === "none" ? "직접 고르기" : pkgTierActive() ? pkgTier(pkg.tier).name : "";
+    n.hidden = !name;
+    $("#barNoteText").textContent = name; $("#barNoteWarn").textContent = "";
+    return;
+  }
   n.hidden = current !== "plan";
   if (n.hidden) return;
-  const t = planTotals();
-  $("#barNoteText").textContent = t.rooms ? `고른 공간 ${t.rooms}곳 · 공사 ${t.trades}건` : "아직 고른 공사가 없어요";
-  $("#barNoteWarn").textContent = t.warn ? `확인 필요 ${t.warn}곳` : "";
+  const t = planTotals(), pk = pkgBarText();
+  $("#barNoteText").textContent = (pk.left ? pk.left + " · " : "") + (t.rooms ? `고른 공간 ${t.rooms}곳 · 공사 ${t.trades}건` : "아직 고른 공사가 없어요");
+  const w = $("#barNoteWarn");
+  w.className = t.warn ? "warn" : "chg";   // 확인 필요(주황)가 먼저 · 없으면 '바꾼 곳 n'(파랑)
+  w.textContent = t.warn ? `확인 필요 ${t.warn}곳` : pk.right;
 }
 
 // ── 공간 판(오른쪽 · 폰은 도면 아래) ────────────────────────────────────
@@ -963,6 +976,7 @@ function planPanelRoom(p, room) {
   const head = planPanelHead(p, planRoomLabel(room), `${cat} · ${n ? `고른 공사 ${n}건` : "아직 고른 공사 없음"}`, true);
   if (n) head.insertBefore(planBtn("tool-btn", "이 공간 비우기", () => planClearRoom(room), "clear"), head.lastChild && head.lastChild.classList.contains("icon-btn") ? head.lastChild : null);
   if (plan.err && plan.err.room === room) p.appendChild(planEl("div", "pp-err", plan.err.text));
+  pkgPanelRows(p, room);   // 맨 위 '패키지' 줄(2026-11-04 — 컨셉 바꾸기 · 고급 섞기 · 패키지 없이 · 패키지대로 되돌리기)
   // 부분 시공 — 공간 평형(공용(전체)는 전체 평형을 그대로 쓴다)
   if (state.scope === "부분" && !whole) {
     const lab = planEl("label", "fl with-sfx pp-py");
@@ -1017,9 +1031,12 @@ function planTradeRow(room, trade) {
     : need ? "상품을 골라 주세요" : !hasProducts ? (on ? "담김" : "누르면 담기") : `상품 ${list.length}${single ? " · 1개만" : ""}`;
   const right = on && !need ? (hasProducts ? `✓ ${picked.length}` : "✓") : hasProducts ? (open ? "⌃" : "⌄") : "";
   const txt = planEl("span", "tr-txt");
-  txt.append(planEl("b", "", trade), planEl("span", "tr-sub", sub));
+  const name = planEl("b", "", trade);
+  const mk = pkgTradeMark(room, trade);   // 패키지 · 바꿈 · 추가 글자 꼬리표(2026-11-04)
+  if (mk) name.appendChild(planEl("span", "pk-tag" + (mk === "패키지" ? "" : " chg"), mk));
+  txt.append(name, planEl("span", "tr-sub", sub));
   head.append(txt, planEl("span", "tr-right", right));
-  head.setAttribute("aria-label", `${trade}: ${sub}`);
+  head.setAttribute("aria-label", `${trade}${mk ? ` (${mk})` : ""}: ${sub}`);
   if (!hasProducts) {
     head.setAttribute("aria-pressed", String(on));
     head.addEventListener("click", () => planToggleTrade(room, trade));
@@ -1123,7 +1140,7 @@ function planStructureText() {
   const size = PLAN_SIZES.find(([k]) => k === plan.size);
   const text = `[집 구조 · 고객 그림(대략)] ${PLAN_BASE_LABEL[plan.base] || ""}${size && plan.base !== "empty" ? ` · ${size[1]} 기본` : ""} · ${parts.join(" · ")}`
     + (unlinked.length ? ` · 견적 공간 없는 도형: ${unlinked.join(", ")}` : "");
-  // 서버가 요청사항을 1000자로 자른다(웹문의.gs clean_(note, 1000)) — 구조 줄은 120자까지, 요청사항 칸은 879자까지
+  // 서버가 요청사항을 1000자로 자른다(웹문의.gs clean_(note, 1000)) — 구조 줄은 120자까지, 패키지 줄 100자(pkg.js), 요청사항 칸은 778자까지
   return text.length > PLAN_STRUCT_MAX ? text.slice(0, PLAN_STRUCT_MAX - 1) + "…" : text;
 }
 /** 그림 1장(JPEG) — { name, dataUrl }. 도형이 없으면 null. 이름 · 연락처 · 주소는 넣지 않는다. */

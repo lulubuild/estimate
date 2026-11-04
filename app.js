@@ -482,7 +482,8 @@ function roomOrder() {
   const whole = CONFIG.WHOLE_HOUSE_ROOM;
   return [...state.rooms.keys()].filter(roomHasWork).sort((a, b) => (b === whole) - (a === whole) || koSort(a, b));
 }
-const steps = () => ["info", "plan", "finish"];
+// 2026-11-04 지시서 1104-03 개정 b — 전체 시공이면 ② 패키지(pkg.js)가 기본 정보와 공사할 곳 사이에 들어간다(부분 시공 · 보일 패키지가 없으면 그대로).
+const steps = () => (pkgStepOn() ? ["info", "pkg", "plan", "finish"] : ["info", "plan", "finish"]);
 
 let navIdx = 0, rewinding = false, stepAt = 0;
 function goTo(id, opts = {}) {
@@ -501,12 +502,14 @@ function goTo(id, opts = {}) {
   }
 }
 function renderStep() {
+  if (!steps().includes(current)) current = current === "pkg" ? "plan" : "info";   // 설정이 바뀌어 ② 패키지가 없어지면 공사할 곳으로(검토 9)
   $$("[data-step]").forEach(s => { s.hidden = s.dataset.step !== current; });
   $("#hero").hidden = current !== "info";
   // 공사할 곳(넓은 화면) — 왼쪽 평면도 · 오른쪽 공간 판 + 이전 · 다음. 그 밖 단계는 한 열 + 아래 바.
   $(".layout").classList.toggle("plan-on", current === "plan");
   planPlacePanel();
   if (current === "plan") { renderRoomsDesc(); planRender(); }
+  if (current === "pkg") pkgRenderStep();
   if (current === "finish") { renderPhotos(); renderSummary(); }   // 사진 상한은 집 구조 그림이 있으면 1장 적다
   updateBar();
 }
@@ -530,7 +533,7 @@ function updateNav() {
   $("#prevBtn").hidden = i === 0;
   const last = current === "finish";
   $("#nextBtn").hidden = last; $("#submitBtn").hidden = !last;
-  $("#nextBtn span").textContent = current === "info" ? "다음 · 공사할 곳" : "다음 · 마무리";
+  $("#nextBtn span").textContent = list[i + 1] === "pkg" ? "다음 · 패키지" : list[i + 1] === "plan" ? "다음 · 공사할 곳" : "다음 · 마무리";
   planRenderBarNote();
   syncSideHeight();
 }
@@ -551,6 +554,14 @@ function stepReady(id) {
     const bad = infoBad();
     if (bad.length) { showBad(bad); return false; }
     ["name", "phone", "address", "zip", "pyeong", "endDate"].forEach(clearInvalid);   // 지난번 빨간 표시가 남지 않게
+  } else if (id === "pkg") {
+    // ② 패키지 — 미리 고르지 않는다. 고르기 전에는 다음을 막고 안내 한 줄(직접 고르기도 하나의 선택).
+    if (!pkg.tier) {
+      $("#pkgErr").textContent = "패키지를 하나 골라 주세요. 패키지 없이 직접 고르셔도 돼요.";
+      setInvalid("pkg"); reveal($("#pkgErr")); toast("패키지를 골라 주세요.");
+      return false;
+    }
+    clearInvalid("pkg");
   } else if (id === "plan") {
     if (!planReady()) return false;
   }
@@ -637,6 +648,8 @@ function renderSummary() {
   row("평형 · 일정", basics, "info");
   const struct = planStructureText();
   row("집 구조", [struct ? struct.replace(/^\[[^\]]*\]\s*/, "") + " · 그림 1장 함께 보냄" : "그림 없음"], () => planGoRoom(""));
+  const pkgLines = pkgSummaryLines();   // 패키지(2026-11-04) — 고르지 않았으면 줄 없음
+  if (pkgLines) row("패키지", pkgLines, () => (steps().includes("pkg") ? goTo("pkg") : planGoRoom("")));
   const order = roomOrder();
   if (!order.length) { row("공사할 곳", ["아직 고른 공사가 없어요."], () => planGoRoom(""), true); return; }
   order.forEach(room => {
@@ -647,6 +660,8 @@ function renderSummary() {
       return picked.length ? `${t}: ${picked.join(", ")}${len > 0 ? ` · 가구 길이 ${len}m` : ""}` : `${t}: 상품을 골라 주세요`;
     });
     if (needsSize(room)) lines.unshift(`공간 크기: ${SIZE_TITLES.includes(data.size) ? data.size : "골라 주세요"}`);
+    const pkgLine = pkgRoomSummaryLine(room);
+    if (pkgLine) lines.unshift(pkgLine);
     const issue = roomIssue(room);
     const py2 = state.scope === "부분" && room !== CONFIG.WHOLE_HOUSE_ROOM && parseFloat(data.pyeong) > 0 ? ` · ${data.pyeong}평` : "";
     row(planRoomLabel(room) + py2, lines.length ? lines : ["아직 고른 상품이 없어요."], () => planGoRoom(room), !!issue);
@@ -777,6 +792,7 @@ function saveDraft() {
     const d = { scope: state.scope, rooms: [...state.rooms].map(([k, v]) => [k, [...v.trades], v.pyeong, [...v.items].map(([t, s]) => [t, [...s]]), v.size, [...v.len]]) };
     draftFields.forEach(f => d[f] = $("#" + f).value);
     d.plan = planDraftOut();   // 집 구조 도형(앱 평면 저장 글과 같은 모양) — 개인정보 없음
+    d.pkg = pkgDraftOut();     // 고른 패키지 · 공간마다 컨셉(2026-11-04) — 개인정보 없음
     d.savedAt = Date.now();
     localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
   } catch {}
@@ -786,7 +802,7 @@ function saveDraft() {
   } catch {}
 }
 function loadDraft() {
-  try { const note = sessionStorage.getItem(NOTE_KEY); if (note) $("#note").value = note; } catch {}
+  try { const note = sessionStorage.getItem(NOTE_KEY); if (note) $("#note").value = note.slice(0, $("#note").maxLength > 0 ? $("#note").maxLength : 778); } catch {}   // 778자(2026-11-04 — 패키지 줄 자리)
   let d = null;
   try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch {}
   if (!d) return;
@@ -814,6 +830,7 @@ function loadDraft() {
   });
   if (d.scope === "부분") state.scope = "부분";
   planDraftIn(d.plan);
+  pkgDraftIn(d.pkg);
   $("#pyeong").dispatchEvent(new Event("input"));
   // 예전 초안에 남은 이름 · 연락처 · 주소 · 요청사항(F-20 전 판)은 바로 지운다 — 다시 저장한 초안에는 없다.
   // 요청사항은 이 탭에서만 이어 쓴다(옛 초안의 글은 되살리지 않는다).
@@ -903,8 +920,10 @@ function buildPayload(shot) {
     startDate: $("#startDate").value,
     endDate: $("#endDate").value,
     rooms,
-    note: [planStructureText(), $("#note").value.trim()].filter(Boolean).join("\n"),
+    // 요청 내용 = 구조 한 줄(120자) + 패키지 한 줄(100자 — 2026-11-04) + 요청사항(778자) — 서버가 1000자로 자른다
+    note: [planStructureText(), pkgNoteLine(), $("#note").value.trim()].filter(Boolean).join("\n"),
     photos: (shot ? [shot] : []).concat(state.photos).slice(0, CONFIG.MAX_PHOTOS).map(p => ({ name: p.name, data: p.dataUrl.split(",")[1] })),
+    pkg: pkgPayload(),                          // 고른 패키지 · 공간마다 컨셉 · 바꾼 공종(2026-11-04) — 지금 서버는 건너뛴다(2단계 '패키지' 열)
     plan: planSendLayout(),                     // 집 구조 도형 — 앱 평면도 형식 글(서버 '평면' 열 → 앱 견적 작성 평면도에서 옮기기 · 크기 수정). 옛 서버는 건너뛴다
     // 동의 기록 — 동의 여부와 그때의 처리방침 판(Apps Script가 접수 시각과 함께 '개인정보 동의' 열에 남긴다).
     consent: $("#consent").checked,
@@ -988,7 +1007,7 @@ async function submit() {
 }
 
 $("#againBtn").addEventListener("click", () => {
-  $("#form").reset(); state.rooms.clear(); state.photos = []; planReset(); setScope("전체"); syncEmailNote();
+  $("#form").reset(); state.rooms.clear(); state.photos = []; planReset(); pkgReset(); setScope("전체"); syncEmailNote();
   const a = $("#address"); a.readOnly = true;
   $("#detailWrap").hidden = true; $("#zipWrap").hidden = true;
   $("#pyeong").dispatchEvent(new Event("input")); syncDates();
