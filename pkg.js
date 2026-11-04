@@ -7,7 +7,8 @@
    · 단계: ① 기본 정보 → ② 패키지(전체 시공일 때만) → ③ 공사할 곳 → ④ 마무리
    · 담는 곳 = 고객이 고른 공간에만
      - ②에서 패키지를 고르면 공용(전체)의 도배 · 바닥재만 담는다
-     - 욕실 · 주방은 ③에서 고객이 그 공간을 누를 때 대표(★) 컨셉을 담는다(5초 되돌리기) — 한 공간에 한 번만
+     - 욕실 · 주방은 ③ 공간 판 '패키지' 줄의 '담기' 단추를 누를 때 대표(★) 컨셉을 담는다(5초 되돌리기 — 11/5 사장님 판단 5,
+       그 전에는 공간을 누르기만 해도 담겨 안 할 공간이 접수에 섞일 수 있었음)
    · 공간 판 맨 위 '패키지' 줄 — 컨셉 바꾸기 · 고급 섞기 · 패키지 없이(상품 그대로 · 표시만 없앰) · 패키지대로 되돌리기
    · 컨셉을 바꾸면 고객이 바꾼 공종은 그대로 두고, 바꾸지 않은 공종만 새 컨셉으로 바뀐다
    · '바꾼 곳'은 저장하지 않고 매번 컨셉과 견줘 센다
@@ -169,9 +170,23 @@ function pkgAssign(room, catId, id, force) {
   nextSets.forEach((names, trade) => {
     if (kept.has(trade)) return;
     const cur = data.items.get(trade);
-    if (!force && cur && cur.size) return;   // 패키지 전에 고객이 고른 공종 — 그대로('바꿈'으로 보이고 '패키지대로 되돌리기'로 바꿀 수 있음)
+    // 패키지 전에 고객이 고른 공종 — 그대로('바꿈'으로 보이고 '패키지대로 되돌리기'로 바꿀 수 있음).
+    // 단, 같은 카테고리 다른 컨셉이 담아 둔 그대로면 패키지 것이므로 바꾼다(고급 → 직접 고르기 → 일반 — 2026-11-05 더블체크 c3)
+    if (!force && cur && cur.size && !pkgFromPackage(room, catId, trade, cur)) return;
     data.items.set(trade, new Set(names)); data.trades.add(trade);
   });
+}
+/** 지금 상품이 이 카테고리 어느 컨셉이 담은 것과 같은가(고객이 고른 것이 아님). */
+function pkgFromPackage(room, catId, trade, cur) {
+  for (const c of pkgData().byId.values()) {
+    if (c.cat === catId && pkgSame(cur, pkgSets(room, c).get(trade))) return true;
+  }
+  return false;
+}
+/** 받침 따라 조사 — pkgJosa("화이트 클린", "을", "를"). */
+function pkgJosa(word, withBatchim, without) {
+  const s = String(word), c = s.charCodeAt(s.length - 1) - 0xAC00;
+  return c >= 0 && c <= 11171 && c % 28 ? withBatchim : without;
 }
 /** 패키지대로 되돌리기 — 지금 컨셉 그대로(바꾼 공종을 컨셉 상품으로). 추가한 공종은 그대로. */
 function pkgRestore(room) {
@@ -193,36 +208,40 @@ function pkgPick(room, catId, id) {
     if (head) head.focus({ preventScroll: true });
   }, 300);
 }
-/** ② 패키지 고르기 — 공용(전체)의 도배 · 바닥재만 담는다. 이미 담긴 공간은 같은 카테고리의 새 등급 대표로(바꾼 공종은 그대로). */
+/** ② 패키지 고르기 — 공용(전체)의 도배 · 바닥재만 담는다. 이미 담긴 공간은 같은 카테고리의 새 등급 대표로(바꾼 공종은 그대로).
+    ②의 선택은 ③ 되돌리기 묶음에 넣지 않는다 — 등급을 바꾸면 되돌리기 기록은 새로 시작(③ 되돌리기가 ② 담기를 풀던 것 — 2026-11-05 더블체크 c2). */
 function pkgChooseTier(tierId) {
   if (tierId === pkg.tier) { pkg.peek = tierId === "none" ? "" : tierId; pkgRenderStep(); return; }
-  const tier = pkgTier(tierId);
-  const label = tierId === "none" ? "직접 고르기 — 담긴 상품은 그대로" : `${tier ? tier.name : ""} 고름`;
-  planDo(label, () => {
-    pkg.tier = tierId; pkg.peek = tierId === "none" ? "" : tierId;
-    if (tierId === "none") { pkg.rooms.clear(); return; }   // 표시만 지운다(상품 그대로)
+  pkg.tier = tierId; pkg.peek = tierId === "none" ? "" : tierId;
+  if (tierId === "none") pkg.rooms.clear();   // 표시만 지운다(상품 그대로)
+  else {
     const whole = CONFIG.WHOLE_HOUSE_ROOM;
     if (WEB.rooms.includes(whole)) pkgRoomCats(whole).forEach(cat => { const d = pkgDefault(tierId, cat.id); if (d) pkgAssign(whole, cat.id, d.id, false); });
     pkg.rooms.forEach((marks, room) => {
       if (room === whole) return;
       [...marks].forEach(([cat, id]) => { const d = id && pkgDefault(tierId, cat); if (d && d.id !== id) pkgAssign(room, cat, d.id, false); });
     });
-  });
+  }
+  planRefresh();
+  plan.hist = []; plan.fut = []; plan.note = null;
+  afterChange();
   clearInvalid("pkg");
+  const t = $("#toast"); if (t) t.classList.remove("on");   // '패키지를 골라 주세요' 알림을 바로 지움(c4)
   pkgRenderStep();
 }
-/** ③ 공간을 누를 때 — 비어 있는 공간이면 고른 등급의 대표 컨셉을 담는다(한 공간에 한 번 · 5초 되돌리기). planSelect가 부른다. */
-function pkgAutoFill(room) {
-  if (!room || !pkgTierActive() || room === CONFIG.WHOLE_HOUSE_ROOM || pkg.touched.has(room) || roomHasWork(room)) return;
-  const picks = pkgRoomCats(room).map(cat => [cat.id, pkgDefault(pkg.tier, cat.id)]).filter(([, d]) => d);
-  if (!picks.length) return;
-  pkg.touched.add(room);
-  const text = `${pkgTier(pkg.tier).short} 패키지 ${picks.map(([, d]) => d.name).join(" · ")}을 담았어요`;
-  planDo(`${room}에 ${text.replace(/을 담았어요$/, "")} 담음`, () => picks.forEach(([cat, d]) => pkgAssign(room, cat, d.id, false)));
-  // 폰은 공간 판으로 화면이 내려가 위 안내가 안 보인다 — 공간 판 맨 위에도 5초 되돌리기(검토 3)
-  pkg.filled = { room, text, until: Date.now() + 5000 };
+/** ③ 공간 판 '담기' — 고른 등급의 대표 컨셉을 그 공간에 담는다(누를 때만 — 사장님 11/5 판단 5). */
+function pkgFill(room, catId, id) {
+  const c = pkgConcept(id);
+  if (!c || !room) return;
+  const tier = pkgTierActive() ? pkgTier(pkg.tier).short + " 패키지 " : "";
+  planDo(`${room} ‹ ${c.name} 담음`, () => { pkg.touched.add(room); pkgAssign(room, catId, id, false); });
+  // 폰은 위 안내가 화면 밖일 수 있다 — 공간 판 맨 위에도 5초 되돌리기(검토 3)
+  pkg.filled = { room, text: `${tier}${c.name}${pkgJosa(c.name, "을", "를")} 담았어요`, until: Date.now() + 5000 };
   clearTimeout(pkg.filledTimer);
   pkg.filledTimer = setTimeout(() => { pkg.filled = null; if (current === "plan") planRender(); }, 5100);
+  planRender();
+  const head = $(`#planPanel [data-k="t-${CSS.escape(PKG_OPEN + catId)}"]`);
+  if (head) head.focus({ preventScroll: true });
 }
 
 // ── 견줘 보기(저장하지 않음) ─────────────────────────────────────────────
@@ -275,29 +294,30 @@ const pkgUsedRooms = () => roomOrder().filter(r => pkgRoomInfo(r));
 function pkgNoteLine() {
   const used = pkgUsedRooms();
   if (!used.length && !pkgTierActive()) return "";
+  // 적용 범위 위주(업체가 어느 공간에 무엇이 담겼는지 한 줄로 — 2026-11-05 더블체크 c5):
+  // '[패키지] 일반 / 공용 깔끔 합지 · 표준 강마루 / 화장실1 화이트 클린 / 변경 없음 / 판 2026-11-05'
   const label = pkgTierLabel() || "패키지";
-  const names = [], seen = new Set(), base = pkgTierActive() ? pkg.tier : "";
+  const base = pkgTierActive() ? pkg.tier : "";
+  const short = r => (r === CONFIG.WHOLE_HOUSE_ROOM ? "공용" : r);
   const catOrder = ["wall", "floor", "kitchen", "bath"];
-  const list = [];
-  used.forEach(r => pkgRoomInfo(r).concepts.forEach(x => list.push(x)));
   const ord = c => { const i = catOrder.indexOf(c); return i < 0 ? 99 : i; };
-  list.sort((a, b) => ord(a.cat) - ord(b.cat));
-  list.forEach(({ concept }) => {
-    if (seen.has(concept.id)) return;
-    seen.add(concept.id);
-    const other = base && !concept.tiers.includes(base) ? `(${(pkgTier(concept.tiers[0]) || {}).short || ""})` : "";
-    names.push(concept.name + other);
-  });
+  const nm = c => c.name + (base && !c.tiers.includes(base) ? `(${(pkgTier(c.tiers[0]) || {}).short || ""})` : "");
+  const parts = used.map(r => `${short(r)} ${[...pkgRoomInfo(r).concepts].sort((a, b) => ord(a.cat) - ord(b.cat)).map(x => nm(x.concept)).join(" · ")}`);
   const big = used.filter(r => pkgRoomInfo(r).bigTile);
-  // 덧방 확인(안전 표시)은 앞에 — 100자를 넘으면 컨셉 이름부터 줄인다(검토 10)
+  // 덧방 확인(안전 표시)은 앞에 — 100자를 넘으면 뒤 공간부터 '외 n곳'으로 줄인다(검토 10)
   const head = ["[패키지] " + label].concat(big.length ? [`덧방 확인 필요 ${big.join("·")}`] : []);
-  const tail = [`바꾼 곳 ${pkgChangedRooms().length}`, "판 " + pkgData().rev];
-  let shown = names.slice(), text = "";
-  for (;;) {
-    const more = names.length - shown.length;
-    text = head.concat(shown, more ? [`외 ${more}`] : [], tail).join(" · ");
-    if (text.length <= PKG_LINE_MAX || !shown.length) break;
-    shown.pop();
+  const ch = pkgChangedRooms();
+  const tails = [[ch.length ? `변경 ${ch.map(short).join("·")}` : "변경 없음", "판 " + pkgData().rev], [ch.length ? `변경 ${ch.length}곳` : "변경 없음", "판 " + pkgData().rev]];
+  let text = "";
+  for (const tail of tails) {
+    let shown = parts.slice();
+    for (;;) {
+      const more = parts.length - shown.length;
+      text = head.concat(shown.length || more ? shown : ["담긴 곳 없음"], more ? [`외 ${more}곳`] : [], tail).join(" / ");
+      if (text.length <= PKG_LINE_MAX || !shown.length) break;
+      shown.pop();
+    }
+    if (text.length <= PKG_LINE_MAX) break;
   }
   return text.length > PKG_LINE_MAX ? text.slice(0, PKG_LINE_MAX - 1) + "…" : text;
 }
@@ -323,13 +343,15 @@ function pkgSummaryLines() {
   }
   const names = [];
   used.forEach(r => pkgRoomInfo(r).concepts.forEach(x => { if (!names.includes(x.concept.name)) names.push(x.concept.name); }));
-  const lines = [`${label ? label + " 패키지" : "패키지"} · 바꾼 곳 ${pkgChangedRooms().length}`];
+  const n = pkgChangedRooms().length;
+  const lines = [`${label ? label + " 패키지" : "패키지"} · ${n ? `바꾼 곳 ${n}` : "바꾼 곳 없음"}`];
   lines.push(names.length ? names.join(" · ") : "아직 담긴 곳이 없어요");
   return lines;
 }
+/** 마무리 공간 줄 — 바꿈 · 추가 · 덧방 확인이 있을 때만(같은 말 세 번 — 2026-11-05 더블체크 c10). */
 function pkgRoomSummaryLine(room) {
   const i = pkgRoomInfo(room);
-  if (!i) return "";
+  if (!i || (!i.changed.size && !i.added.size && !i.bigTile)) return "";
   return `패키지: ${i.concepts.map(x => x.concept.name).join(" · ")}${i.changed.size ? ` · 바꿈 ${i.changed.size}` : ""}${i.added.size ? ` · 추가 ${i.added.size}` : ""}${i.bigTile ? " · 덧방 확인 필요" : ""}`;
 }
 /** 아래 바 — 왼쪽 등급 이름 · 오른쪽 '바꾼 곳 n'. */
@@ -394,7 +416,9 @@ function pkgRenderStep() {
   const active = document.activeElement, focusKey = active && list.contains(active) && active.dataset ? active.dataset.k : "";
   list.textContent = "";
   const d = pkgData();
-  const cards = d.tiers.map(t => ({ id: t.id, name: t.name, sub: t.sub, tier: t }))
+  // 카드 부제 = 이 패키지가 담는 것(보이는 카테고리만 — 숨은 것이 있어도 말이 맞게, 2026-11-05 더블체크 c1)
+  const cover = t => t.cats.map(c => c.name + (c.method ? ` ${c.method}` : "")).join(" · ");
+  const cards = d.tiers.map(t => ({ id: t.id, name: t.name, sub: cover(t), tier: t }))
     .concat([{ id: "none", name: "직접 고르기", sub: "패키지 없이 공간마다 골라요", tier: null }]);
   cards.forEach(card => {
     const on = pkg.tier === card.id, open = !!card.tier && pkg.peek === card.id;
@@ -427,7 +451,10 @@ function pkgRenderStep() {
         const v = pkgEl("b", "");
         if (star.concept.swatch.length) v.appendChild(pkgSwatch(star.concept.swatch));
         v.append(document.createTextNode(star.concept.name));
-        it.append(pkgEl("span", "", cat.name), v);
+        const col = pkgEl("span", "pk-v");
+        col.appendChild(v);
+        if (star.concept.desc) col.appendChild(pkgEl("small", "pk-desc", star.concept.desc));   // 사양 한 줄(c8)
+        it.append(pkgEl("span", "", cat.name), col);
         body.appendChild(it);
       });
       const thin = card.tier.cats.find(c => c.method === "덧방");
@@ -472,20 +499,25 @@ function pkgRenderStep() {
   $("#pkgThin").hidden = !d.tiers.some(t => t.cats.some(c => c.method === "덧방"));
   pkgRenderHint(d);
 }
-/** 안내 한 줄 — 지금 보이는 카테고리만 말한다(이름이 안 맞아 숨은 컨셉이 있으면 그 공간은 빼고, 2026-11-04 게시 뒤 실서버 대조). */
+/** 제목 · 안내 한 줄 — 지금 보이는 카테고리만 말한다(이름이 안 맞아 숨은 컨셉이 있으면 그 공간은 빼고 — 2026-11-04 실서버 대조 · 11-05 더블체크 c1 · c7).
+    공간 이름은 웹 설정의 실제 이름(화장실1 → '화장실')으로. */
 function pkgRenderHint(d) {
-  const hint = $("#pkgHint");
-  if (!hint) return;
-  const josa = w => { const c = String(w).charCodeAt(String(w).length - 1) - 0xAC00; return c >= 0 && c <= 11171 && c % 28 ? "은" : "는"; };
+  const josa = w => pkgJosa(w, "은", "는");
+  const roomName = target => { const r = WEB.rooms.find(x => x !== CONFIG.WHOLE_HOUSE_ROOM && pkgTargetHit(x, target)); return r ? r.replace(/\s*\d+$/, "") : target; };
   const whole = [], rooms = [];
   d.tiers.forEach(t => t.cats.forEach(c => {
-    const list = c.target === "whole" ? whole : rooms, nm = c.target === "whole" ? c.name : c.target;
+    const list = c.target === "whole" ? whole : rooms, nm = c.target === "whole" ? c.name : roomName(c.target);
     if (nm && !list.includes(nm)) list.push(nm);
   }));
   const w = whole.join(" · "), r = rooms.join(" · ");
-  if (whole.length && rooms.length) hint.textContent = `${w}${josa(w)} 집 전체에 바로 담기고, ${r}${josa(r)} 다음 화면에서 그 공간을 누를 때 담겨요. 공간마다 컨셉 · 상품을 바꿀 수 있어요.`;
-  else if (whole.length) hint.textContent = `${w}${josa(w)} 집 전체에 바로 담겨요. 그 밖의 공간은 다음 화면에서 직접 골라요.`;
-  else if (rooms.length) hint.textContent = `${r}${josa(r)} 다음 화면에서 그 공간을 누를 때 담겨요. 공간마다 컨셉 · 상품을 바꿀 수 있어요.`;
+  const title = $("#pkgTitleSub");
+  if (title) title.textContent = rooms.length ? "고른 공간에 추천 상품을 담아요." : whole.length ? `${w}${pkgJosa(w, "을", "를")} 한 번에 골라요.` : "";
+  const hint = $("#pkgHint");
+  if (!hint) return;
+  const range = "범위 · 수량은 실측 때 정해요.";
+  if (whole.length && rooms.length) hint.textContent = `${w}${josa(w)} 공용(전체)에 바로 담기고, ${r}${josa(r)} 다음 화면에서 그 공간을 누른 뒤 '담기'로 담아요. ${range}`;
+  else if (whole.length) hint.textContent = `${w}${josa(w)} 공용(전체)에 바로 담겨요. 그 밖의 공간은 다음 화면에서 직접 골라요. ${range}`;
+  else if (rooms.length) hint.textContent = `${r}${josa(r)} 다음 화면에서 그 공간을 누른 뒤 '담기'로 담아요. ${range}`;
 }
 
 // ── 그리기 · ③ 공간 판 '패키지' 줄 ─────────────────────────────────────
@@ -508,8 +540,12 @@ function pkgPanelRows(p, room) {
     const row = pkgEl("div", "tr pk-row-tr" + (cur ? " on" : "") + (open ? " open" : ""));
     const head = planBtn("tr-head", null, () => { plan.open = open ? null : key; planRender(); }, "t-" + key);
     const changedHere = cur && info ? [...info.changed].filter(t => pkgSets(room, cur).has(t)).length : 0;
-    const sub = cur ? `${cur.tiers.length > 1 ? "공통" : (pkgTier(cur.tiers[0]) || {}).short} · ${cur.name}${changedHere ? ` · 바꿈 ${changedHere}` : ""}`
-      : curId === "" ? "패키지 없이 직접 고름" : "골라서 한 번에 담기";
+    // 아직 안 담았고 등급을 골랐으면 그 등급 대표를 '담기' 단추로(누를 때만 — 사장님 11/5 판단 5)
+    const def = !cur && curId === null && pkgTierActive() ? pkgDefault(pkg.tier, cat.id) : null;
+    const sub = cur ? `${cur.tiers.length > 1 ? "일반 · 고급 같음" : (pkgTier(cur.tiers[0]) || {}).short} · ${cur.name}${changedHere ? ` · 바꿈 ${changedHere}` : ""}`
+      : curId === "" ? "패키지 없이 직접 고름"
+      : def ? `${pkgTier(pkg.tier).short} 추천 · ${def.name}`
+      : "추천 구성 한 번에 담기 — 일반 · 고급";
     const txt = pkgEl("span", "tr-txt");
     const title = pkgEl("b", "", cats.length > 1 ? `패키지 · ${cat.name}` : "패키지");
     txt.append(title, pkgEl("span", "tr-sub", sub));
@@ -518,6 +554,13 @@ function pkgPanelRows(p, room) {
     head.setAttribute("aria-expanded", String(open));
     head.setAttribute("aria-label", `${cats.length > 1 ? `패키지 ${cat.name}` : "패키지"}: ${sub}`);
     row.appendChild(head);
+    if (def && !open) {
+      const fill = planBtn("pk-fill", null, () => pkgFill(room, cat.id, def.id), "pk-fill-" + cat.id);
+      if (def.swatch.length) fill.appendChild(pkgSwatch(def.swatch));
+      fill.appendChild(pkgEl("span", "", `‘${def.name}’ 담기`));
+      fill.setAttribute("aria-label", `${pkgTier(pkg.tier).short} 패키지 ${def.name} ${room}에 담기`);
+      row.appendChild(fill);
+    }
     if (open) {
       const body = pkgEl("div", "tr-body");
       body.setAttribute("role", "group");
@@ -533,7 +576,7 @@ function pkgPanelRows(p, room) {
         const mark = pkgEl("span", "mark", sel ? "✓" : "");
         mark.setAttribute("aria-hidden", "true");
         const t = pkgEl("span", "pr-txt");
-        const tierName = o.common ? "공통" : (pkgTier(o.tier) || {}).short;
+        const tierName = o.common ? "일반 · 고급 같음" : (pkgTier(o.tier) || {}).short;
         t.append(pkgEl("span", "", o.concept.name + (o.star && o.tier === base ? " ★" : "")),
           pkgEl("small", "", [tierName, o.concept.desc].filter(Boolean).join(" · ")));
         b.append(mark, t);

@@ -521,39 +521,43 @@ footer .sep { color: var(--line); }
 .pk-head .pr { flex: 1; min-width: 0; min-height: 60px; padding: 8px 10px; background: transparent; }
 .pk-head .pr[aria-pressed="true"] { background: transparent; }
 .pk-head .pk-name { font-size: 16px; font-weight: 600; }
-.pk-head .pr-txt small { font-size: 14px; -webkit-line-clamp: 1; }
+.pk-head .pr-txt small { font-size: 14px; -webkit-line-clamp: 2; }
 .pk-more { font-size: 14px; font-weight: 600; padding: 0 8px; }
 .pk-body { padding: 0 14px 12px 46px; }
 .pk-it { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 7px 0; border-top: 1px solid var(--line-soft); font-size: 14px; }
 .pk-it > span { flex: none; color: var(--muted); }
 .pk-it b { min-width: 0; font-weight: 500; text-align: right; word-break: keep-all; display: flex; align-items: center; gap: 6px; }
+.pk-v { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 0; }
+.pk-desc { font-size: 14px; color: var(--muted); text-align: right; word-break: keep-all; }
 .pk-sw { display: inline-flex; gap: 3px; flex: none; }
 .pk-sw i { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(128, 128, 128, .35); }
 .pk-inc { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--line-soft); }
-.pk-inc > span:first-child { font-size: 12px; color: var(--muted); }
+.pk-inc > span:first-child { font-size: 14px; color: var(--muted); }
 .pk-cmp { border-top: 1px solid var(--line); }
 .pk-row { display: grid; grid-template-columns: 76px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
 .pk-row .k { font-weight: 600; }
 .pk-row .v { color: var(--muted); word-break: keep-all; overflow-wrap: anywhere; }
 .pk-row .v.cur { color: var(--ink); font-weight: 500; }
-.pk-row.h .v { font-size: 12px; font-weight: 600; }
+.pk-row.h .v { font-size: 14px; font-weight: 600; }
 .pk-row.h .v.cur { color: var(--sel); }
 .pk-note { margin: 20px 0 0; padding: 10px 14px; border-radius: var(--r-tile); background: var(--bg-alt); font-size: 14px; color: var(--muted); }
 .pk-3 { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 8px; padding: 7px 0; border-top: 1px solid var(--line-soft); }
 .pk-3:first-child { border-top: 0; }
 .pk-3 span { color: var(--ink); font-weight: 600; }
 .pk-3 p { margin: 0; word-break: keep-all; }
-.pk-small { margin: 8px 0 0; font-size: 12px; line-height: 1.5; word-break: keep-all; }
+.pk-small { margin: 8px 0 0; font-size: 14px; line-height: 1.5; word-break: keep-all; }
 .pkg-step .step-err { margin-top: 16px; }
 .pk-ic { flex: none; width: 22px; height: 22px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tr.pk-row-tr .tr-head { gap: 10px; }
 .tr.pk-row-tr.on .pk-ic { stroke: var(--sel); }
 .tr.pk-row-tr + .tr:not(.pk-row-tr) { margin-top: 2px; }
 .pk-row-tr .pr .pk-sw { margin-left: auto; }
+.pk-fill { display: flex; align-items: center; justify-content: center; gap: 8px; width: calc(100% - 24px); min-height: 48px; margin: 0 12px 12px; padding: 0 14px; border: 0; border-radius: var(--r-tile); background: var(--accent-soft); color: var(--sel); font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+.pk-fill:focus-visible { outline: 2px solid var(--sel); outline-offset: 2px; }
 .pk-acts { display: flex; justify-content: flex-end; margin: -2px 0 0; }
 .pk-keep { padding: 2px 8px 0; }
 .pk-big { margin-top: 0; }
-.pk-tag { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 999px; border: 1px solid var(--line); font-size: 12px; font-weight: 600; line-height: 18px; color: var(--muted); vertical-align: 1px; }
+.pk-tag { display: inline-block; margin-left: 6px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--line); font-size: 14px; font-weight: 600; line-height: 20px; color: var(--muted); vertical-align: 1px; }
 .pk-tag.chg { border-color: var(--sel); color: var(--sel); }
 .bar-note .chg { color: var(--sel); }
 .pk-filled { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 14px; border-radius: var(--r-tile); background: var(--accent-soft); font-size: 14px; }
@@ -662,16 +666,16 @@ footer .sep { color: var(--line); }
       </div>
 
       <!-- ② 패키지(2026-11-04 지시서 1104-03 개정 b) — 전체 시공일 때만. 카드 · 차이 표는 pkg.js가 그린다.
-           고르면 공용(전체)의 도배 · 바닥재만 담기고, 욕실 · 주방은 다음 화면에서 그 공간을 누를 때 담긴다. 가격 없음(표시광고법). -->
+           고르면 공용(전체)의 도배 · 바닥재만 담기고, 욕실 · 주방은 다음 화면 공간 판의 '담기' 단추로(11/5 사장님 판단 5). 가격 없음(표시광고법). -->
       <section class="step section pkg-step" data-step="pkg" data-field="pkg" id="pkgStep" hidden>
-        <div class="sec-head"><h2 class="sec-title step-title" tabindex="-1">패키지. <span>고른 공간에 추천 상품이 담겨요.</span></h2></div>
+        <div class="sec-head"><h2 class="sec-title step-title" tabindex="-1">패키지. <span id="pkgTitleSub">고른 공간에 추천 상품을 담아요.</span></h2></div>
         <p class="pk-sub">추천 구성 · 자재 기준 · 금액은 실측 뒤 견적</p>
         <div class="pk-list" id="pkgList" role="group" aria-label="패키지 — 1개 고르기"></div>
-        <div class="hint" id="pkgHint">도배 · 바닥재는 집 전체에 바로 담기고, 욕실 · 주방은 다음 화면에서 그 공간을 누를 때 담겨요. 공간마다 컨셉 · 상품을 바꿀 수 있어요.</div>
+        <div class="hint" id="pkgHint">도배 · 바닥재는 공용(전체)에 바로 담기고, 주방 · 화장실은 다음 화면에서 그 공간을 누른 뒤 '담기'로 담아요. 범위 · 수량은 실측 때 정해요.</div>
         <p class="plan-label" id="pkgCompareLabel">일반과 고급 차이</p>
         <div class="pk-cmp" id="pkgCompare"></div>
         <div class="pk-note" role="group" aria-label="패키지 안내">
-          <div class="pk-3"><span>포함</span><p>자재 구성</p></div>
+          <div class="pk-3"><span>포함</span><p>컨셉별 자재(제품 · 규격)</p></div>
           <div class="pk-3"><span>견적 때 확정</span><p>시공비 · 철거 범위 · 방수 · 부자재(실측 뒤)</p></div>
           <div class="pk-3"><span>별도</span><p>가전 · 가구(소파 · 침대 등) · 이사</p></div>
           <p class="pk-small" id="pkgThin">화장실 일반은 덧방이에요. 실측 결과 덧방이 어렵거나 덧방 이력이 있으면 철거 시공으로 바뀌며 견적을 다시 안내해요.</p>
@@ -820,9 +824,9 @@ footer .sep { color: var(--line); }
 </div>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="packages.js?v=2026-11-05a"></script>
-<script src="pkg.js?v=2026-11-05a"></script>
-<script src="plan.js?v=2026-11-04p"></script>
+<script src="packages.js?v=2026-11-05c"></script>
+<script src="pkg.js?v=2026-11-05c"></script>
+<script src="plan.js?v=2026-11-05c"></script>
 <script src="app.js?v=2026-11-04p"></script>
 </body>
 </html>

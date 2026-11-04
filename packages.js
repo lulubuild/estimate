@@ -3,10 +3,10 @@
    · 아래 { … } 부분은 그대로 JSON이다(앱 2단계가 packages.json으로 그대로 가져간다 — 빈칸 method · qty · labor는 2단계가 채움).
    · 상품 이름 = 앱 자재 DB · 웹 설정(webConfig.products)의 글자 그대로. 대조 키 = (공종, 항목명).
      공종 이름이 다르면(예: 마루 → 바닥재) 그 이름을 가진 공종이 하나뿐일 때만 그 공종으로 본다.
+   · 2026-11-05 실서버 대조로 이름 맞춤(사장님 판단 3 · 4): 화장실 '천장 돔 시공' 뺌 · 주방 = '싱크대 기본 구성 (1mm 당)'(벽타일 · 천장은 견적 때).
    · 이름이 하나라도 안 맞거나 덧방 컨셉에 대형 타일(긴 변 600mm 넘음)이 있으면 그 컨셉은 웹에서 숨는다(pkg.js).
    · 가격 없음(웹 가격 없음 · 표시광고법). 사진 없음(색 칩만).
-   · 고칠 때 index.html의 packages.js?v= 값을 바꾼다.
-   · 2026-11-05(사장님 결정 추천 A): 화장실 4컨셉 '천장 돔 시공' 뺌(천장은 견적 때) · 주방 '기본 싱크대' = 실서버 '싱크대 기본 구성 (1mm 당)' 하나(벽타일은 견적 때). */
+   · 고칠 때 index.html의 packages.js?v= 값을 바꾼다. */
 const PACKAGES_V1 = {
   "v": 1,
   "rev": "2026-11-05",
@@ -15,7 +15,7 @@ const PACKAGES_V1 = {
       "id": "basic",
       "name": "일반 패키지",
       "short": "일반",
-      "sub": "표준 자재 · 기본 마감",
+      "sub": "합지 · 강마루 · 화장실 덧방",
       "categories": [
         { "id": "wall", "name": "도배", "target": "whole", "method": null, "concepts": [
           { "id": "basic-wall-plain", "name": "깔끔 합지", "star": true, "desc": "장폭 합지 벽지",
@@ -28,7 +28,7 @@ const PACKAGES_V1 = {
             "items": [{ "trade": "마루", "name": "나투스강 7.5T 강마루", "qty": null }], "labor": null }
         ]},
         { "id": "kitchen", "name": "주방가구", "target": "주방", "method": null, "concepts": [
-          { "id": "common-kitchen-basic", "name": "기본 싱크대", "star": true, "desc": "상 · 하부장 + 대리석 상판 · 후드 · 수전",
+          { "id": "common-kitchen-basic", "name": "기본 싱크대", "star": true, "desc": "상 · 하부장 · 대리석 상판 · 후드 · 수전",
             "swatch": ["#F2F2F0", "#CFCFCB", "#8E8E8A"],
             "items": [{ "trade": "제작가구", "name": "싱크대 기본 구성 (1mm 당)", "qty": null }], "labor": null }
         ]},
@@ -55,7 +55,7 @@ const PACKAGES_V1 = {
       "id": "premium",
       "name": "고급 패키지",
       "short": "고급",
-      "sub": "상위 자재 · 마감 강화",
+      "sub": "실크 · 광폭 강마루 · 화장실 철거",
       "categories": [
         { "id": "wall", "name": "도배", "target": "whole", "method": null, "concepts": [
           { "id": "premium-wall-silk", "name": "실크", "star": true, "desc": "실크 벽지 · 106cm 폭",
@@ -71,7 +71,7 @@ const PACKAGES_V1 = {
             "items": [{ "trade": "마루", "name": "에디톤 스톤 5T (450×900)", "qty": null }], "labor": null }
         ]},
         { "id": "kitchen", "name": "주방가구", "target": "주방", "method": null, "concepts": [
-          { "id": "common-kitchen-basic", "name": "기본 싱크대", "star": true, "desc": "상 · 하부장 + 대리석 상판 · 후드 · 수전",
+          { "id": "common-kitchen-basic", "name": "기본 싱크대", "star": true, "desc": "상 · 하부장 · 대리석 상판 · 후드 · 수전",
             "swatch": ["#F2F2F0", "#CFCFCB", "#8E8E8A"],
             "items": [{ "trade": "제작가구", "name": "싱크대 기본 구성 (1mm 당)", "qty": null }], "labor": null }
         ]},

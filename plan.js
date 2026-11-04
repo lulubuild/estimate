@@ -406,7 +406,7 @@ function planSelect(key) {
   const changed = plan.sel !== key;
   plan.sel = key; plan.ask = "";
   if (changed) { plan.open = null; plan.err = null; }
-  if (changed && plan.mode === "pick") pkgAutoFill(planSelRoom());   // 패키지를 골랐으면 빈 공간에 대표 컨셉(한 번 · 5초 되돌리기 — 2026-11-04)
+  // 공간을 누르기만 해서는 패키지를 담지 않는다 — 공간 판 '담기' 단추로(사장님 11/5 판단 5 · pkg.js pkgFill)
   planRender();
   if (changed && key && !planPanelInSide()) planRevealPanel();
 }
