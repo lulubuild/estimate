@@ -209,7 +209,10 @@ function normalizeWebConfig(raw) {
     .map(r => [r, str(rawCats[r], WEB_LIMITS.category)]).filter(([, c]) => catNames.has(c))) : null;
   const roomSizeGroups = rawSizes ? new Map(rooms.filter(r => Object.prototype.hasOwnProperty.call(rawSizes, r))
     .map(r => [r, Number(rawSizes[r])]).filter(([, n]) => Number.isInteger(n) && sizeGroups[n])) : null;
-  return { rooms, trades, products, categories, single, sized, sizeGroups, roomCategories, roomSizeGroups };
+  // 앱 패키지 목록(2026-11-06 지시서 1106-04 C2) — 모양 검사 · 이름 대조 · 숨김은 pkg.js(pkgSource · pkgData).
+  // 없으면(옛 앱 · 옛 스크립트 · 이 페이지 기본값) null = 게시본 packages.js.
+  const packages = raw.packages && typeof raw.packages === "object" && !Array.isArray(raw.packages) ? raw.packages : null;
+  return { rooms, trades, products, categories, single, sized, sizeGroups, roomCategories, roomSizeGroups, packages };
 }
 /** 이 공종은 단일 선택인가(한 공간에 상품 1개) — 아니면 중복 선택(여러 개). */
 const isSingle = trade => !!(WEB.single && WEB.single.has(trade));

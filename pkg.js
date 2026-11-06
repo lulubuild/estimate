@@ -2,7 +2,7 @@
    웹 견적요청 — 패키지(지시서 1104-03 개정 b · 통합 개정 a, 2026-11-04)
 
    1단계 = 적용형: 고른 패키지를 지금의 공간별 상품 이름으로 풀어 담는다. 보내는 형식(공간별 상품)은 그대로라
-   서버 · 앱은 바뀌지 않는다. 고른 패키지는 요청 내용에 한 줄('[패키지] …')로 남고, 보내기 칸 pkg에도 싣는다(지금 서버는 건너뜀).
+   서버 · 앱은 바뀌지 않는다. 고른 패키지는 요청 내용에 한 줄('[패키지] …')로 남고, 보내기 칸 pkg에도 싣는다(2026-11-06부터 서버 '패키지' 열 · 옛 서버는 건너뜀).
 
    · 단계: ① 기본 정보 → ② 패키지(전체 시공일 때만) → ③ 공사할 곳 → ④ 마무리
    · 담는 곳 = 고객이 고른 공간에만
@@ -13,6 +13,8 @@
    · 컨셉을 바꾸면 고객이 바꾼 공종은 그대로 두고, 바꾸지 않은 공종만 새 컨셉으로 바뀐다
    · '바꾼 곳'은 저장하지 않고 매번 컨셉과 견줘 센다
    · 게시 조건(화면에서도 같은 검사): 이름이 하나라도 안 맞거나, 덧방 컨셉에 대형 타일이 든 컨셉은 숨긴다
+   · 목록 원본(2026-11-06 지시서 1106-04 C2): 앱 '웹 견적 페이지 반영'이 설정과 함께 올린 패키지(설정 packages)가 있으면 그것,
+     없으면(옛 앱 · 옛 스크립트 · 처음) 게시본 packages.js. 앱에서 '웹에 보이기'를 끈 컨셉(web: false)은 숨긴다
    · 웹 가격 없음 · 사진 없음(색 칩)
 
    이 파일은 app.js보다 먼저 읽힌다. 맨 위에서는 선언만 하고, 실제로 부르는 것은 app.js · plan.js가 다 읽힌 뒤다.
@@ -50,11 +52,18 @@ function pkgResolveItem(item, index) {
   const hits = index.get(name) || [];
   return hits.length === 1 ? { trade: hits[0], name } : null;
 }
-/** 쓰기 좋은 모양 — 컨셉마다 대조 결과. 웹 설정이 바뀌면(webSource) 다시 만든다. */
+/** 목록 원본 — 앱이 올린 것(웹 설정 packages · 1106-04 C2)이 v 1 · tiers 배열이면 그것(비어 있어도 — 모두 숨김 = 패키지 없음),
+    아니면 게시본 packages.js. from: "app" · "file". */
+function pkgSource() {
+  const ok = p => !!p && typeof p === "object" && p.v === 1 && Array.isArray(p.tiers);
+  if (WEB && ok(WEB.packages)) return { src: WEB.packages, from: "app" };
+  return { src: typeof PACKAGES_V1 === "object" && ok(PACKAGES_V1) ? PACKAGES_V1 : null, from: "file" };
+}
+/** 쓰기 좋은 모양 — 컨셉마다 대조 결과. 웹 설정이 바뀌면(webSource — 앱 패키지도 그 안) · 원본 · 판(rev)이 바뀌면 다시 만든다. */
 function pkgData() {
-  const key = webSource + "|" + (typeof PACKAGES_V1 === "object" ? PACKAGES_V1.rev : "");
+  const { src, from } = pkgSource();
+  const key = webSource + "|" + from + "|" + (src ? String(src.rev || "") : "");
   if (pkgCache.key === key && pkgCache.data) return pkgCache.data;
-  const src = typeof PACKAGES_V1 === "object" && PACKAGES_V1 && PACKAGES_V1.v === 1 && Array.isArray(PACKAGES_V1.tiers) ? PACKAGES_V1 : null;
   const index = new Map();
   WEB.trades.forEach(t => (WEB.products[t] || []).forEach(([n]) => { if (!index.has(n)) index.set(n, []); index.get(n).push(t); }));
   const tiers = [], byId = new Map(), problems = [];
@@ -66,6 +75,7 @@ function pkgData() {
       const cat = { id: c.id, name: String(c.name || ""), target: String(c.target || ""), method: c.method || "", concepts: [] };
       (Array.isArray(c.concepts) ? c.concepts : []).forEach(k => {
         if (!k || typeof k.id !== "string") return;
+        if (k.web === false) return;   // 앱 '웹에 보이기' 끔(1106-04 C2) — 숨김(점검 목록에도 안 넣음)
         const items = (Array.isArray(k.items) ? k.items : []).map(it => pkgResolveItem(it, index));
         let why = "";
         if (!items.length) why = "상품 없음";
@@ -89,7 +99,7 @@ function pkgData() {
     });
     if (tier.cats.length) tiers.push(tier);
   });
-  const data = { ok: tiers.length > 0, rev: src ? String(src.rev || "") : "", tiers, byId, problems };
+  const data = { ok: tiers.length > 0, rev: src ? String(src.rev || "") : "", from, tiers, byId, problems };
   pkgCache = { key, data };
   // 설정이 바뀌어 숨은 컨셉 — 표시만 지운다(담긴 상품은 그대로)
   pkg.rooms.forEach(cats => cats.forEach((id, cat) => { if (id && !byId.has(id)) cats.delete(cat); }));
@@ -321,7 +331,7 @@ function pkgNoteLine() {
   }
   return text.length > PKG_LINE_MAX ? text.slice(0, PKG_LINE_MAX - 1) + "…" : text;
 }
-/** 보내기 칸 pkg — 지금 서버는 건너뛴다(2단계에 '패키지' 열). */
+/** 보내기 칸 pkg — 서버가 '패키지' 열에 JSON 글로 적고 앱 동기화에 pkg로 싣는다(2026-11-06 1106-04 C2 · 옛 서버는 건너뜀). */
 function pkgPayload() {
   const used = pkgUsedRooms(), tier = pkgTierActive() ? pkg.tier : pkg.tier === "none" && state.scope === "전체" ? "none" : "";
   if (!used.length && !tier) return null;
