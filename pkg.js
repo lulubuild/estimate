@@ -16,6 +16,8 @@
    · 목록 원본(2026-11-06 지시서 1106-04 C2): 앱 '웹 견적 페이지 반영'이 설정과 함께 올린 패키지(설정 packages)가 있으면 그것,
      없으면(옛 앱 · 옛 스크립트 · 처음) 게시본 packages.js. 앱에서 '웹에 보이기'를 끈 컨셉(web: false)은 숨긴다
    · 웹 가격 없음 · 사진 없음(색 칩)
+   · 2026-11-06b(지시서 1106-05): 패키지 수 · 이름은 목록대로(최대 8 — 'basic' · 'premium' 고정 없음) · 카테고리 차례 = 목록 차례 ·
+     카테고리 담길 곳 여럿(targets — 없으면 target 하나) · 공간 맞추기 = 앱 PackageCatalog.matches와 같은 규칙(pkgTargetHit)
 
    이 파일은 app.js보다 먼저 읽힌다. 맨 위에서는 선언만 하고, 실제로 부르는 것은 app.js · plan.js가 다 읽힌 뒤다.
    ═══════════════════════════════════════════════════════════════════════ */
@@ -23,8 +25,9 @@
 const PKG_TILE_MAX_MM = 600;   // [가정] 덧방 '대형 타일' = 긴 변 600mm 넘음(사장님 값이 정해지면 그 값으로)
 const PKG_LINE_MAX = 100;      // 요청 내용 '[패키지]' 줄 — 서버가 요청 내용을 1000자로 자른다(구조 120 + 패키지 100 + 요청사항 778)
 const PKG_OPEN = "pkg:";       // 공간 판에서 펼친 줄 열쇠(plan.open) — 공종 이름과 겹치지 않게
+const PKG_COMPARE_MAX = 4;     // ② 비교 표에 견줄 패키지 수 상한(1106-05 — 넘으면 표 없이 카드 '구성'만)
 
-/** 고객이 고른 것 — tier: "" 아직 · "basic" · "premium" · "none"(직접 고르기).
+/** 고객이 고른 것 — tier: "" 아직 · 등급 id(목록대로) · "none"(직접 고르기 — 등급 id로 쓰지 않음).
     rooms: 공간 → Map(카테고리 → 컨셉 id | ""(패키지 없이)). touched: 대표 컨셉을 한 번 담아 준 공간(되돌린 뒤 다시 채우지 않게). */
 const pkg = { tier: "", rooms: new Map(), touched: new Set(), peek: "", filled: null, filledTimer: 0 };
 
@@ -68,11 +71,11 @@ function pkgData() {
   WEB.trades.forEach(t => (WEB.products[t] || []).forEach(([n]) => { if (!index.has(n)) index.set(n, []); index.get(n).push(t); }));
   const tiers = [], byId = new Map(), problems = [];
   (src ? src.tiers : []).forEach(t => {
-    if (!t || typeof t.id !== "string") return;
+    if (!t || typeof t.id !== "string" || !t.id || t.id === "none") return;   // "none" = '직접 고르기' 카드 값
     const tier = { id: t.id, name: String(t.name || ""), short: String(t.short || t.name || ""), sub: String(t.sub || ""), cats: [] };
     (Array.isArray(t.categories) ? t.categories : []).forEach(c => {
       if (!c || typeof c.id !== "string") return;
-      const cat = { id: c.id, name: String(c.name || ""), target: String(c.target || ""), method: c.method || "", concepts: [] };
+      const cat = { id: c.id, name: String(c.name || ""), target: String(c.target || ""), places: pkgPlaces(c), method: c.method || "", concepts: [] };
       (Array.isArray(c.concepts) ? c.concepts : []).forEach(k => {
         if (!k || typeof k.id !== "string") return;
         if (k.web === false) return;   // 앱 '웹에 보이기' 끔(1106-04 C2) — 숨김(점검 목록에도 안 넣음)
@@ -99,7 +102,10 @@ function pkgData() {
     });
     if (tier.cats.length) tiers.push(tier);
   });
-  const data = { ok: tiers.length > 0, rev: src ? String(src.rev || "") : "", from, tiers, byId, problems };
+  // 카테고리 차례 = 목록 차례(등급 차례 · 그 안 카테고리 차례 — 처음 나온 자리) — 요청 내용 줄 · 비교 표가 쓴다(1106-05).
+  const catOrder = [];
+  tiers.forEach(t => t.cats.forEach(c => { if (!catOrder.includes(c.id)) catOrder.push(c.id); }));
+  const data = { ok: tiers.length > 0, rev: src ? String(src.rev || "") : "", from, tiers, byId, problems, catOrder };
   pkgCache = { key, data };
   // 설정이 바뀌어 숨은 컨셉 — 표시만 지운다(담긴 상품은 그대로)
   pkg.rooms.forEach(cats => cats.forEach((id, cat) => { if (id && !byId.has(id)) cats.delete(cat); }));
@@ -112,7 +118,7 @@ const pkgStepOn = () => state.scope === "전체" && pkgAvailable();
 const pkgTier = id => pkgData().tiers.find(t => t.id === id) || null;
 const pkgConcept = id => (id && pkgData().byId.get(id)) || null;
 /** 고른 등급이 살아 있는가 — 전체 시공일 때만(부분으로 바꾸면 등급은 쉬고, 담긴 컨셉 표시만 남는다 — 검토 1). */
-const pkgTierActive = () => state.scope === "전체" && (pkg.tier === "basic" || pkg.tier === "premium") && !!pkgTier(pkg.tier);
+const pkgTierActive = () => state.scope === "전체" && !!pkg.tier && pkg.tier !== "none" && !!pkgTier(pkg.tier);
 /** 그 등급 · 카테고리의 대표(★) 컨셉 — 대표가 숨었으면 없음(사장님 ★만 미리 고름). */
 function pkgDefault(tierId, catId) {
   const tier = pkgTier(tierId), cat = tier && tier.cats.find(c => c.id === catId);
@@ -125,17 +131,46 @@ function pkgDefault(tierId, catId) {
 function pkgRoomCategory(room) {
   return WEB.roomCategories ? (WEB.roomCategories.get(room) || "") : (matchCategory(room, WEB.categories.map(c => c.name)) || "");
 }
+/** 카테고리 담길 곳 — targets(글 배열 · 빈 글 · 겹침 뺌)가 있으면 그것, 없으면 target 하나(1106-05 · 앱 PackageCategory.placeTargets). */
+function pkgPlaces(c) {
+  const out = [];
+  (Array.isArray(c && c.targets) ? c.targets : []).forEach(x => {
+    const v = typeof x === "string" ? x.trim() : "";
+    if (v && !out.includes(v)) out.push(v);
+  });
+  return out.length ? out : [String(c && c.target || "")];
+}
+/** 공간 ↔ 담길 곳 하나 — 앱 PackageCatalog.matches(target:)와 같은 규칙(1106-05). 공간 글 = 공간 이름 · 그 공간 분류.
+    ① 욕실 공간 = 욕실 · 화장실이 든 공간 · 공용 공간 = 욕실이 아니고 '공용'이 든 공간 ② whole = 공용 공간만 · 공용 공간은 whole에만
+    ③ 욕실 · 화장실 = 욕실 공간 ④ 그 글자가 든 공간(두 글자 이상) ⑤ 공간 분류 규칙(matchCategory — 뒤 번호 · '/' 나눔 · 흔한 다른 이름). */
 function pkgTargetHit(room, target) {
-  if (target === "whole") return room === CONFIG.WHOLE_HOUSE_ROOM;
-  if (room === CONFIG.WHOLE_HOUSE_ROOM) return false;
-  const cat = pkgRoomCategory(room);
-  return cat ? cat === target || !!matchCategory(cat, [target]) : !!matchCategory(room, [target]);
+  const t = String(target || "").trim();
+  if (!t) return false;
+  const texts = [String(room || ""), pkgRoomCategory(room)].filter(Boolean);
+  const bath = texts.some(x => x.includes("욕실") || x.includes("화장실"));
+  const whole = !bath && texts.some(x => x.includes("공용"));
+  if (t === "whole" || t.includes("공용")) return whole;
+  if (whole) return false;
+  if (t === "욕실" || t === "화장실") return bath;
+  if (t.length >= 2 && texts.some(x => x.includes(t))) return true;
+  return texts.some(x => !!matchCategory(x, [t]));
+}
+/** 이 공간에 이 카테고리가 담기나 — 담길 곳 중 하나라도. */
+function pkgCatHit(room, cat) {
+  return (cat.places || [cat.target]).some(t => pkgTargetHit(room, t));
+}
+/** 컨셉이 든 패키지 이름 — '일반 · 고급 같음'(둘 이상) · 하나면 그 짧은 이름 · 모든 패키지(셋 이상)면 '모든 패키지 같음'. */
+function pkgTiersText(concept) {
+  const ids = concept ? concept.tiers : [];
+  if (ids.length > 2 && ids.length === pkgData().tiers.length) return "모든 패키지 같음";
+  const names = ids.map(id => (pkgTier(id) || {}).short).filter(Boolean);
+  return names.length > 1 ? names.join(" · ") + " 같음" : (names[0] || "");
 }
 /** 이 공간에 쓸 수 있는 카테고리 — [{ id, name, method, options:[{ concept, tier, star }] }]. 공간에서 못 고르는 공종만 든 컨셉은 뺀다. */
 function pkgRoomCats(room) {
   const out = [];
   pkgData().tiers.forEach(tier => tier.cats.forEach(cat => {
-    if (!pkgTargetHit(room, cat.target)) return;
+    if (!pkgCatHit(room, cat)) return;
     let row = out.find(r => r.id === cat.id);
     if (!row) { row = { id: cat.id, name: cat.name, method: cat.method, options: [] }; out.push(row); }
     cat.concepts.forEach(({ concept, star }) => {
@@ -309,7 +344,7 @@ function pkgNoteLine() {
   const label = pkgTierLabel() || "패키지";
   const base = pkgTierActive() ? pkg.tier : "";
   const short = r => (r === CONFIG.WHOLE_HOUSE_ROOM ? "공용" : r);
-  const catOrder = ["wall", "floor", "kitchen", "bath"];
+  const catOrder = pkgData().catOrder;   // 목록 차례(1106-05 — 고정 차례 걷어 냄)
   const ord = c => { const i = catOrder.indexOf(c); return i < 0 ? 99 : i; };
   const nm = c => c.name + (base && !c.tiers.includes(base) ? `(${(pkgTier(c.tiers[0]) || {}).short || ""})` : "");
   const parts = used.map(r => `${short(r)} ${[...pkgRoomInfo(r).concepts].sort((a, b) => ord(a.cat) - ord(b.cat)).map(x => nm(x.concept)).join(" · ")}`);
@@ -381,7 +416,7 @@ function pkgSnapOut(withTier) {
 function pkgSnapIn(s) {
   pkg.rooms.clear();
   if (!s || typeof s !== "object") return;
-  if ("tier" in s) pkg.tier = s.tier === "none" || ((s.tier === "basic" || s.tier === "premium") && pkgTier(s.tier)) ? s.tier : "";
+  if ("tier" in s) pkg.tier = s.tier === "none" || (typeof s.tier === "string" && !!s.tier && !!pkgTier(s.tier)) ? s.tier : "";
   (Array.isArray(s.rooms) ? s.rooms : []).forEach(e => {
     if (!Array.isArray(e) || typeof e[0] !== "string" || !Array.isArray(e[1])) return;
     const marks = new Map(e[1].filter(x => Array.isArray(x) && typeof x[0] === "string" && typeof x[1] === "string")
@@ -480,17 +515,22 @@ function pkgRenderStep() {
     list.appendChild(box);
   });
   if (focusKey) { const again = list.querySelector(`[data-k="${CSS.escape(focusKey)}"]`); if (again) again.focus({ preventScroll: true }); }
-  // 일반과 고급 차이 — 카테고리마다 컨셉 이름(대표 먼저)
+  // 패키지 차이 — 카테고리마다 컨셉 이름(대표 먼저). 패키지 2 ~ 4개일 때(1106-05 — 5개부터는 칸이 좁아 카드 '구성'으로만)
   const cmp = $("#pkgCompare");
   if (cmp) {
     cmp.textContent = "";
-    const tiers = d.tiers.slice(0, 2);
+    const tiers = d.tiers.length <= PKG_COMPARE_MAX ? d.tiers : [];
     cmp.hidden = tiers.length < 2;
     const label = $("#pkgCompareLabel");
-    if (label) label.hidden = cmp.hidden;
+    if (label) {
+      label.hidden = cmp.hidden;
+      const a = tiers.length === 2 ? tiers[0].short : "";
+      label.textContent = a ? `${a}${pkgJosa(a, "과", "와")} ${tiers[1].short} 차이` : "패키지 차이";
+    }
     if (!cmp.hidden) {
       const row = (k, vals, cls) => {
         const r = pkgEl("div", "pk-row" + (cls ? " " + cls : ""));
+        if (tiers.length !== 2) r.style.gridTemplateColumns = `76px repeat(${tiers.length}, minmax(0, 1fr))`;
         r.appendChild(pkgEl("div", "k", k));
         vals.forEach((v, i) => r.appendChild(pkgEl("div", "v" + (tiers[i].id === pkg.tier ? " cur" : ""), v)));
         cmp.appendChild(r);
@@ -515,10 +555,10 @@ function pkgRenderHint(d) {
   const josa = w => pkgJosa(w, "은", "는");
   const roomName = target => { const r = WEB.rooms.find(x => x !== CONFIG.WHOLE_HOUSE_ROOM && pkgTargetHit(x, target)); return r ? r.replace(/\s*\d+$/, "") : target; };
   const whole = [], rooms = [];
-  d.tiers.forEach(t => t.cats.forEach(c => {
-    const list = c.target === "whole" ? whole : rooms, nm = c.target === "whole" ? c.name : roomName(c.target);
+  d.tiers.forEach(t => t.cats.forEach(c => (c.places || [c.target]).forEach(target => {   // 담길 곳마다(1106-05)
+    const isWhole = target === "whole" || target.includes("공용"), list = isWhole ? whole : rooms, nm = isWhole ? c.name : roomName(target);
     if (nm && !list.includes(nm)) list.push(nm);
-  }));
+  })));
   const w = whole.join(" · "), r = rooms.join(" · ");
   const title = $("#pkgTitleSub");
   if (title) title.textContent = rooms.length ? "고른 공간에 추천 상품을 담아요." : whole.length ? `${w}${pkgJosa(w, "을", "를")} 한 번에 골라요.` : "";
@@ -552,10 +592,10 @@ function pkgPanelRows(p, room) {
     const changedHere = cur && info ? [...info.changed].filter(t => pkgSets(room, cur).has(t)).length : 0;
     // 아직 안 담았고 등급을 골랐으면 그 등급 대표를 '담기' 단추로(누를 때만 — 사장님 11/5 판단 5)
     const def = !cur && curId === null && pkgTierActive() ? pkgDefault(pkg.tier, cat.id) : null;
-    const sub = cur ? `${cur.tiers.length > 1 ? "일반 · 고급 같음" : (pkgTier(cur.tiers[0]) || {}).short} · ${cur.name}${changedHere ? ` · 바꿈 ${changedHere}` : ""}`
+    const sub = cur ? `${pkgTiersText(cur)} · ${cur.name}${changedHere ? ` · 바꿈 ${changedHere}` : ""}`
       : curId === "" ? "패키지 없이 직접 고름"
       : def ? `${pkgTier(pkg.tier).short} 추천 · ${def.name}`
-      : "추천 구성 한 번에 담기 — 일반 · 고급";
+      : "추천 구성 한 번에 담기 — " + pkgData().tiers.map(t => t.short).filter(Boolean).join(" · ");
     const txt = pkgEl("span", "tr-txt");
     const title = pkgEl("b", "", cats.length > 1 ? `패키지 · ${cat.name}` : "패키지");
     txt.append(title, pkgEl("span", "tr-sub", sub));
@@ -586,7 +626,7 @@ function pkgPanelRows(p, room) {
         const mark = pkgEl("span", "mark", sel ? "✓" : "");
         mark.setAttribute("aria-hidden", "true");
         const t = pkgEl("span", "pr-txt");
-        const tierName = o.common ? "일반 · 고급 같음" : (pkgTier(o.tier) || {}).short;
+        const tierName = o.common ? pkgTiersText(o.concept) : (pkgTier(o.tier) || {}).short;
         t.append(pkgEl("span", "", o.concept.name + (o.star && o.tier === base ? " ★" : "")),
           pkgEl("small", "", [tierName, o.concept.desc].filter(Boolean).join(" · ")));
         b.append(mark, t);
